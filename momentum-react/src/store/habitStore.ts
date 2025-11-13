@@ -45,7 +45,7 @@ interface HabitStore {
   getHabitById: (id: string) => Habit | undefined;
   getHabitStats: (habitId: string) => HabitStats | null;
   getTotalHabits: () => number;
-  getActiveHabits: () => Habit[];
+  getActiveHabits: () => number;
 }
 
 export const useHabitStore = create<HabitStore>()(
@@ -180,11 +180,11 @@ export const useHabitStore = create<HabitStore>()(
       },
 
       getTotalHabits: () => {
-        return get().habits.filter((h) => !h.archived).length;
+        return get().habits.length;
       },
 
       getActiveHabits: () => {
-        return get().habits.filter((h) => !h.archived);
+        return get().habits.filter((h) => !h.archived).length;
       },
     }),
     {

@@ -20,11 +20,11 @@ export const getDaysInYear = (year: number): Date[] => {
 /**
  * Get all days in a month
  */
-export const getDaysInMonth = (year: number, month: number): Date[] => {
+export const getDaysInMonth = (year: number, month: number): number => {
   const start = new Date(year, month, 1);
   const end = new Date(year, month + 1, 0);
 
-  return eachDayOfInterval({ start, end });
+  return eachDayOfInterval({ start, end }).length;
 };
 
 /**

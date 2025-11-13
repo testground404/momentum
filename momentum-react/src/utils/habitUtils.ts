@@ -11,7 +11,11 @@ export const filterHabits = (
   let filtered = habits;
 
   // Filter by archived status
-  if (!showArchived) {
+  if (showArchived) {
+    // When showArchived is true, show ONLY archived habits
+    filtered = filtered.filter((h) => h.archived);
+  } else {
+    // When showArchived is false, show only non-archived habits
     filtered = filtered.filter((h) => !h.archived);
   }
 
