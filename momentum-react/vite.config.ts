@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -63,7 +64,16 @@ export default defineConfig({
         ],
       },
     }),
-  ],
+    // Bundle analyzer (only in analyze mode)
+    process.env.ANALYZE
+      ? visualizer({
+          filename: './dist/stats.html',
+          open: true,
+          gzipSize: true,
+          brotliSize: true,
+        })
+      : undefined,
+  ].filter(Boolean),
   build: {
     target: 'esnext',
     minify: 'esbuild',
