@@ -1,0 +1,3174 @@
+function hexToRgb(hex) {
+      try {
+        var h = String(hex).trim();
+        if (h.startsWith('#')) h = h.slice(1);
+        if (h.length === 3) {
+          h = h.split('').map(function (c) { return c + c; }).join('');
+        }
+        var num = parseInt(h, 16);
+        return ((num >> 16) & 255) + ', ' + ((num >> 8) & 255) + ', ' + (num & 255);
+      } catch (e) {
+        return '59,130,246';
+      }
+    }
+
+    function hexToRgbObj(hex) {
+      var m = hex.replace('#','');
+      var int = parseInt(m, 16);
+      return { r: (int>>16)&255, g: (int>>8)&255, b: int&255 };
+    }
+
+    function channel(v) {
+      v = v/255;
+      return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+    }
+    function luminance(hex) {
+      var c = hexToRgbObj(hex);
+      return 0.2126*channel(c.r) + 0.7152*channel(c.g) + 0.0722*channel(c.b);
+    }
+    function contrast(a, b) {
+      var L1 = luminance(a), L2 = luminance(b);
+      var light = Math.max(L1, L2), dark = Math.min(L1, L2);
+      return (light+0.05)/(dark+0.05);
+    }
+    function mix(h1, h2, t) {
+      var c1 = hexToRgbObj(h1), c2 = hexToRgbObj(h2);
+      var r = Math.round(c1.r + (c2.r - c1.r)*t);
+      var g = Math.round(c1.g + (c2.g - c1.g)*t);
+      var b = Math.round(c1.b + (c2.b - c1.b)*t);
+      return '#' + [r, g, b].map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
+    }
+    function clampColorToMode(hex, isDark) {
+      var bg = isDark ? '#18181b' : '#ffffff';
+      var c = contrast(hex, bg);
+      if (c >= 3) return hex;
+      return isDark ? mix(hex, '#ffffff', 0.4) : mix(hex, '#000000', 0.4);
+    }
+
+    function debounce(fn, ms) {
+      var t;
+      return function () {
+        var args = arguments;
+        clearTimeout(t);
+        t = setTimeout(function () {
+          fn.apply(null, args);
+        }, ms);
+      }
+    }
+
+    /* ────────── Picker State ────────── */
+    var ipEls = {
+      modal: document.getElementById('picker-modal'),
+      overlay: document.getElementById('picker-overlay'),
+      search: document.getElementById('ip-search'),
+      cats: document.getElementById('ip-cats'),
+      colors: document.getElementById('ip-colors'),
+      icons: document.getElementById('ip-icons'),
+      empty: document.getElementById('ip-empty'),
+      select: document.getElementById('ip-select'),
+      cancel: document.getElementById('ip-cancel'),
+      close: document.getElementById('ip-closeBtn'),
+      density: document.getElementById('ip-densityBtn'),
+      colorPreview: document.getElementById('ip-colorPreview'),
+      customColor: document.getElementById('ip-customColor'),
+      scroll: document.getElementById('ip-scroll')
+    };
+
+    var ipState = {
+      allIcons: [],
+      filteredIcons: [],
+      selectedIcon: null,
+      selectedColor: '#1e293b',
+      searchQuery: '',
+      selectedCategory: 'All',
+      gridDensity: 'comfortable',
+      resolver: null,
+      observer: null,
+      renderOffset: 0,
+      renderBatch: 90
+    };
+
+    var ipPalette = ['#1e293b','#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#22c55e','#10b981','#14b8a6','#06b6d4','#0ea5e9','#3b82f6','#6366f1','#8b5cf6','#a855f7','#d946ef','#ec4899','#f43f5e'];
+
+    var SORT_OPTIONS = [
+      { value: 'created-newest', description: 'Newest first' },
+      { value: 'created-oldest', description: 'Oldest first' },
+      { value: 'name-az', description: 'Name A → Z' },
+      { value: 'name-za', description: 'Name Z → A' },
+      { value: 'rate-high-low', description: 'Highest completion' },
+      { value: 'rate-low-high', description: 'Lowest completion' }
+    ];
+
+    function updatePickerThemeConsistency() {
+      if (!ipState.selectedColor) return;
+      var safe = clampColorToMode(ipState.selectedColor, document.documentElement.classList.contains('dark'));
+      ipState.selectedColor = safe;
+      document.documentElement.style.setProperty('--icon-selected', safe);
+      document.documentElement.style.setProperty(
+        '--icon-selected-bg',
+        document.documentElement.classList.contains('dark') ? 'rgba(228,228,231,.08)' : 'rgba(30,41,59,.12)'
+      );
+      if (ipEls.colorPreview) ipEls.colorPreview.style.backgroundColor = safe;
+      if (ipEls.customColor) ipEls.customColor.value = safe;
+    }
+
+    /* ────────── Theme ────────── */
+    var themeToggle = document.getElementById('theme-toggle');
+    var THEMEKEY = 'themepreference';
+    function getInitialTheme() {
+      var stored = localStorage.getItem(THEMEKEY);
+      if (stored) return stored;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    function applyTheme(theme) {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      if (themeToggle) {
+        themeToggle.setAttribute('aria-label', 'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' mode');
+        themeToggle.setAttribute('title', 'Switch to ' + (theme === 'dark' ? 'light' : 'dark') + ' mode');
+      }
+      localStorage.setItem(THEMEKEY, theme);
+      updatePickerThemeConsistency();
+    }
+    if (themeToggle) {
+      themeToggle.addEventListener('click', function () {
+        var next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+        applyTheme(next);
+      });
+    }
+    applyTheme(getInitialTheme());
+
+    /* ────────── View Controls ────────── */
+    var viewToggle = document.getElementById('view-toggle');
+    var VIEWKEY = 'viewpreference';
+    function getInitialView() {
+      return localStorage.getItem(VIEWKEY) || 'year';
+    }
+    var EASEIO = getComputedStyle(document.documentElement).getPropertyValue('--ease-io').trim() || 'cubic-bezier(0.4,0,0.2,1)';
+
+    /* ────────── Date helpers ────────── */
+    var now = new Date();
+    var CURRENTYEAR = now.getFullYear();
+    function isLeap(y){return (y%4===0 && y%100!==0) || (y%400===0);}
+    function daysInYear(y){return isLeap(y) ? 366 : 365;}
+    function startOfYear(y){return new Date(y,0,1);}
+    function dayIndexForYear(y){
+      if (y !== CURRENTYEAR) return daysInYear(y)-1;
+      var todayNoTime = new Date(CURRENTYEAR, now.getMonth(), now.getDate());
+      return Math.floor((todayNoTime - startOfYear(CURRENTYEAR))/86400000);
+    }
+    function fmt(d){
+      return d.toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+    }
+
+    function toDateInputValue(date) {
+      if (!(date instanceof Date) || isNaN(date)) return '';
+      var y = date.getFullYear();
+      var m = String(date.getMonth() + 1).padStart(2, '0');
+      var d = String(date.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    }
+
+    function parseDateValue(value) {
+      if (!value) return null;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        var parts = value.split('-');
+        var parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        return isNaN(parsed) ? null : parsed;
+      }
+      var dt = new Date(value);
+      return isNaN(dt) ? null : dt;
+    }
+
+    function clampDateToYearBounds(date, year) {
+      var safeYear = year || CURRENTYEAR;
+      if (!(date instanceof Date) || isNaN(date)) return new Date(safeYear, 0, 1);
+      if (date.getFullYear() < safeYear) return new Date(safeYear, 0, 1);
+      if (date.getFullYear() > safeYear) return new Date(safeYear, 11, 31);
+      return new Date(safeYear, date.getMonth(), date.getDate());
+    }
+
+    function sanitizeStartDateValue(value, year) {
+      var parsed = parseDateValue(value);
+      var clamped = clampDateToYearBounds(parsed || new Date(), year);
+      return toDateInputValue(clamped);
+    }
+
+    function defaultStartDateForYear(year) {
+      return sanitizeStartDateValue(toDateInputValue(new Date()), year);
+    }
+
+    function getHabitStartDate(habit) {
+      if (!habit) return null;
+      // Get the raw ISO string from the habit object
+      var raw = habit.startDate || habit.createdAt;
+      // Parse it into a true Date object
+      var parsed = parseDateValue(raw);
+
+      // If parsing fails for any reason, create a fallback date
+      if (!parsed || isNaN(parsed)) {
+          var creationYear = habit.createdAt ? new Date(habit.createdAt).getFullYear() : CURRENTYEAR;
+          return new Date(creationYear, 0, 1);
+      }
+
+      // Return the real, unclamped start date
+      return parsed;
+    }
+
+    function getHabitStartIndex(habit) {
+      if (!habit) return 0;
+      var viewYear = habit.year || CURRENTYEAR;
+      var trueStartDate = getHabitStartDate(habit);
+      if (!trueStartDate) return 0;
+      var startYear = trueStartDate.getFullYear();
+
+      // Case 1: Habit starts in future year (viewing past years)
+      if (startYear > viewYear) {
+        return daysInYear(viewYear);
+      }
+
+      // Case 2: Habit started in previous year (all dots available)
+      if (startYear < viewYear) {
+        return 0;
+      }
+
+      // Case 3: Same year - calculate specific day
+      var idx = Math.floor((trueStartDate - startOfYear(viewYear)) / 86400000);
+      return Math.max(0, idx);
+    }
+
+    function formatStartDateLabel(habit) {
+      var d = getHabitStartDate(habit);
+      if (!d) return 'N/A';
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function toDisplayDateValue(date) {
+      if (!(date instanceof Date) || isNaN(date)) return '';
+      var dd = String(date.getDate()).padStart(2, '0');
+      var mm = String(date.getMonth() + 1).padStart(2, '0');
+      var yyyy = date.getFullYear();
+      return dd + '-' + mm + '-' + yyyy;
+    }
+
+    function parseDisplayDateValue(value, fallbackYear) {
+      if (!value) return null;
+      var parts = value.trim().split(/[-/]/);
+      if (parts.length !== 3) return null;
+      var day = Number(parts[0]);
+      var month = Number(parts[1]) - 1;
+      var year = Number(parts[2]);
+      if (!year || String(year).length !== 4) year = fallbackYear || CURRENTYEAR;
+      if (!day || !isFinite(day) || !month || !isFinite(month)) return null;
+      var parsed = new Date(year, month, day);
+      if (isNaN(parsed) || parsed.getDate() !== day || parsed.getMonth() !== month) return null;
+      return parsed;
+    }
+
+    function convertDisplayToISO(value, year) {
+      var parsed = parseDisplayDateValue(value, year) || new Date(year || CURRENTYEAR, 0, 1);
+      var clamped = clampDateToYearBounds(parsed, year);
+      return toDateInputValue(clamped);
+    }
+
+    // Unclamped version - preserves original date across years
+    function convertDisplayToISOUnclamped(value, fallbackYear) {
+      var parsed = parseDisplayDateValue(value, fallbackYear);
+      if (!parsed || isNaN(parsed)) {
+        return toDateInputValue(new Date(fallbackYear || CURRENTYEAR, 0, 1));
+      }
+      return toDateInputValue(parsed);
+    }
+
+    function isoToDisplay(value, year) {
+      var parsed = parseDateValue(value) || new Date(year || CURRENTYEAR, 0, 1);
+      var clamped = clampDateToYearBounds(parsed, year || CURRENTYEAR);
+      return toDisplayDateValue(clamped);
+    }
+
+    // Unclamped version - preserves original date across years
+    function isoToDisplayUnclamped(value, fallbackYear) {
+      var parsed = parseDateValue(value);
+      if (!parsed || isNaN(parsed)) {
+        return toDisplayDateValue(new Date(fallbackYear || CURRENTYEAR, 0, 1));
+      }
+      return toDisplayDateValue(parsed);
+    }
+
+    /* ────────── Storage Model ────────── */
+    var STORAGEKEY = 'habits';
+    async function loadHabits() {
+      try {
+        var arr = await Storage.loadHabits();
+        if (!Array.isArray(arr)) return [];
+        return arr.map(normalizeHabit).filter(Boolean);
+      } catch (e) {
+        console.error('Error loading habits:', e);
+        return [];
+      }
+    }
+    var saveQueued = false;
+    async function saveHabits(habits){
+      if (saveQueued) return;
+      saveQueued = true;
+      try {
+        await Storage.saveHabits(habits);
+      } catch (e){
+        console.warn('Save failed', e);
+      } finally {
+        saveQueued = false;
+      }
+    }
+    function uid(){
+      return "h" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+    }
+
+    /* frequency helpers (NEW) */
+    function defaultFrequency() {
+      return {
+        type: 'daily',
+        daysOfWeek: [],
+        timesPerWeek: 3
+      };
+    }
+
+    /* create habit with frequency */
+    function newHabit(name, accent, value, startDateValue){
+      var year = CURRENTYEAR;
+      var days = daysInYear(year);
+      var startDate = sanitizeStartDateValue(startDateValue, year);
+      var h = {
+        id: uid(),
+        name: String(name).trim() || 'New Habit',
+        visualType: 'icon',
+        visualValue: value || 'target',
+        year: year,
+        days: days,
+        dots: new Array(days).fill(false),
+        offDays: new Array(days).fill(false),
+        notes: new Array(days).fill(''),
+        accent: accent || '#3d85c6',
+        startDate: startDate,
+        createdAt: new Date().toISOString(),
+        frequency: defaultFrequency()
+      };
+      applyFrequencyToHabit(h); // mark offs right away
+      return h;
+    }
+
+    /* normalize now also ensures frequency */
+    function normalizeHabit(h){
+      if (!h || typeof h !== 'object') return null;
+      var id = h.id;
+      var name = h.name;
+      var visualValue = h.visualValue;
+      var year = h.year;
+      var accent = h.accent;
+      var dots = h.dots;
+      var offDays = h.offDays;
+      var notes = h.notes;
+      var frequency = h.frequency;
+
+      if (!id) id = uid();
+      if (!name) name = 'Habit';
+      if (!visualValue || typeof visualValue !== 'string') visualValue = 'target';
+      if (!year) year = CURRENTYEAR;
+      var expected = daysInYear(year);
+      if (!accent || typeof accent !== 'string') accent = '#3d85c6';
+      if (!Array.isArray(dots) || dots.length !== expected) dots = new Array(expected).fill(false);
+      if (!Array.isArray(offDays) || offDays.length !== expected) offDays = new Array(expected).fill(false);
+      if (!Array.isArray(notes) || notes.length !== expected) notes = new Array(expected).fill('');
+      if (!frequency || typeof frequency !== 'object') frequency = defaultFrequency();
+
+      // Preserve original startDate without clamping to year
+      var startDate = h.startDate || h.createdAt || toDateInputValue(new Date(year,0,1));
+
+      // Initialize historical data storage if not present
+      var yearHistory = h.yearHistory || {};
+
+      var habit = {
+        id: id,
+        name: String(name),
+        visualType: 'icon',
+        visualValue: visualValue,
+        year: year,
+        days: expected,
+        dots: dots.map(Boolean),
+        offDays: offDays.map(Boolean),
+        notes: notes.map(function(v){ return typeof v === 'string' ? v : ''; }),
+        accent: accent,
+        startDate: startDate,
+        createdAt: h.createdAt || new Date().toISOString(),
+        frequency: frequency,
+        yearHistory: yearHistory  // Stores {year: {dots, offDays, notes}}
+      };
+
+      // ensure offdays match frequency
+      applyFrequencyToHabit(habit);
+
+      return habit;
+    }
+
+    /* when year rolls to new year, rebuild offDays from frequency */
+    function rolloverIfNeeded(h){
+      // Initialize yearHistory if not present
+      if (!h.yearHistory) h.yearHistory = {};
+
+      if (h.year !== CURRENTYEAR){
+        // PRESERVE historical data before rolling over
+        var oldYear = h.year;
+        h.yearHistory[oldYear] = {
+          dots: h.dots.slice(),      // Clone arrays
+          offDays: h.offDays.slice(),
+          notes: h.notes.slice()
+        };
+
+        // Now roll to current year
+        h.year = CURRENTYEAR;
+        h.days = daysInYear(CURRENTYEAR);
+        h.dots = new Array(h.days).fill(false);
+        h.offDays = new Array(h.days).fill(false);
+        h.notes = new Array(h.days).fill('');
+        // REMOVED: Don't modify startDate - it's the habit's creation date
+        if (!h.frequency) h.frequency = defaultFrequency();
+        applyFrequencyToHabit(h);
+      } else {
+        // same year but maybe no frequency
+        if (!h.frequency) h.frequency = defaultFrequency();
+        if (!h.startDate) {
+          h.startDate = defaultStartDateForYear(h.year);
+        }
+        // REMOVED: Don't sanitize existing startDate
+        applyFrequencyToHabit(h);
+      }
+      return h;
+    }
+
+    /* apply frequency rules to offDays (NEW) */
+    function applyFrequencyToHabit(habit) {
+      var year = habit.year;
+      var totalDays = habit.days;
+      var freq = habit.frequency || defaultFrequency();
+
+      var newOff = new Array(totalDays).fill(false);
+
+      if (freq.type === 'daily') {
+        // no extra offs
+      } else if (freq.type === 'weekdays') {
+        for (var i = 0; i < totalDays; i++) {
+          var d = new Date(year, 0, 1 + i);
+          var day = d.getDay();
+          if (day === 0 || day === 6) {
+            newOff[i] = true;
+          }
+        }
+      } else if (freq.type === 'daysOfWeek') {
+        var set = new Set(freq.daysOfWeek || []);
+        for (var i = 0; i < totalDays; i++) {
+          var d = new Date(year, 0, 1 + i);
+          var day = d.getDay();
+          if (!set.has(day)) {
+            newOff[i] = true;
+          }
+        }
+      } else if (freq.type === 'timesPerWeek') {
+        var target = freq.timesPerWeek || 3;
+        // simple heuristic: if target >=5, weekends off
+        if (target >= 5) {
+          for (var i = 0; i < totalDays; i++) {
+            var d = new Date(year, 0, 1 + i);
+            var day = d.getDay();
+            if (day === 0 || day === 6) {
+              newOff[i] = true;
+            }
+          }
+        } else {
+          // leave all days on; user can right-click to mark off
+        }
+      }
+
+      // don't hide days the user already completed
+      for (var j = 0; j < totalDays; j++) {
+        if (habit.dots[j]) {
+          newOff[j] = false;
+        }
+      }
+
+      habit.offDays = newOff;
+    }
+
+    var HABITS = [];
+
+    /* measure layer */
+    var measureLayer = document.createElement('div');
+    measureLayer.id = 'measure-layer';
+    measureLayer.style.position = 'fixed';
+    measureLayer.style.inset = '0';
+    measureLayer.style.visibility = 'hidden';
+    measureLayer.style.pointerEvents = 'none';
+    measureLayer.style.zIndex = '-1';
+    document.body.appendChild(measureLayer);
+
+    var POSCACHE = { year: new Map(), month: new Map() };
+
+    var listEl = document.getElementById('list');
+    var skeletonEl = document.getElementById('skeleton-list');
+    var emptyEl = document.getElementById('empty');
+    var searchEmptyEl = document.getElementById('search-empty');
+    var yearBanner = document.getElementById('year-banner');
+    var searchInput = document.getElementById('habit-search');
+    var searchFieldWrap = document.getElementById('search-field');
+    var navSearchToggle = document.getElementById('nav-search-toggle');
+    var sortSelect = document.getElementById('habit-sort');
+    var sortDisplay = document.getElementById('habit-sort-display');
+    var sortToggleBtn = document.getElementById('sort-toggle');
+    var sortModal = document.getElementById('sort-modal');
+    var sortOptionsEl = document.getElementById('sort-options');
+    var mobileToolbarMedia = window.matchMedia('(max-width: 750px)');
+    var accountToggleBtn = document.getElementById('account-toggle');
+    var accountModal = document.getElementById('account-modal');
+    var accountThemeToggleBtn = document.getElementById('account-theme-toggle');
+    var accountLogoutBtn = document.getElementById('account-logout');
+    var accountDeleteBtn = document.getElementById('account-delete');
+    var accountMenuWrap = document.querySelector('.account-menu');
+    var accountMenuBtn = document.getElementById('account-menu-btn');
+    var accountMenuDropdown = document.getElementById('account-menu');
+    var navViewToggle = document.getElementById('nav-view-toggle');
+    var navAddBtn = document.getElementById('nav-add');
+
+    var habitViewState = {
+      searchQuery: searchInput ? searchInput.value.trim() : '',
+      sortKey: sortSelect ? sortSelect.value : 'created-newest'
+    };
+
+    if (searchInput) {
+      var handleSearchInput = debounce(function (value) {
+        var next = value.trim();
+        if (next === habitViewState.searchQuery) return;
+        habitViewState.searchQuery = next;
+        render();
+      }, 180);
+      searchInput.addEventListener('input', function (e) {
+        handleSearchInput(e.target.value || '');
+      });
+      searchInput.addEventListener('focus', function () {
+        if (mobileToolbarMedia.matches) {
+          expandMobileSearch(false);
+        }
+      });
+      searchInput.addEventListener('blur', function () {
+        if (mobileToolbarMedia.matches) {
+          collapseMobileSearchIfNeeded(false);
+        }
+      });
+    }
+
+    function toggleMobileSearchVisibility() {
+      if (!mobileToolbarMedia.matches) {
+        if (searchInput) searchInput.focus();
+        return;
+      }
+      if (document.body.classList.contains('search-expanded')) {
+        collapseMobileSearchIfNeeded(true, true);
+      } else {
+        expandMobileSearch(false);
+      }
+    }
+
+    if (navSearchToggle) {
+      navSearchToggle.setAttribute('aria-expanded', 'false');
+      navSearchToggle.addEventListener('click', toggleMobileSearchVisibility);
+    }
+
+    if (navViewToggle) {
+      navViewToggle.addEventListener('click', function () {
+        if (viewToggle) viewToggle.click();
+      });
+    }
+
+    if (navAddBtn) {
+      navAddBtn.addEventListener('click', function () {
+        var addBtn = document.getElementById('btn-new');
+        if (addBtn) addBtn.click();
+      });
+    }
+
+    if (sortToggleBtn) {
+      sortToggleBtn.addEventListener('click', function () {
+        if (mobileToolbarMedia.matches) {
+          openSortModal();
+        } else if (sortDisplay) {
+          sortDisplay.focus();
+        } else if (sortSelect) {
+          sortSelect.focus();
+        }
+      });
+    }
+
+    if (sortSelect) {
+      sortSelect.addEventListener('change', function (e) {
+        setSortValue(e.target.value || 'created-newest', true);
+      });
+    }
+
+    if (sortOptionsEl) {
+      sortOptionsEl.addEventListener('click', function (e) {
+        var btn = e.target.closest('.sort-option-btn');
+        if (!btn) return;
+        setSortValue(btn.dataset.value);
+        closeSortModal();
+      });
+    }
+
+    function updateNavSearchState(expanded) {
+      if (!navSearchToggle) return;
+      navSearchToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      navSearchToggle.classList.toggle('is-active', expanded && mobileToolbarMedia.matches);
+    }
+
+    function updateViewToggleLabels(currentView) {
+      var next = currentView === 'year' ? 'month' : 'year';
+      if (viewToggle) {
+        viewToggle.setAttribute('aria-label', 'Switch to ' + next + ' view');
+        viewToggle.setAttribute('title', 'Switch to ' + next + ' view');
+      }
+      if (navViewToggle) {
+        navViewToggle.setAttribute('aria-label', 'Switch to ' + next + ' view');
+        navViewToggle.setAttribute('title', 'Switch to ' + next + ' view');
+      }
+    }
+
+    function expandMobileSearch(shouldFocus) {
+      if (!searchFieldWrap) return;
+      document.body.classList.add('search-expanded');
+      updateNavSearchState(true);
+      if (shouldFocus && searchInput) {
+        setTimeout(function () {
+          searchInput.focus();
+        }, 150);
+      }
+    }
+
+    function collapseMobileSearchIfNeeded(force, blurInput) {
+      if (!searchFieldWrap) return;
+      if (!force && !mobileToolbarMedia.matches) return;
+      var hasValue = searchInput && searchInput.value.trim().length;
+      if (!force && hasValue) return;
+      if (blurInput && searchInput) {
+        searchInput.blur();
+      }
+      document.body.classList.remove('search-expanded');
+      updateNavSearchState(false);
+    }
+
+    function handleSearchMediaChange(e) {
+      if (sortModal && !e.matches) {
+        closeSortModal();
+      }
+      if (!searchFieldWrap) return;
+      if (!e.matches) {
+        document.body.classList.add('search-expanded');
+        updateNavSearchState(false);
+      } else {
+        document.body.classList.remove('search-expanded');
+        updateNavSearchState(false);
+      }
+    }
+
+    if (mobileToolbarMedia.addEventListener) {
+      mobileToolbarMedia.addEventListener('change', handleSearchMediaChange);
+    } else if (mobileToolbarMedia.addListener) {
+      mobileToolbarMedia.addListener(handleSearchMediaChange);
+    }
+    handleSearchMediaChange(mobileToolbarMedia);
+
+    function renderSortOptions() {
+      if (!sortOptionsEl) return;
+      sortOptionsEl.innerHTML = '';
+      SORT_OPTIONS.forEach(function (opt) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'sort-option-btn';
+        btn.dataset.value = opt.value;
+        var label = document.createElement('span');
+        label.textContent = opt.description;
+        btn.appendChild(label);
+        if (habitViewState.sortKey === opt.value) btn.classList.add('is-active');
+        sortOptionsEl.appendChild(btn);
+      });
+    }
+
+    function highlightSortOption() {
+      if (!sortOptionsEl) return;
+      var current = habitViewState.sortKey;
+      var buttons = sortOptionsEl.querySelectorAll('.sort-option-btn');
+      buttons.forEach(function (btn) {
+        btn.classList.toggle('is-active', btn.dataset.value === current);
+      });
+    }
+
+    function openSortModal() {
+      if (!sortModal || !mobileToolbarMedia.matches) return;
+      renderSortOptions();
+      sortModal.classList.add('open');
+      sortModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeSortModal() {
+      if (!sortModal) return;
+      sortModal.classList.remove('open');
+      sortModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function setSortValue(value, skipSelectSync) {
+      var next = value || 'created-newest';
+      var changed = habitViewState.sortKey !== next;
+      habitViewState.sortKey = next;
+      highlightSortOption();
+      if (!skipSelectSync && sortSelect) {
+        if (sortSelect.value !== next) {
+          sortSelect.value = next;
+        }
+        sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      if (changed) render();
+    }
+
+    if (sortModal) {
+      sortModal.addEventListener('click', function (e) {
+        if (e.target.closest('[data-sort-close]')) {
+          closeSortModal();
+        }
+      });
+    }
+
+    highlightSortOption();
+
+    function openAccountMenu() {
+      if (!accountMenuWrap || !accountMenuBtn) return;
+      accountMenuWrap.classList.add('open');
+      accountMenuBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeAccountMenu() {
+      if (!accountMenuWrap || !accountMenuBtn) return;
+      accountMenuWrap.classList.remove('open');
+      accountMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    function openAccountModal() {
+      if (!accountModal) return;
+      accountModal.classList.add('open');
+      accountModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeAccountModal() {
+      if (!accountModal) return;
+      accountModal.classList.remove('open');
+      accountModal.setAttribute('aria-hidden', 'true');
+    }
+
+    async function handleLogoutAction() {
+      const confirmed = await Utils.showConfirm(
+        'Confirm Logout',
+        'Are you sure you want to log out?'
+      );
+
+      if (confirmed) {
+        await Auth.logout();
+        window.location.href = 'index.html';
+      }
+    }
+
+    async function handleDeleteAccountAction() {
+      const confirmed = await Utils.showConfirm(
+        'Delete Account',
+        'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.'
+      );
+
+      if (confirmed) {
+        try {
+          const username = Auth.getCurrentUser();
+          const cleared = await Storage.clearUserData();
+          const deleted = await Auth.deleteAccount(username);
+
+          if (cleared && deleted) {
+            await Utils.showAlert('Success', 'Your account has been deleted.');
+            window.location.href = 'index.html';
+          } else {
+            await Utils.showAlert('Error', 'Error deleting account. Please try again.');
+          }
+        } catch (error) {
+          console.error('Account deletion error:', error);
+          await Utils.showAlert('Error', 'Error deleting account. Please try again.');
+        }
+      }
+    }
+
+    if (accountMenuBtn) {
+      accountMenuBtn.addEventListener('click', function () {
+        if (accountMenuWrap && accountMenuWrap.classList.contains('open')) {
+          closeAccountMenu();
+        } else {
+          closeAccountModal();
+          openAccountMenu();
+        }
+      });
+    }
+
+    if (accountToggleBtn) {
+      accountToggleBtn.addEventListener('click', function () {
+        openAccountModal();
+      });
+    }
+
+    if (accountModal) {
+      accountModal.addEventListener('click', function (e) {
+        if (e.target.closest('[data-account-close]')) {
+          closeAccountModal();
+        }
+      });
+    }
+
+    if (accountThemeToggleBtn) {
+      accountThemeToggleBtn.addEventListener('click', function () {
+        var next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+        applyTheme(next);
+        closeAccountModal();
+        closeAccountMenu();
+      });
+    }
+    if (accountLogoutBtn) {
+      accountLogoutBtn.addEventListener('click', function () {
+        handleLogoutAction();
+        closeAccountModal();
+        closeAccountMenu();
+      });
+    }
+    if (accountDeleteBtn) {
+      accountDeleteBtn.addEventListener('click', function () {
+        handleDeleteAccountAction();
+        closeAccountModal();
+        closeAccountMenu();
+      });
+    }
+
+    if (accountMenuDropdown) {
+      accountMenuDropdown.addEventListener('click', function (e) {
+        var item = e.target.closest('.account-menu-item');
+        if (!item) return;
+        var action = item.dataset.accountMenu;
+        if (action === 'logout') {
+          handleLogoutAction();
+        } else if (action === 'delete') {
+          handleDeleteAccountAction();
+        }
+        closeAccountMenu();
+      });
+    }
+
+    document.addEventListener('click', function (e) {
+      if (!accountMenuWrap || !accountMenuWrap.classList.contains('open')) return;
+      if (accountMenuWrap.contains(e.target)) return;
+      closeAccountMenu();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        closeSortModal();
+        closeAccountModal();
+        closeAccountMenu();
+      }
+    });
+
+    function updateYearBanner() {
+      var y = CURRENTYEAR;
+      var today = Math.min(dayIndexForYear(y)+1, daysInYear(y));
+      var total = daysInYear(y);
+      yearBanner.innerHTML =
+        '<span class="yb-label">Year</span> <span class="yb-value">' + y + '</span>' +
+        ' • ' +
+        '<span class="yb-label">Days</span> <span class="yb-value">' + today + '/' + total + '</span>';
+    }
+
+    function dotTitle(habit, index, baseLabel, isToday) {
+      var parts = [baseLabel];
+      if (isToday) parts.push('(Today)');
+      if (habit.offDays[index]) parts.push('Off day');
+      var note = habit.notes && habit.notes[index] ? habit.notes[index].trim() : '';
+      if (note) parts.push('Note: ' + note);
+      return parts.join(' • ');
+    }
+
+    /* frequency -> text for card (NEW) */
+    function formatFrequency(freq) {
+      if (!freq) return 'Daily';
+      if (freq.type === 'daily') return 'Daily';
+      if (freq.type === 'weekdays') return 'Weekdays';
+      if (freq.type === 'daysOfWeek') {
+        var names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        var arr = (freq.daysOfWeek || []).map(function(i){ return names[i]; });
+        return arr.length ? arr.join(', ') : 'Specific days';
+      }
+      if (freq.type === 'timesPerWeek') return (freq.timesPerWeek || 3) + '×/week';
+      return 'Daily';
+    }
+
+    /* compute completion rate ignoring offdays (UPDATED) */
+    function getCompletionRate(habit, stats) {
+      var todayIdx = dayIndexForYear(habit.year);
+      var elapsed = (habit.year === CURRENTYEAR) ? (todayIdx + 1) : habit.days;
+      var startIndex = getHabitStartIndex(habit);
+      if (elapsed <= startIndex) return 0;
+      var eligible = 0;
+      var completed = 0;
+      for (var i = startIndex; i < elapsed; i++) {
+        if (!habit.offDays[i]) {
+          eligible++;
+          if (habit.dots[i]) completed++;
+        }
+      }
+      if (eligible === 0) return 0;
+      return Math.round((completed / eligible) * 100);
+    }
+
+    function getVisibleHabits() {
+      var query = (habitViewState.searchQuery || '').toLowerCase();
+      var filtered = HABITS.filter(function (habit) {
+        if (!query) return true;
+        return String(habit.name || '').toLowerCase().indexOf(query) !== -1;
+      });
+      return sortHabits(filtered, habitViewState.sortKey);
+    }
+
+    function sortHabits(list, sortKey) {
+      var key = sortKey || 'created-newest';
+      var arr = list.slice();
+      var completionCache;
+      if (key === 'rate-high-low' || key === 'rate-low-high') {
+        completionCache = new Map();
+        arr.forEach(function (habit) {
+          completionCache.set(habit.id, completionSortValue(habit));
+        });
+      }
+      arr.sort(function (a, b) {
+        switch (key) {
+          case 'name-az':
+            return compareHabitNames(a, b);
+          case 'name-za':
+            return compareHabitNames(b, a);
+          case 'created-oldest':
+            return createdAtValue(a) - createdAtValue(b);
+          case 'rate-high-low':
+            return (completionCache.get(b.id) || 0) - (completionCache.get(a.id) || 0);
+          case 'rate-low-high':
+            return (completionCache.get(a.id) || 0) - (completionCache.get(b.id) || 0);
+          case 'created-newest':
+          default:
+            return createdAtValue(b) - createdAtValue(a);
+        }
+      });
+      return arr;
+    }
+
+    function compareHabitNames(a, b) {
+      return String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+    }
+
+    function createdAtValue(habit) {
+      var raw = habit.createdAt || habit.startDate || '';
+      var parsed = raw ? Date.parse(raw) : NaN;
+      if (!isNaN(parsed)) return parsed;
+      var year = habit.year || CURRENTYEAR;
+      return new Date(year, 0, 1).getTime();
+    }
+
+    function renderHabitCard(habit) {
+      var todayIdx = dayIndexForYear(habit.year);
+      var stats = calcStats(habit.dots, habit.offDays, todayIdx);
+      var completionRate = getCompletionRate(habit, stats);
+
+      var wrap = document.createElement('section');
+      wrap.className = 'card';
+      wrap.dataset.habitId = habit.id;
+
+      var acc = habit.accent || '#3d85c6';
+      try {
+        var rgb = hexToRgb(acc);
+        wrap.style.setProperty('--accent-base', acc);
+        wrap.style.setProperty('--accent-rgb', rgb);
+        wrap.style.setProperty('--accent-a-07', 'rgba(' + rgb + ',0.7)');
+        wrap.style.setProperty('--accent-a-05', 'rgba(' + rgb + ',0.5)');
+        wrap.style.setProperty('--accent-a-03', 'rgba(' + rgb + ',0.3)');
+        wrap.style.setProperty('--accent-a-02', 'rgba(' + rgb + ',0.2)');
+        wrap.style.setProperty('--accent-a-01', 'rgba(' + rgb + ',0.1)');
+        wrap.style.setProperty('--accent-tint', 'rgba(' + rgb + ',0.3)');
+        wrap.style.borderColor = 'rgba(' + rgb + ',0.1)';
+      } catch (e){}
+
+      var header = document.createElement('div');
+      header.className = 'card-header';
+
+      var left = document.createElement('div');
+      left.className = 'left';
+
+      var title = document.createElement('h2');
+      title.className = 'card-title';
+
+      var titleBtn = document.createElement('button');
+      titleBtn.type = 'button';
+      titleBtn.className = 'habit-title-btn';
+      titleBtn.dataset.habitId = habit.id;
+
+      var visualEl = document.createElement('span');
+      visualEl.className = 'habit-visual';
+      visualEl.innerHTML = '<i class="ti ti-' + (habit.visualValue || 'target') + '"></i>';
+      visualEl.style.color = acc;
+      titleBtn.appendChild(visualEl);
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'habit-name';
+      nameSpan.textContent = habit.name;
+      titleBtn.appendChild(nameSpan);
+
+      title.appendChild(titleBtn);
+      left.appendChild(title);
+
+      var markTodayBtn = document.createElement('button');
+      markTodayBtn.className = 'control-btn mark-today-btn';
+      markTodayBtn.dataset.action = 'mark-today';
+      var isTodayMarked = habit.dots[todayIdx];
+      if (isTodayMarked) {
+        markTodayBtn.classList.add('marked');
+      }
+      markTodayBtn.setAttribute('aria-label', isTodayMarked ? 'Unmark today' : 'Mark today');
+      markTodayBtn.setAttribute('title', isTodayMarked ? 'Unmark today' : 'Mark today');
+      markTodayBtn.innerHTML = '<span class="mark-today-dot"></span>';
+
+      var editBtn = document.createElement('button');
+      editBtn.className = 'control-btn';
+      editBtn.dataset.action = 'edit';
+      editBtn.setAttribute('aria-label', 'Edit habit');
+      editBtn.setAttribute('title', 'Edit habit');
+      editBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>';
+
+      var buttonsContainer = document.createElement('div');
+      buttonsContainer.className = 'card-header-buttons';
+      buttonsContainer.appendChild(markTodayBtn);
+      buttonsContainer.appendChild(editBtn);
+
+      var headerTopRow = document.createElement('div');
+      headerTopRow.className = 'header-top-row';
+      headerTopRow.appendChild(left);
+      headerTopRow.appendChild(buttonsContainer);
+      header.appendChild(headerTopRow);
+
+      var subtitle = document.createElement('p');
+      subtitle.className = 'card-subtitle';
+      var startLabel = formatStartDateLabel(habit);
+      subtitle.innerHTML =
+        '<span class="stat-item">Total <span class="total-count">' + stats.total + '</span></span>' +
+        '<span class="stat-item">Longest <span class="longest-streak">' + stats.longest + '</span></span>' +
+        '<span class="stat-item">Current <span class="current-streak">' + stats.current + '</span></span>' +
+        '<span class="stat-item">Rate <span class="completion-rate">' + completionRate + '%</span></span>' +
+        '<span class="stat-item start-pill">Start <span class="start-date">' + startLabel + '</span></span>' +
+        '<span class="stat-item frequency-pill">' + formatFrequency(habit.frequency) + '</span>';
+
+      var subtitleWrap = document.createElement('div');
+      subtitleWrap.className = 'card-subtitle-wrap';
+      subtitleWrap.appendChild(subtitle);
+
+      var pillsWrapper = document.createElement('div');
+      pillsWrapper.className = 'card-pills-wrapper';
+      pillsWrapper.appendChild(subtitleWrap);
+      header.appendChild(pillsWrapper);
+
+      var divider = document.createElement('div');
+      divider.className = 'divider';
+
+      // Create year wheel container for this habit
+      var yearWheelContainer = document.createElement('div');
+      yearWheelContainer.id = 'year-wheel-' + habit.id;
+      yearWheelContainer.className = 'habit-year-wheel';
+      divider.appendChild(yearWheelContainer);
+
+      header.appendChild(divider);
+
+      var content = document.createElement('div');
+      content.className = 'card-content';
+
+      var gridContainer = document.createElement('div');
+      if (document.documentElement.dataset.view === 'month') {
+        gridContainer.className = 'months-container';
+        buildMonthViews(habit, gridContainer, todayIdx);
+      } else {
+        gridContainer.className = 'dots-grid';
+        buildYearView(habit, gridContainer, todayIdx);
+      }
+      content.appendChild(gridContainer);
+      wrap.appendChild(header);
+      wrap.appendChild(content);
+
+      return wrap;
+    }
+
+    var hasHydratedList = false;
+
+    function render() {
+      var visibleHabits = getVisibleHabits();
+      listEl.innerHTML = '';
+      emptyEl.hidden = HABITS.length !== 0;
+      if (searchEmptyEl) {
+        searchEmptyEl.hidden = !(HABITS.length && visibleHabits.length === 0);
+      }
+      visibleHabits.forEach(function (h, index) {
+        var card = renderHabitCard(h);
+        card.style.animationDelay = (index * 50) + 'ms';
+        listEl.appendChild(card);
+      });
+      updateYearBanner();
+      buildPositionCacheForView('year');
+      buildPositionCacheForView('month');
+
+      if (!hasHydratedList) {
+        hasHydratedList = true;
+        if (skeletonEl) skeletonEl.hidden = true;
+        listEl.hidden = false;
+      }
+
+      // NEW: run staggered wave on initial load
+      if (!HAS_RUN_INITIAL_WAVE) {
+        ensureWaveStyles();
+        var cards = listEl.querySelectorAll('.card');
+        cards.forEach(function (card) {
+          var dots = card.querySelectorAll('.dot');
+          applyWave(dots);
+        });
+        HAS_RUN_INITIAL_WAVE = true;
+      }
+
+      // Add scroll listeners for fade effect
+      document.querySelectorAll('.card-subtitle').forEach(function (scroller) {
+        var wrap = scroller.parentElement; // .card-subtitle-wrap
+
+        function updateFades() {
+          var atStart = scroller.scrollLeft < 1;
+          var atEnd = Math.ceil(scroller.scrollLeft + scroller.clientWidth) >= scroller.scrollWidth - 1;
+
+          wrap.classList.toggle('fade-right', !atEnd);
+          wrap.classList.toggle('fade-left', !atStart);
+        }
+
+        scroller.addEventListener('scroll', updateFades);
+        updateFades(); // run once
+      });
+
+      // Initialize year wheels for all visible habits after DOM is ready
+      requestAnimationFrame(function() {
+        visibleHabits.forEach(function(habit) {
+          initHabitYearWheel(habit);
+        });
+      });
+    }
+
+    function buildYearView(habit, container, todayIndex) {
+      var startIndex = getHabitStartIndex(habit);
+      for (var i=0;i<habit.days;i++){
+        var d = new Date(habit.year,0,1+i);
+        var btn = document.createElement('button');
+        btn.className = 'dot';
+        btn.type = 'button';
+        btn.dataset.index = String(i);
+        btn.dataset.habitId = habit.id;
+        var label = fmt(d);
+        var isOff = !!habit.offDays[i];
+        var isToday = (habit.year === CURRENTYEAR && i === todayIndex);
+        var hasNote = !!(habit.notes && habit.notes[i] && habit.notes[i].trim());
+        btn.title = dotTitle(habit, i, label, isToday);
+        btn.setAttribute('aria-label', 'Day ' + (i+1) + ': ' + btn.title);
+        btn.setAttribute('aria-pressed', habit.dots[i] ? 'true' : 'false');
+        if (isOff) btn.dataset.off = 'true';
+        if (hasNote) btn.dataset.note = 'true';
+        if (isToday) btn.setAttribute('aria-current', 'date');
+
+        // Disable dots in future dates of current year OR all dots in future years
+        var isFutureYear = habit.year > CURRENTYEAR;
+        var isFuture = habit.year === CURRENTYEAR && i > todayIndex;
+        var isBeforeStart = i < startIndex;
+
+        if (isFutureYear || isFuture || isBeforeStart) btn.disabled = true;
+        container.appendChild(btn);
+      }
+    }
+
+    function buildMonthViews(habit, container, todayIndex) {
+      var year = habit.year;
+      var dayOfYearIndex = 0;
+      var startIndex = getHabitStartIndex(habit);
+      for (var month=0; month<12; month++) {
+        var monthContainer = document.createElement('div');
+        monthContainer.className = 'month-container';
+        var monthGrid = document.createElement('div');
+        monthGrid.className = 'month-grid';
+
+        var firstDateOfMonth = new Date(year, month, 1);
+        var startingDayOfWeek = firstDateOfMonth.getDay();
+        var daysInMonth = new Date(year, month+1, 0).getDate();
+
+        for (var i=0;i<startingDayOfWeek;i++){
+          monthGrid.appendChild(document.createElement('div'));
+        }
+
+        for (var dayOfMonth=1; dayOfMonth<=daysInMonth; dayOfMonth++) {
+          var btn = document.createElement('button');
+          btn.className = 'dot';
+          btn.type = 'button';
+          btn.dataset.index = String(dayOfYearIndex);
+          btn.dataset.habitId = habit.id;
+          var d = new Date(year, month, dayOfMonth);
+          var label = fmt(d);
+          var isOff = !!habit.offDays[dayOfYearIndex];
+          var isToday = (habit.year === CURRENTYEAR && dayOfYearIndex === todayIndex);
+          var hasNote = !!(habit.notes && habit.notes[dayOfYearIndex] && habit.notes[dayOfYearIndex].trim());
+          btn.title = dotTitle(habit, dayOfYearIndex, label, isToday);
+          btn.setAttribute('aria-label', btn.title);
+          btn.setAttribute('aria-pressed', habit.dots[dayOfYearIndex] ? 'true' : 'false');
+          if (isOff) btn.dataset.off = 'true';
+          if (hasNote) btn.dataset.note = 'true';
+          if (isToday) btn.setAttribute('aria-current', 'date');
+
+          // Disable dots in future dates of current year OR all dots in future years
+          var isFutureYear = habit.year > CURRENTYEAR;
+          var isFuture = habit.year === CURRENTYEAR && dayOfYearIndex > todayIndex;
+          var isBeforeStart = dayOfYearIndex < startIndex;
+
+          if (isFutureYear || isFuture || isBeforeStart) btn.disabled = true;
+          monthGrid.appendChild(btn);
+          dayOfYearIndex++;
+        }
+
+        monthContainer.appendChild(monthGrid);
+        container.appendChild(monthContainer);
+      }
+    }
+
+    function calcStats(dots, offDays, dayIdx) {
+      var total = dots.reduce(function (a,b){ return a + (b ? 1 : 0); }, 0);
+      var longest = 0, run = 0;
+      for (var i=0;i<dots.length;i++){
+        if (dots[i]) {
+          run++;
+        } else if (offDays[i]) {
+          // skip
+        } else {
+          if (run > longest) longest = run;
+          run = 0;
+        }
+      }
+      if (run > longest) longest = run;
+
+      var current = 0;
+      for (var j=Math.min(dayIdx, dots.length-1); j>=0; j--){
+        if (dots[j]) {
+          current++;
+        } else if (offDays[j]) {
+          // keep alive
+        } else {
+          break;
+        }
+      }
+      return { total: total, longest: longest, current: current };
+    }
+
+    function completionSortValue(habit) {
+      var todayIdx = dayIndexForYear(habit.year);
+      var stats = calcStats(habit.dots, habit.offDays, todayIdx);
+      return getCompletionRate(habit, stats);
+    }
+
+    /* ────────── painting ────────── */
+    var isPainting = false;
+    var paintAction = null;
+    var habitsToUpdate = new Set();
+    var HAS_RUN_INITIAL_WAVE = false; // <--- new flag
+
+    function setDotState(dotEl, shouldBeChecked){
+      if (!dotEl || dotEl.disabled) return;
+      var hid = dotEl.dataset.habitId;
+      var idx = Number(dotEl.dataset.index);
+      var h = HABITS.find(function (x){ return x.id === hid; });
+      if (h && h.dots[idx] !== shouldBeChecked) {
+        h.dots[idx] = shouldBeChecked;
+        // if user checks a day that was auto-off, we should clear off for that day
+        if (shouldBeChecked && h.offDays[idx]) {
+          h.offDays[idx] = false;
+        }
+        dotEl.setAttribute('aria-pressed', String(shouldBeChecked));
+        if (shouldBeChecked) {
+          dotEl.classList.add('just-toggled');
+          dotEl.addEventListener('animationend', function (){
+            dotEl.classList.remove('just-toggled');
+          }, { once: true });
+        }
+        habitsToUpdate.add(hid);
+      }
+    }
+
+    function handlePointerMove(e){
+      if (!isPainting) return;
+      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      var el = document.elementFromPoint(clientX, clientY);
+      var targetDot = el && el.closest('.dot');
+      setDotState(targetDot, paintAction === 'check');
+    }
+
+    function handlePointerUp(){
+      if (!isPainting) return;
+      isPainting = false;
+      habitsToUpdate.forEach(function (hid){
+        var h = HABITS.find(function (x){ return x.id === hid; });
+        if (h) onHabitChanged(h);
+      });
+      habitsToUpdate.clear();
+    }
+
+    listEl.addEventListener('mousedown', function (e){
+      var dot = e.target.closest('.dot');
+      if (!dot || dot.disabled) return;
+      if (e.button !== 0) return;
+      e.preventDefault();
+      isPainting = true;
+      habitsToUpdate.clear();
+      var h = HABITS.find(function (x){ return x.id === dot.dataset.habitId; });
+      paintAction = !h.dots[Number(dot.dataset.index)] ? 'check' : 'uncheck';
+      setDotState(dot, paintAction === 'check');
+    });
+    listEl.addEventListener('mouseover', handlePointerMove);
+    window.addEventListener('mouseup', function (){
+      if (isPainting) handlePointerUp();
+    });
+    listEl.addEventListener('touchstart', function (e){
+      var dot = e.target.closest('.dot');
+      if (dot && !dot.disabled) {
+        e.preventDefault(); // Prevent emulated mouse events
+        isPainting = true;
+        habitsToUpdate.clear();
+        var h = HABITS.find(function (x){ return x.id === dot.dataset.habitId; });
+        paintAction = !h.dots[Number(dot.dataset.index)] ? 'check' : 'uncheck';
+        setDotState(dot, paintAction === 'check');
+      }
+    });
+    listEl.addEventListener('touchmove', handlePointerMove, { passive: true });
+    window.addEventListener('touchend', function (){
+      if (isPainting) handlePointerUp();
+    });
+
+    listEl.addEventListener('click', function (e){
+      var markTodayBtn = e.target.closest('[data-action="mark-today"]');
+      if (markTodayBtn) {
+        var card = markTodayBtn.closest('.card');
+        var habitId = card.dataset.habitId;
+        var habit = HABITS.find(function(h) { return h.id === habitId; });
+
+        if (!habit) return;
+
+        // --- SMART MARK TODAY LOGIC ---
+
+        // Case 1: The user is already viewing the current year
+        if (habit.year === CURRENTYEAR) {
+          var todayIdx = dayIndexForYear(CURRENTYEAR);
+          var todayDot = card.querySelector('.dot[data-index="' + todayIdx + '"]');
+
+          if (todayDot && !todayDot.disabled) {
+            var currentState = habit.dots[todayIdx];
+            var newState = !currentState;
+            setDotState(todayDot, newState);
+
+            // Update button visual state immediately
+            markTodayBtn.classList.toggle('marked', newState);
+            markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
+            markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
+
+            onHabitChanged(habit); // This updates stats and saves
+            announce(newState ? "Marked today" : "Unmarked today");
+          }
+
+        // Case 2: The user is viewing a different year - switch to current year first
+        } else {
+          var yearToSave = habit.year;
+          var habitStartDate = getHabitStartDate(habit);
+          var startYear = habitStartDate ? habitStartDate.getFullYear() : CURRENTYEAR;
+
+          // Step A: Save the data for the year we are leaving (for persistence)
+          if (yearToSave >= startYear && yearToSave <= CURRENTYEAR) {
+            if (!habit.yearHistory) habit.yearHistory = {};
+            habit.yearHistory[yearToSave] = {
+              dots: habit.dots.slice(),
+              offDays: habit.offDays.slice(),
+              notes: habit.notes.slice()
+            };
+          }
+
+          // Step B: Switch the habit's state to the CURRENT YEAR
+          habit.year = CURRENTYEAR;
+          habit.days = daysInYear(CURRENTYEAR);
+
+          // Load data for the current year from history, or create new arrays
+          if (habit.yearHistory && habit.yearHistory[CURRENTYEAR]) {
+            var history = habit.yearHistory[CURRENTYEAR];
+            habit.dots = history.dots.slice();
+            habit.offDays = history.offDays.slice();
+            habit.notes = history.notes.slice();
+          } else {
+            habit.dots = new Array(habit.days).fill(false);
+            habit.offDays = new Array(habit.days).fill(false);
+            habit.notes = new Array(habit.days).fill('');
+            applyFrequencyToHabit(habit);
+          }
+
+          // Step C: Perform the mark/unmark action for today's date
+          var todayIdx = dayIndexForYear(CURRENTYEAR);
+          var todayIsBeforeStartDate = todayIdx < getHabitStartIndex(habit);
+
+          if (!todayIsBeforeStartDate) {
+            var newState = !habit.dots[todayIdx]; // Toggle the state
+            habit.dots[todayIdx] = newState;
+            // If we mark a day, it can't be an "off day"
+            if (newState && habit.offDays[todayIdx]) {
+              habit.offDays[todayIdx] = false;
+            }
+            announce("Switched to current year and " + (newState ? "marked today" : "unmarked today"));
+          } else {
+            announce("Switched to current year. Cannot mark today as it is before the habit's start date.");
+          }
+
+          // Step D: Save all changes and re-render the entire list
+          saveHabits(HABITS);
+          render(); // This will redraw the card with the correct year and dot state
+        }
+
+        return; // Ensure no other click actions fire
+      }
+      var editBtn = e.target.closest('[data-action="edit"]');
+      if (editBtn){
+        var card = editBtn.closest('.card');
+        var habitId = card.dataset.habitId;
+        var habit = HABITS.find(function (h){ return h.id === habitId; });
+        if (habit) openEditOverlay(habit);
+      }
+      var titleBtn = e.target.closest('.habit-title-btn');
+      if (titleBtn) {
+        var hid = titleBtn.dataset.habitId;
+        var habit = HABITS.find(function (h){ return h.id === hid; });
+        if (habit) openStatsOverlay(habit);
+      }
+    });
+
+    function onHabitChanged(habit){
+      var card = listEl.querySelector('.card[data-habit-id="' + habit.id + '"]');
+      if (card) {
+        var dayIdx = dayIndexForYear(habit.year);
+        var stats = calcStats(habit.dots, habit.offDays, dayIdx);
+        var completionRate = getCompletionRate(habit, stats);
+        function updateStat(sel, val, suffix){
+          var el = card.querySelector(sel);
+          if (el) {
+            var displayVal = suffix ? val + suffix : val;
+            if (el.textContent !== String(displayVal)){
+              el.textContent = String(displayVal);
+              el.classList.add('stat-updated');
+              el.addEventListener('animationend', function (){
+                el.classList.remove('stat-updated');
+              }, { once: true });
+            }
+          }
+        }
+        updateStat('.total-count', stats.total);
+        updateStat('.longest-streak', stats.longest);
+        updateStat('.current-streak', stats.current);
+        updateStat('.completion-rate', completionRate, '%');
+        updateStat('.start-date', formatStartDateLabel(habit));
+        updateStat('.frequency-pill', formatFrequency(habit.frequency));
+      }
+      saveHabits(HABITS);
+      buildPositionCacheForView('year');
+      buildPositionCacheForView('month');
+    }
+
+    /* overlays */
+    var appRoot = document.querySelector('.container');
+    var lastFocus = null;
+    function getFocusableWithin(el){
+      return Array.prototype.slice.call(el.querySelectorAll('a[href],area[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),[tabindex]:not([tabindex="-1"])'));
+    }
+    function createOverlayManager(id){
+      var overlay = document.getElementById(id);
+      if (!overlay) return { open:function(){}, close:function(){} };
+      function trap(e){
+        if (e.key !== 'Tab') return;
+        var f = getFocusableWithin(overlay);
+        if (!f.length) return;
+        var first = f[0];
+        var last = f[f.length-1];
+        if (e.shiftKey){
+          if (document.activeElement === first){
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last){
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+      function esc(e){
+        if (e.key === 'Escape') close();
+      }
+      function open(){
+        lastFocus = document.activeElement;
+        overlay.classList.add('show');
+        overlay.setAttribute('aria-hidden', 'false');
+        appRoot.setAttribute('aria-hidden', 'true');
+        document.body.classList.add('scroll-lock');
+        var f = getFocusableWithin(overlay)[0];
+        if (f) f.focus();
+        document.addEventListener('keydown', trap);
+        document.addEventListener('keydown', esc);
+      }
+      function close(){
+        overlay.classList.remove('show');
+        overlay.setAttribute('aria-hidden', 'true');
+        appRoot.removeAttribute('aria-hidden');
+        document.body.classList.remove('scroll-lock');
+        document.removeEventListener('keydown', trap);
+        document.removeEventListener('keydown', esc);
+        if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+      }
+      overlay.addEventListener('click', function (e){
+        if (e.target === overlay) close();
+      });
+      return { open: open, close: close };
+    }
+    var newHabitOverlay = createOverlayManager('new-habit-overlay');
+    var editHabitOverlay = createOverlayManager('edit-habit-overlay');
+    var noteOverlay = createOverlayManager('note-overlay');
+    var pickerOverlay = createOverlayManager('picker-overlay');
+    var statsOverlayMgr = createOverlayManager('stats-overlay');
+    var confirmOverlayElem = document.getElementById('confirm-overlay');
+    var confirmOverlayMgr = createOverlayManager('confirm-overlay');
+    var confirmResolver = null;
+
+    /* Confirm modal helper */
+    function openConfirmModal(options) {
+      var title = options.title || 'Confirm';
+      var message = options.message || 'Are you sure?';
+      var confirmText = options.confirmText || 'OK';
+      var variant = options.variant || 'danger';
+
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      var okBtn = document.getElementById('confirm-ok-btn');
+      okBtn.textContent = confirmText;
+      okBtn.className = 'btn ' + (variant === 'danger' ? 'danger' : 'primary');
+
+      confirmOverlayMgr.open();
+      return new Promise(function(resolve){
+        confirmResolver = resolve;
+      });
+    }
+    document.getElementById('confirm-close').addEventListener('click', function () {
+      confirmOverlayMgr.close();
+      if (confirmResolver) confirmResolver(false);
+      confirmResolver = null;
+    });
+    document.getElementById('confirm-cancel-btn').addEventListener('click', function () {
+      confirmOverlayMgr.close();
+      if (confirmResolver) confirmResolver(false);
+      confirmResolver = null;
+    });
+    document.getElementById('confirm-ok-btn').addEventListener('click', function () {
+      confirmOverlayMgr.close();
+      if (confirmResolver) confirmResolver(true);
+      confirmResolver = null;
+    });
+
+    /* stats overlay logic */
+    function monthName(idx) {
+      return new Date(2000, idx, 1).toLocaleString(undefined, { month: 'short' });
+    }
+    function openStatsOverlay(habit) {
+      var todayIdx = dayIndexForYear(habit.year);
+      var stats = calcStats(habit.dots, habit.offDays, todayIdx);
+      var completionRate = getCompletionRate(habit, stats);
+
+      var body = document.getElementById('stats-body');
+      document.getElementById('stats-title').textContent = 'Stats • ' + habit.name;
+      body.innerHTML = '';
+
+      var topStats = document.createElement('div');
+      topStats.innerHTML = `
+        <div class="stats-block">
+          <span>Total days done</span>
+          <strong>${stats.total}</strong>
+        </div>
+        <div class="stats-block">
+          <span>Current streak</span>
+          <strong>${stats.current}</strong>
+        </div>
+        <div class="stats-block">
+          <span>Longest streak</span>
+          <strong>${stats.longest}</strong>
+        </div>
+        <div class="stats-block">
+          <span>Completion rate</span>
+          <strong>${completionRate}%</strong>
+        </div>
+      `;
+      body.appendChild(topStats);
+
+      var monthGrid = document.createElement('div');
+      monthGrid.className = 'month-grid-stats';
+
+      var year = habit.year;
+      var globalIdx = 0;
+      var startIndex = getHabitStartIndex(habit);
+      for (var m = 0; m < 12; m++) {
+        var daysInMonth = new Date(year, m + 1, 0).getDate();
+        var done = 0;
+        var off = 0;
+        var eligibleDays = 0;
+
+        for (var day = 1; day <= daysInMonth; day++) {
+          var isFuture = (year === CURRENTYEAR && globalIdx > todayIdx);
+          var isBeforeStart = globalIdx < startIndex;
+          if (!isFuture && !isBeforeStart) {
+            if (!habit.offDays[globalIdx]) {
+              eligibleDays++;
+            } else {
+              off++;
+            }
+            if (habit.dots[globalIdx]) done++;
+          }
+          globalIdx++;
+        }
+
+        var monthCard = document.createElement('div');
+        monthCard.className = 'month-card';
+        var monthRate = eligibleDays > 0 ? Math.round((done / eligibleDays) * 100) : 0;
+        monthCard.innerHTML = `
+          <h3>${monthName(m)}</h3>
+          <p>Done: ${done}/${eligibleDays} (${monthRate}%)</p>
+          <p style="opacity:.68">Off days: ${off}</p>
+        `;
+        monthGrid.appendChild(monthCard);
+      }
+
+      body.appendChild(monthGrid);
+
+      statsOverlayMgr.open();
+    }
+    document.getElementById('stats-close').addEventListener('click', function () {
+      statsOverlayMgr.close();
+    });
+    document.getElementById('stats-ok').addEventListener('click', function () {
+      statsOverlayMgr.close();
+    });
+
+    /* new habit flow */
+    var PRESETCOLORS = ['#bf2525','#ed7d31','#ffc000','#69b647','#3d85c6','#7467ff','#a259ff','#f34e1e','#eb008b','#edd526','#b00020','#6200ee','#2196f3','#cddc39','#795548','#607d8b'];
+    var newSelectedAccent = PRESETCOLORS[4];
+    var newSelectedIcon = 'target';
+    var newStartInput = document.getElementById('habit-start-date');
+    var editStartInput = document.getElementById('edit-habit-start-date');
+    function renderPreview(which, iconKey, accent){
+      var chip = document.getElementById(which === 'new' ? 'new-preview-chip' : 'edit-preview-chip');
+      chip.style.color = accent;
+      chip.innerHTML = '<i class="ti ti-' + (iconKey || 'target') + '"></i>';
+    }
+    document.getElementById('btn-new').addEventListener('click', function (){
+      renderPreview('new', newSelectedIcon, newSelectedAccent);
+      if (newStartInput) {
+        var isoDefault = defaultStartDateForYear(CURRENTYEAR);
+        newStartInput.value = isoToDisplay(isoDefault, CURRENTYEAR);
+      }
+      newHabitOverlay.open();
+    });
+    document.getElementById('new-sheet-close').addEventListener('click', function (){ newHabitOverlay.close(); });
+    document.getElementById('new-sheet-cancel').addEventListener('click', function (){ newHabitOverlay.close(); });
+
+    /* frequency extra renderers (NEW) */
+    function renderWeekdayButtons(prefix, selected) {
+      var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      selected = selected || [];
+      return `
+        <div class="form-label">On these days</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap">
+          ${days.map(function(d,i){
+            var active = selected.indexOf(i) !== -1;
+            return `<button type="button" class="btn ${active ? 'primary' : ''}" data-${prefix}-dow="${i}">${d}</button>`;
+          }).join('')}
+        </div>
+      `;
+    }
+    function renderTimesPerWeek(prefix, val) {
+      return `
+        <label class="form-label">Times per week</label>
+        <input type="number" min="1" max="7" value="${val || 3}" class="input" id="${prefix}-tpw">
+      `;
+    }
+
+    var freqSelect = document.getElementById('habit-frequency');
+    var freqExtra = document.getElementById('freq-extra');
+    freqSelect.addEventListener('change', function () {
+      var val = freqSelect.value;
+      if (val === 'daysOfWeek') {
+        freqExtra.style.display = 'block';
+        freqExtra.innerHTML = renderWeekdayButtons('new', [1,3,5]); // default MWF
+      } else if (val === 'timesPerWeek') {
+        freqExtra.style.display = 'block';
+        freqExtra.innerHTML = renderTimesPerWeek('new', 3);
+      } else {
+        freqExtra.style.display = 'none';
+        freqExtra.innerHTML = '';
+      }
+    });
+
+    // handle clicking weekday buttons for NEW
+    freqExtra.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-new-dow]');
+      if (!btn) return;
+      btn.classList.toggle('primary');
+    });
+
+    document.getElementById('new-preview-btn').addEventListener('click', async function (){
+      var res = await openIconColorPicker(newSelectedIcon, newSelectedAccent);
+      if (res) {
+        newSelectedIcon = res.icon;
+        newSelectedAccent = res.color;
+        renderPreview('new', newSelectedIcon, newSelectedAccent);
+      }
+    });
+    document.getElementById('new-habit-form').addEventListener('submit', function (e){
+      e.preventDefault();
+      var nameEl = document.getElementById('habit-name');
+      var name = nameEl.value.trim();
+      if (!name) {
+        nameEl.classList.add('input-invalid');
+        nameEl.addEventListener('animationend', function (){
+          nameEl.classList.remove('input-invalid');
+        }, { once: true });
+        return;
+      }
+
+      // build frequency from form
+      var fsel = document.getElementById('habit-frequency').value;
+      var freqObj = { type: fsel, daysOfWeek: [], timesPerWeek: 3 };
+      if (fsel === 'daysOfWeek') {
+        var chosen = [];
+        freqExtra.querySelectorAll('[data-new-dow]').forEach(function (btn){
+          if (btn.classList.contains('primary')) chosen.push(Number(btn.dataset.newDow));
+        });
+        freqObj.daysOfWeek = chosen;
+      } else if (fsel === 'timesPerWeek') {
+        var tpw = Number(document.getElementById('new-tpw') ? document.getElementById('new-tpw').value : 3);
+        if (!tpw || tpw < 1) tpw = 1;
+        if (tpw > 7) tpw = 7;
+        freqObj.timesPerWeek = tpw;
+      }
+
+      var startDateValue = newStartInput
+        ? convertDisplayToISO(newStartInput.value, CURRENTYEAR)
+        : defaultStartDateForYear(CURRENTYEAR);
+      var h = newHabit(name, newSelectedAccent, newSelectedIcon, startDateValue);
+      h.frequency = freqObj;
+      applyFrequencyToHabit(h);
+
+      HABITS.unshift(h);
+      saveHabits(HABITS);
+      render();
+      announce('Habit created');
+      newHabitOverlay.close();
+      document.getElementById('new-habit-form').reset();
+      if (newStartInput) {
+        newStartInput.value = isoToDisplay(defaultStartDateForYear(CURRENTYEAR), CURRENTYEAR);
+      }
+      freqExtra.style.display = 'none';
+      freqExtra.innerHTML = '';
+      var card = listEl.querySelector('.card');
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    /* edit flow */
+    var editSelectedAccent = PRESETCOLORS[0];
+    var editSelectedIcon = 'target';
+    var editFreqSelect = document.getElementById('edit-habit-frequency');
+    var editFreqExtra = document.getElementById('edit-freq-extra');
+
+    editFreqSelect.addEventListener('change', function () {
+      var val = editFreqSelect.value;
+      if (val === 'daysOfWeek') {
+        editFreqExtra.style.display = 'block';
+        editFreqExtra.innerHTML = renderWeekdayButtons('edit', [1,3,5]);
+      } else if (val === 'timesPerWeek') {
+        editFreqExtra.style.display = 'block';
+        editFreqExtra.innerHTML = renderTimesPerWeek('edit', 3);
+      } else {
+        editFreqExtra.style.display = 'none';
+        editFreqExtra.innerHTML = '';
+      }
+    });
+
+    // click weekdays in edit
+    editFreqExtra.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-edit-dow]');
+      if (!btn) return;
+      btn.classList.toggle('primary');
+    });
+
+    function openEditOverlay(h){
+      document.getElementById('edit-habit-id').value = h.id;
+      document.getElementById('edit-habit-name').value = h.name;
+      editSelectedAccent = h.accent;
+      editSelectedIcon = h.visualValue || 'target';
+      renderPreview('edit', editSelectedIcon, editSelectedAccent);
+      if (editStartInput) {
+        // Preserve original startDate without clamping to viewed year
+        var originalStartDate = h.startDate || h.createdAt;
+        editStartInput.value = isoToDisplayUnclamped(originalStartDate, CURRENTYEAR);
+      }
+
+      // prefill frequency
+      var freq = h.frequency || defaultFrequency();
+      editFreqSelect.value = freq.type;
+      if (freq.type === 'daysOfWeek') {
+        editFreqExtra.style.display = 'block';
+        editFreqExtra.innerHTML = renderWeekdayButtons('edit', freq.daysOfWeek || []);
+      } else if (freq.type === 'timesPerWeek') {
+        editFreqExtra.style.display = 'block';
+        editFreqExtra.innerHTML = renderTimesPerWeek('edit', freq.timesPerWeek || 3);
+      } else {
+        editFreqExtra.style.display = 'none';
+        editFreqExtra.innerHTML = '';
+      }
+
+      editHabitOverlay.open();
+    }
+    document.getElementById('edit-sheet-close').addEventListener('click', function (){ editHabitOverlay.close(); });
+    document.getElementById('edit-sheet-cancel').addEventListener('click', function (){ editHabitOverlay.close(); });
+    document.getElementById('edit-preview-btn').addEventListener('click', async function (){
+      var res = await openIconColorPicker(editSelectedIcon, editSelectedAccent);
+      if (res) {
+        editSelectedIcon = res.icon;
+        editSelectedAccent = res.color;
+        renderPreview('edit', editSelectedIcon, editSelectedAccent);
+      }
+    });
+    document.getElementById('edit-habit-form').addEventListener('submit', function (e){
+      e.preventDefault();
+      var id = document.getElementById('edit-habit-id').value;
+      var habit = HABITS.find(function (h){ return h.id === id; });
+      if (!habit) return;
+      var nameEl = document.getElementById('edit-habit-name');
+      var name = nameEl.value.trim();
+      if (!name){
+        nameEl.classList.add('input-invalid');
+        nameEl.addEventListener('animationend', function (){
+          nameEl.classList.remove('input-invalid');
+        }, { once: true });
+        return;
+      }
+      habit.name = name;
+      habit.accent = editSelectedAccent;
+      habit.visualType = 'icon';
+      habit.visualValue = editSelectedIcon;
+
+      // Validate and set start date
+      if (editStartInput) {
+        var newStartDateISO = convertDisplayToISOUnclamped(editStartInput.value || habit.startDate, CURRENTYEAR);
+        var newStartDate = parseDateValue(newStartDateISO);
+
+        if (newStartDate && !isNaN(newStartDate)) {
+          var today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          // Check if new start date is in the future
+          if (newStartDate > today) {
+            // Check if habit has any existing completions in current year
+            var hasCompletions = habit.dots && habit.dots.some(function(dot) { return dot === true; });
+
+            // Also check historical years for completions
+            if (!hasCompletions && habit.yearHistory) {
+              for (var yr in habit.yearHistory) {
+                if (habit.yearHistory[yr].dots && habit.yearHistory[yr].dots.some(function(dot) { return dot === true; })) {
+                  hasCompletions = true;
+                  break;
+                }
+              }
+            }
+
+            if (hasCompletions) {
+              // Invalid: can't set future start date if habit has completions
+              editStartInput.classList.add('input-invalid');
+              editStartInput.addEventListener('animationend', function (){
+                editStartInput.classList.remove('input-invalid');
+              }, { once: true });
+              announce('Cannot set future start date for habit with existing completions');
+              return;
+            }
+          }
+
+          // Additional validation: Check if new start date invalidates existing completions
+          var newStartYear = newStartDate.getFullYear();
+          var oldStartDate = parseDateValue(habit.startDate);
+          var oldStartYear = oldStartDate ? oldStartDate.getFullYear() : newStartYear;
+
+          // If moving start date LATER (forward in time), check if it invalidates existing completions
+          if (newStartDate > oldStartDate) {
+            // Check if there are completions between old start date and new start date
+            var hasInvalidatedCompletions = false;
+
+            // Check all years for completions that would become invalid
+            var yearsToCheck = [habit.year];
+            if (habit.yearHistory) {
+              for (var yr in habit.yearHistory) {
+                yearsToCheck.push(parseInt(yr));
+              }
+            }
+
+            for (var i = 0; i < yearsToCheck.length; i++) {
+              var checkYear = yearsToCheck[i];
+              var checkDots = checkYear === habit.year ? habit.dots : (habit.yearHistory && habit.yearHistory[checkYear] ? habit.yearHistory[checkYear].dots : null);
+
+              if (checkDots && checkYear >= oldStartYear && checkYear <= newStartYear) {
+                // Calculate indices for this year
+                var yearStart = new Date(checkYear, 0, 1);
+
+                for (var dayIdx = 0; dayIdx < checkDots.length; dayIdx++) {
+                  if (checkDots[dayIdx]) {
+                    var dayDate = new Date(checkYear, 0, 1 + dayIdx);
+
+                    // If this completion is after old start but before new start, it's invalid
+                    if (dayDate >= oldStartDate && dayDate < newStartDate) {
+                      hasInvalidatedCompletions = true;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (hasInvalidatedCompletions) break;
+            }
+
+            if (hasInvalidatedCompletions) {
+              editStartInput.classList.add('input-invalid');
+              editStartInput.addEventListener('animationend', function (){
+                editStartInput.classList.remove('input-invalid');
+              }, { once: true });
+              announce('Cannot move start date forward - would invalidate existing completions');
+              return;
+            }
+          }
+
+          habit.startDate = newStartDateISO;
+
+          // If start date changed, the year wheel needs to be reinitialized
+          // to update the minSelectableYear (will happen on render())
+        }
+      }
+
+      // read frequency from edit form
+      var fsel = document.getElementById('edit-habit-frequency').value;
+      var freqObj = { type: fsel, daysOfWeek: [], timesPerWeek: 3 };
+      if (fsel === 'daysOfWeek') {
+        var chosen = [];
+        editFreqExtra.querySelectorAll('[data-edit-dow]').forEach(function (btn){
+          if (btn.classList.contains('primary')) chosen.push(Number(btn.dataset.editDow));
+        });
+        freqObj.daysOfWeek = chosen;
+      } else if (fsel === 'timesPerWeek') {
+        var tpw = Number(document.getElementById('edit-tpw') ? document.getElementById('edit-tpw').value : 3);
+        if (!tpw || tpw < 1) tpw = 1;
+        if (tpw > 7) tpw = 7;
+        freqObj.timesPerWeek = tpw;
+      }
+      habit.frequency = freqObj;
+      applyFrequencyToHabit(habit);
+
+      saveHabits(HABITS);
+      render();
+      announce('Habit saved');
+      editHabitOverlay.close();
+    });
+
+    document.getElementById('btn-delete').addEventListener('click', async function (){
+      var id = document.getElementById('edit-habit-id').value;
+      var habit = HABITS.find(function (h){ return h.id === id; });
+      if (!habit) return;
+      var ok = await openConfirmModal({
+        title: 'Delete habit',
+        message: 'Are you sure you want to delete "' + habit.name + '"? This action cannot be undone.',
+        confirmText: 'Delete',
+        variant: 'danger'
+      });
+      if (!ok) return;
+      var idx = HABITS.findIndex(function (h){ return h.id === id; });
+      if (idx === -1) return;
+      var removed = HABITS.splice(idx, 1);
+      saveHabits(HABITS);
+      render();
+      announce('Habit deleted');
+      showUndoToast(removed);
+      editHabitOverlay.close();
+    });
+
+    /* context menu */
+    var dotMenu = document.createElement('div');
+    dotMenu.className = 'context-menu';
+    dotMenu.setAttribute('role', 'menu');
+    dotMenu.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(dotMenu);
+    var menuTarget = null;
+    var docClickHandler = null;
+    var docScrollHandler = null;
+    var docResizeHandler = null;
+    var docKeyHandler = null;
+    function closeDotMenu(){
+      dotMenu.setAttribute('aria-hidden', 'true');
+      menuTarget = null;
+      if (docClickHandler){
+        document.removeEventListener('click', docClickHandler, true);
+        docClickHandler = null;
+      }
+      if (docScrollHandler){
+        window.removeEventListener('scroll', docScrollHandler, true);
+        docScrollHandler = null;
+      }
+      if (docResizeHandler){
+        window.removeEventListener('resize', docResizeHandler, true);
+        docResizeHandler = null;
+      }
+      if (docKeyHandler){
+        document.removeEventListener('keydown', docKeyHandler, true);
+        docKeyHandler = null;
+      }
+    }
+    function openDotMenu(x, y, habit, idx, el){
+      closeDotMenu();
+      menuTarget = { habitId: habit.id, index: idx, element: el };
+      var isOff = !!habit.offDays[idx];
+      var hasNote = !!(habit.notes && habit.notes[idx] && habit.notes[idx].trim());
+      dotMenu.innerHTML = '';
+      var offBtn = document.createElement('button');
+      offBtn.type = 'button';
+      offBtn.textContent = isOff ? 'Remove off day' : 'Mark as off day';
+      offBtn.addEventListener('click', function (ev){
+        ev.stopPropagation();
+        toggleOffDay(habit, idx, !isOff);
+        closeDotMenu();
+      });
+      dotMenu.appendChild(offBtn);
+      var noteBtn = document.createElement('button');
+      noteBtn.type = 'button';
+      noteBtn.textContent = hasNote ? 'Edit note' : 'Add note';
+      noteBtn.addEventListener('click', function (ev){
+        ev.stopPropagation();
+        openNoteOverlay(habit, idx);
+        closeDotMenu();
+      });
+      dotMenu.appendChild(noteBtn);
+      var vw = Math.max(document.documentElement.clientWidth, window.innerWidth||0);
+      var vh = Math.max(document.documentElement.clientHeight, window.innerHeight||0);
+      dotMenu.style.left = Math.min(x, vw - 220) + 'px';
+      dotMenu.style.top = Math.min(y, vh - 90) + 'px';
+      dotMenu.setAttribute('aria-hidden', 'false');
+      docClickHandler = function (evt){
+        if (!dotMenu.contains(evt.target)) closeDotMenu();
+      };
+      document.addEventListener('click', docClickHandler, true);
+      docScrollHandler = function (){ closeDotMenu(); };
+      window.addEventListener('scroll', docScrollHandler, true);
+      docResizeHandler = function (){ closeDotMenu(); };
+      window.addEventListener('resize', docResizeHandler, true);
+      docKeyHandler = function (e){
+        if (e.key === 'Escape') closeDotMenu();
+      };
+      document.addEventListener('keydown', docKeyHandler, true);
+    }
+    listEl.addEventListener('contextmenu', function (e){
+      var dot = e.target.closest('.dot');
+      if (!dot) return;
+      e.preventDefault();
+      if (dot.disabled) return;
+      var hid = dot.dataset.habitId;
+      var idx = Number(dot.dataset.index);
+      var habit = HABITS.find(function (h){ return h.id === hid; });
+      if (!habit) return;
+      openDotMenu(e.clientX, e.clientY, habit, idx, dot);
+    });
+
+    /* ────────── Long Press Support (simulates right-click) ────────── */
+    var longPressTimer = null;
+    var longPressTarget = null;
+    var longPressStartPos = { x: 0, y: 0 };
+    var LONG_PRESS_DURATION = 500; // 500ms
+    var MOVE_THRESHOLD = 10; // 10px movement threshold
+
+    listEl.addEventListener('touchstart', function(e) {
+      var dot = e.target.closest('.dot');
+      if (!dot || dot.disabled) return;
+
+      longPressTarget = dot;
+      var touch = e.touches[0];
+      longPressStartPos = { x: touch.clientX, y: touch.clientY };
+
+      // Clear any existing timer
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+      }
+
+      // Add visual feedback class
+      dot.classList.add('long-pressing');
+
+      // Start long press timer
+      longPressTimer = setTimeout(function() {
+        if (longPressTarget) {
+          // Remove visual feedback
+          longPressTarget.classList.remove('long-pressing');
+
+          // Prevent the default tap behavior
+          e.preventDefault();
+
+          // Get habit and index
+          var hid = longPressTarget.dataset.habitId;
+          var idx = Number(longPressTarget.dataset.index);
+          var habit = HABITS.find(function(h) { return h.id === hid; });
+
+          if (habit) {
+            // Trigger haptic feedback if available
+            if (navigator.vibrate) {
+              navigator.vibrate(50);
+            }
+
+            // Open the context menu at touch position
+            openDotMenu(longPressStartPos.x, longPressStartPos.y, habit, idx, longPressTarget);
+          }
+
+          longPressTarget = null;
+        }
+      }, LONG_PRESS_DURATION);
+    }, { passive: false });
+
+    listEl.addEventListener('touchmove', function(e) {
+      if (!longPressTarget) return;
+
+      var touch = e.touches[0];
+      var deltaX = Math.abs(touch.clientX - longPressStartPos.x);
+      var deltaY = Math.abs(touch.clientY - longPressStartPos.y);
+
+      // If finger moved too much, cancel long press
+      if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        // Remove visual feedback
+        if (longPressTarget) {
+          longPressTarget.classList.remove('long-pressing');
+        }
+        longPressTarget = null;
+      }
+    }, { passive: true });
+
+    listEl.addEventListener('touchend', function(e) {
+      // Clear long press timer
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      // Remove visual feedback
+      if (longPressTarget) {
+        longPressTarget.classList.remove('long-pressing');
+      }
+      longPressTarget = null;
+    }, { passive: true });
+
+    listEl.addEventListener('touchcancel', function(e) {
+      // Clear long press timer
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      // Remove visual feedback
+      if (longPressTarget) {
+        longPressTarget.classList.remove('long-pressing');
+      }
+      longPressTarget = null;
+    }, { passive: true });
+    function toggleOffDay(habit, index, makeOff){
+      habit.offDays[index] = !!makeOff;
+      var dot = listEl.querySelector('.dot[data-habit-id="' + habit.id + '"][data-index="' + index + '"]');
+      if (dot) {
+        var date = new Date(habit.year, 0, 1+index);
+        var label = fmt(date);
+        var isToday = dot.hasAttribute('aria-current');
+        dot.title = dotTitle(habit, index, label, isToday);
+        if (makeOff){
+          dot.dataset.off = 'true';
+        } else {
+          dot.removeAttribute('data-off');
+        }
+      }
+      onHabitChanged(habit);
+      announce(makeOff ? 'Marked off day' : 'Removed off day');
+    }
+
+    /* notes */
+    function openNoteOverlay(habit, index){
+      var d = new Date(habit.year, 0, 1+index);
+      var hasNote = !!(habit.notes && habit.notes[index] && habit.notes[index].trim());
+      document.getElementById('note-title').textContent = hasNote ? 'Edit note' : 'Add note';
+      document.getElementById('note-date').textContent = fmt(d);
+      document.getElementById('note-text').value = (habit.notes && habit.notes[index]) || '';
+      document.getElementById('note-habit-id').value = habit.id;
+      document.getElementById('note-index').value = String(index);
+      noteOverlay.open();
+    }
+    document.getElementById('note-close').addEventListener('click', function (){ noteOverlay.close(); });
+    document.getElementById('note-cancel').addEventListener('click', function (){ noteOverlay.close(); });
+    document.getElementById('note-form').addEventListener('submit', function (e){
+      e.preventDefault();
+      var hid = document.getElementById('note-habit-id').value;
+      var idx = Number(document.getElementById('note-index').value);
+      var text = document.getElementById('note-text').value ? document.getElementById('note-text').value.trim() : '';
+      var habit = HABITS.find(function (h){ return h.id === hid; });
+      if (!habit) return;
+      if (!Array.isArray(habit.notes)) habit.notes = new Array(habit.days).fill('');
+      habit.notes[idx] = text;
+      var dot = listEl.querySelector('.dot[data-habit-id="' + hid + '"][data-index="' + idx + '"]');
+      if (dot) {
+        var date = new Date(habit.year, 0, 1+idx);
+        var label = fmt(date);
+        var isToday = dot.hasAttribute('aria-current');
+        dot.title = dotTitle(habit, idx, label, isToday);
+        if (text) {
+          dot.dataset.note = 'true';
+        } else {
+          dot.removeAttribute('data-note');
+        }
+      }
+      saveHabits(HABITS);
+      announce('Note saved');
+      noteOverlay.close();
+      buildPositionCacheForView('year');
+      buildPositionCacheForView('month');
+    });
+
+    /* picker */
+    var ipLoaded = false;
+    function loadIconsOnce(){
+      if (ipLoaded) return Promise.resolve();
+      return fetch('https://cdn.jsdelivr.net/npm/@tabler/icons@latest/icons.json')
+        .then(function (r){ return r.json(); })
+        .then(function (json){
+          var names = Object.keys(json).sort();
+          ipState.allIcons = names.map(function (n){ return { name: n, category: n.split('-')[0] || 'other' }; });
+          ipLoaded = true;
+        })
+        .catch(function (){
+          ipState.allIcons = ['activity','alert-circle','home','user','settings','target','book','run','dumbbell'].map(function (n){ return { name: n, category: n.split('-')[0] || 'other' }; });
+          ipLoaded = true;
+        });
+    }
+    function ipBuildCategories(){
+      if (ipEls.cats) {
+        ipEls.cats.innerHTML = '';
+        ipEls.cats.style.display = 'none';
+      }
+    }
+    function ipApplyFilter(){
+      var q = ipState.searchQuery.toLowerCase();
+      ipState.filteredIcons = ipState.allIcons.filter(function (ic){ return ic.name.toLowerCase().includes(q); });
+      ipBuildCategories();
+      ipRenderIcons(true);
+    }
+    function ipRenderColors(){
+      ipEls.colors.innerHTML = ipPalette.map(function (c){
+        var active = ipState.selectedColor === c;
+        return '<button type="button" data-color="' + c + '" class="picker-color-swatch" style="background:' + c + (active ? '; outline:2px solid var(--icon-selected); outline-offset:2px' : '') + '"></button>';
+      }).join('');
+      Array.prototype.forEach.call(ipEls.colors.querySelectorAll('button'), function (btn){
+        btn.onclick = function (){
+          var c = btn.dataset.color;
+          var safe = clampColorToMode(c, document.documentElement.classList.contains('dark'));
+          ipState.selectedColor = safe;
+          document.documentElement.style.setProperty('--icon-selected', safe);
+          document.documentElement.style.setProperty(
+            '--icon-selected-bg',
+            document.documentElement.classList.contains('dark') ? 'rgba(228,228,231,.08)' : 'rgba(30,41,59,.12)'
+          );
+          ipEls.customColor.value = safe;
+          ipEls.colorPreview.style.backgroundColor = safe;
+          ipRenderColors();
+          ipRecolorVisible();
+        }
+      });
+    }
+    function setupIconObserver(){
+      if (ipState.observer) return;
+      ipState.observer = new IntersectionObserver(function (entries){
+        for (var i=0;i<entries.length;i++){
+          var entry = entries[i];
+          if (entry.isIntersecting){
+            ipRenderIcons(false);
+            ipState.observer.unobserve(entry.target);
+          }
+        }
+      }, { root: ipEls.scroll, rootMargin: '150px', threshold: 0 });
+    }
+    function ipRenderIcons(reset){
+      if (reset) {
+        ipState.renderOffset = 0;
+        ipEls.icons.innerHTML = '';
+      }
+      var batch = ipState.filteredIcons.slice(ipState.renderOffset, ipState.renderOffset + ipState.renderBatch);
+      if (!batch.length) {
+        if (!ipState.renderOffset) {
+          ipEls.empty.classList.remove('hidden');
+          ipEls.icons.classList.add('hidden');
+        }
+        return;
+      }
+      ipEls.empty.classList.add('hidden');
+      ipEls.icons.classList.remove('hidden');
+      var frag = document.createDocumentFragment();
+      batch.forEach(function (ic){
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'picker-icon-btn-entry';
+        if (ipState.selectedIcon === ic.name) btn.classList.add('is-selected');
+        btn.dataset.icon = ic.name;
+        btn.innerHTML = '<i class="ti ti-' + ic.name + '"></i>';
+        btn.onclick = function (){
+          ipState.selectedIcon = ic.name;
+          ipEls.select.disabled = false;
+          Array.prototype.forEach.call(ipEls.icons.querySelectorAll('.is-selected'), function (x){
+            x.classList.remove('is-selected');
+          });
+          btn.classList.add('is-selected');
+        }
+        frag.appendChild(btn);
+      });
+      ipEls.icons.appendChild(frag);
+      ipState.renderOffset += ipState.renderBatch;
+      if (ipState.renderOffset < ipState.filteredIcons.length) {
+        var sentinel = document.createElement('div');
+        sentinel.style.height = '1px';
+        ipEls.icons.appendChild(sentinel);
+        ipState.observer.observe(sentinel);
+      }
+    }
+    function ipRecolorVisible(){
+      Array.prototype.forEach.call(ipEls.icons.querySelectorAll('.picker-icon-btn-entry'), function (btn){
+        var icon = btn.dataset.icon;
+        if (ipState.selectedIcon === icon) {
+          btn.style.color = ipState.selectedColor;
+        } else {
+          btn.style.color = '';
+        }
+      });
+    }
+    function ipSetup(){
+      ipRenderColors();
+      ipEls.customColor.value = ipState.selectedColor;
+      ipEls.colorPreview.style.backgroundColor = ipState.selectedColor;
+      ipEls.customColor.oninput = debounce(function (){
+        var val = ipEls.customColor.value.trim();
+        if (!/^#?[0-9A-Fa-f]{6}$/.test(val)) return;
+        if (val.charAt(0) !== '#') val = '#' + val;
+        var safe = clampColorToMode(val, document.documentElement.classList.contains('dark'));
+        ipState.selectedColor = safe;
+        document.documentElement.style.setProperty('--icon-selected', safe);
+        document.documentElement.style.setProperty(
+          '--icon-selected-bg',
+          document.documentElement.classList.contains('dark') ? 'rgba(228,228,231,.08)' : 'rgba(30,41,59,.12)'
+        );
+        ipEls.colorPreview.style.backgroundColor = safe;
+        ipRenderColors();
+        ipRecolorVisible();
+      }, 300);
+      ipEls.search.oninput = debounce(function (){
+        ipState.searchQuery = ipEls.search.value.trim();
+        ipApplyFilter();
+      }, 200);
+      ipEls.density.disabled = true;
+      ipEls.density.style.opacity = '0.5';
+      ipEls.density.style.cursor = 'not-allowed';
+      ipEls.close.onclick = function (){
+        if (ipState.resolver) ipState.resolver(null);
+        pickerOverlay.close();
+      };
+      ipEls.cancel.onclick = function (){
+        if (ipState.resolver) ipState.resolver(null);
+        pickerOverlay.close();
+      };
+      ipEls.select.onclick = function (){
+        if (ipState.resolver) {
+          ipState.resolver({ icon: ipState.selectedIcon, color: ipState.selectedColor });
+        }
+        pickerOverlay.close();
+      };
+    }
+    async function openIconColorPicker(initialIcon, initialColor){
+      await loadIconsOnce();
+      setupIconObserver();
+      ipState.selectedIcon = initialIcon || 'target';
+      ipState.selectedColor = clampColorToMode(initialColor || '#1e293b', document.documentElement.classList.contains('dark'));
+      ipState.searchQuery = '';
+      ipState.selectedCategory = 'All';
+      document.documentElement.style.setProperty('--icon-selected', ipState.selectedColor);
+      document.documentElement.style.setProperty(
+        '--icon-selected-bg',
+        document.documentElement.classList.contains('dark') ? 'rgba(228,228,231,.08)' : 'rgba(30,41,59,.12)'
+      );
+      ipSetup();
+      ipApplyFilter();
+      var selected = ipEls.icons.querySelector('.picker-icon-btn-entry[data-icon="' + ipState.selectedIcon + '"]');
+      if (selected) selected.scrollIntoView({ behavior:'smooth', block:'center' });
+      pickerOverlay.open();
+      ipEls.select.disabled = false;
+      return new Promise(function (resolve){
+        ipState.resolver = resolve;
+      });
+    }
+
+    /* undo */
+    var undoToast = document.getElementById('undo-toast');
+    var undoTrigger = undoToast ? undoToast.querySelector('[data-undo-trigger]') : null;
+    var undoMessage = undoToast ? undoToast.querySelector('[data-undo-message]') : null;
+    var undoProgress = undoToast ? undoToast.querySelector('.toast-progress div') : null;
+    var undoData = null;
+    var undoTimer = null;
+    function showUndoToast(removed){
+      if (!undoToast) return;
+      undoData = removed;
+      if (undoMessage && removed && removed.length) {
+        undoMessage.textContent = 'Deleted "' + removed[0].name + '"';
+      }
+      undoToast.classList.add('show');
+      if (undoProgress) {
+        undoProgress.style.transitionDuration = '0ms';
+        undoProgress.style.transform = 'scaleX(1)';
+        requestAnimationFrame(function (){
+          requestAnimationFrame(function (){
+            undoProgress.style.transitionDuration = '10000ms';
+            undoProgress.style.transform = 'scaleX(0)';
+          });
+        });
+      }
+      clearTimeout(undoTimer);
+      undoTimer = setTimeout(function (){
+        undoToast.classList.remove('show');
+        if (undoProgress) {
+          undoProgress.style.transitionDuration = '0ms';
+          undoProgress.style.transform = 'scaleX(0)';
+        }
+        undoData = null;
+      }, 10000);
+    }
+    if (undoTrigger) {
+      undoTrigger.addEventListener('click', function (){
+        if (undoData) {
+          HABITS.push.apply(HABITS, undoData);
+          saveHabits(HABITS);
+          render();
+          announce('Habit restored');
+          undoData = null;
+        }
+        undoToast.classList.remove('show');
+        if (undoProgress) {
+          undoProgress.style.transitionDuration = '0ms';
+          undoProgress.style.transform = 'scaleX(0)';
+        }
+        clearTimeout(undoTimer);
+      });
+    }
+
+    /* wave styles — UPDATED to keep disabled dots faded */
+    var WAVE_STYLE_ID = 'dot-wave-style';
+    function ensureWaveStyles() {
+      if (document.getElementById(WAVE_STYLE_ID)) return;
+      var s = document.createElement('style');
+      s.id = WAVE_STYLE_ID;
+      s.textContent = [
+        '.dot-wave{animation:dotWave .42s cubic-bezier(0.4,0,0.2,1) both;}',
+        '.dot-wave-active::before,.dot-wave[aria-pressed="true"]::before{animation:dotWaveInner .42s cubic-bezier(0.4,0,0.2,1) both;}',
+        '.dot:disabled.dot-wave,.dot:disabled.dot-wave::before{opacity:.35!important;}',
+        '@keyframes dotWave{0%{transform:scale(.4);opacity:0;}100%{transform:scale(1);opacity:1;}}',
+        '@keyframes dotWaveInner{0%{transform:scale(.4);opacity:0;}100%{transform:scale(1);opacity:1;}}'
+      ].join('');
+      document.head.appendChild(s);
+    }
+
+    // wave applier
+    function applyWave(dotsNodeList) {
+      if (!dotsNodeList || !dotsNodeList.length) return;
+
+      var dots = Array.prototype.slice.call(dotsNodeList).map(function (dot, idx) {
+        var rect = dot.getBoundingClientRect();
+        return {
+          el: dot,
+          left: rect.left,
+          top: rect.top,
+          idx: idx
+        };
+      });
+
+      dots.sort(function (a, b) {
+        if (a.left === b.left) {
+          return a.top - b.top;
+        }
+        return a.left - b.left;
+      });
+
+      dots.forEach(function (item, order) {
+        var dot = item.el;
+        var delay = order * 1;
+        dot.style.animationDelay = delay + 'ms';
+        dot.classList.add('dot-wave');
+
+        if (dot.getAttribute('aria-pressed') === 'true') {
+          dot.classList.add('dot-wave-active');
+        }
+
+        dot.addEventListener('animationend', function () {
+          dot.classList.remove('dot-wave');
+          dot.classList.remove('dot-wave-active');
+          dot.style.removeProperty('animation-delay');
+        }, { once: true });
+      });
+    }
+
+    /* position caches */
+    function buildPositionCacheForView(viewType){
+      if (!measureLayer) return;
+      measureLayer.innerHTML = '';
+      measureLayer.style.visibility = 'visible';
+      measureLayer.style.position = 'fixed';
+      measureLayer.style.inset = '0';
+      measureLayer.style.zIndex = '-1';
+      measureLayer.style.overflow = 'hidden';
+
+      var temp = document.createElement('div');
+      temp.className = 'container';
+      temp.style.width = '95%';
+      temp.style.maxWidth = '1400px';
+      measureLayer.appendChild(temp);
+
+      var prevView = document.documentElement.dataset.view;
+      document.documentElement.dataset.view = viewType;
+
+      HABITS.forEach(function (h){
+        var card = renderHabitCard(h);
+        card.classList.add('no-transitions');
+        temp.appendChild(card);
+        var dots = card.querySelectorAll('.dot');
+        dots.forEach(function (dot){
+          var key = dot.dataset.habitId + '-' + dot.dataset.index;
+          var rect = dot.getBoundingClientRect();
+          POSCACHE[viewType].set(key, {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height
+          });
+        });
+      });
+
+      document.documentElement.dataset.view = prevView;
+      measureLayer.innerHTML = '';
+      measureLayer.style.visibility = 'hidden';
+    }
+
+    /* view toggle */
+    viewToggle.addEventListener('click', function (){
+      ensureWaveStyles();
+      var currentView = document.documentElement.dataset.view || 'year';
+      var targetView = currentView === 'year' ? 'month' : 'year';
+
+      var cards = Array.prototype.slice.call(listEl.querySelectorAll('.card'));
+      var cardHeights = new Map();
+      var cardRects = new Map();
+      cards.forEach(function (card){
+        cardHeights.set(card.dataset.habitId, card.offsetHeight);
+        cardRects.set(card.dataset.habitId, card.getBoundingClientRect());
+      });
+
+      document.documentElement.dataset.view = targetView;
+      localStorage.setItem(VIEWKEY, targetView);
+      updateViewToggleLabels(targetView);
+
+      listEl.classList.add('is-transitioning');
+
+      cards.forEach(function (card){
+        var content = card.querySelector('.card-content');
+        if (!content) return;
+        var gridContainer = content.querySelector('.dots-grid, .months-container');
+        var habit = HABITS.find(function (hab){ return hab.id === card.dataset.habitId; });
+        if (!habit) return;
+        var todayIdx = dayIndexForYear(habit.year);
+        if (targetView === 'month') {
+          gridContainer.className = 'months-container';
+          gridContainer.innerHTML = '';
+          buildMonthViews(habit, gridContainer, todayIdx);
+          applyWave(gridContainer.querySelectorAll('.dot'));
+        } else {
+          gridContainer.className = 'dots-grid';
+          gridContainer.innerHTML = '';
+          buildYearView(habit, gridContainer, todayIdx);
+          applyWave(gridContainer.querySelectorAll('.dot'));
+        }
+      });
+
+      requestAnimationFrame(function (){
+        cards.forEach(function (card){
+          var hid = card.dataset.habitId;
+          var oldH = cardHeights.get(hid) || card.offsetHeight;
+          var newH = card.offsetHeight;
+          var needsHeight = Math.abs(newH - oldH) > 2;
+
+          var firstRect = cardRects.get(hid);
+          var lastRect = card.getBoundingClientRect();
+          var deltaX = 0;
+          var deltaY = 0;
+          var scaleX = 1;
+          var scaleY = 1;
+          var needsTransform = false;
+
+          if (firstRect && lastRect) {
+            deltaX = firstRect.left - lastRect.left;
+            deltaY = firstRect.top - lastRect.top;
+            scaleX = lastRect.width ? firstRect.width / lastRect.width : 1;
+            scaleY = lastRect.height ? firstRect.height / lastRect.height : 1;
+            needsTransform =
+              Math.abs(deltaX) > 1 ||
+              Math.abs(deltaY) > 1 ||
+              Math.abs(scaleX - 1) > 0.02 ||
+              Math.abs(scaleY - 1) > 0.02;
+          }
+
+          if (!needsHeight && !needsTransform) {
+            card.style.transition = '';
+            return;
+          }
+
+          var transitions = [];
+          if (needsHeight) {
+            card.style.height = oldH + 'px';
+            transitions.push('height 480ms ' + EASEIO);
+          }
+          if (needsTransform) {
+            card.style.transformOrigin = 'top left';
+            card.style.transform = 'translate(' + deltaX + 'px,' + deltaY + 'px) scale(' + scaleX + ',' + scaleY + ')';
+            transitions.push('transform 480ms ' + EASEIO);
+          }
+
+          card.offsetHeight;
+          card.style.transition = transitions.join(', ');
+          card.style.willChange = 'transform, height';
+
+          if (needsHeight) {
+            card.style.height = newH + 'px';
+          }
+          if (needsTransform) {
+            requestAnimationFrame(function (){
+              card.style.transform = '';
+            });
+          }
+
+          var heightDone = !needsHeight;
+          var transformDone = !needsTransform;
+          var cleanup = function (evt){
+            if (evt.propertyName === 'height') {
+              heightDone = true;
+              card.style.height = '';
+            } else if (evt.propertyName === 'transform') {
+              transformDone = true;
+              card.style.transformOrigin = '';
+            }
+            if (heightDone && transformDone) {
+              card.style.transition = '';
+              card.style.willChange = '';
+              card.removeEventListener('transitionend', cleanup);
+            }
+          };
+          card.addEventListener('transitionend', cleanup);
+        });
+        listEl.classList.remove('is-transitioning');
+      });
+    });
+
+    function initCustomSelects(){
+      var wrappers = document.querySelectorAll('[data-custom-select]');
+      if (!wrappers.length) return;
+      var openWrapper = null;
+      var activeBackdrop = null;
+      var activeSheet = null;
+
+      wrappers.forEach(function (wrapper){
+        var select = wrapper.querySelector('.custom-select-source');
+        var display = wrapper.querySelector('[data-select-display]');
+        var list = wrapper.querySelector('[data-select-options]');
+        if (!select || !display || !list) return;
+
+        function renderOptions(){
+          list.innerHTML = '';
+          Array.prototype.forEach.call(select.options, function (opt){
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'select-option';
+            btn.textContent = opt.textContent;
+            btn.dataset.value = opt.value;
+            if (opt.selected) {
+              btn.setAttribute('aria-selected', 'true');
+            }
+            list.appendChild(btn);
+          });
+        }
+
+        function updateDisplay(){
+          var selected = select.options[select.selectedIndex] || select.options[0];
+          if (selected) {
+            display.textContent = selected.textContent;
+          }
+          list.querySelectorAll('.select-option').forEach(function (node){
+            var isSelected = node.dataset.value === select.value;
+            node.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+          });
+        }
+
+        renderOptions();
+        if (select.selectedIndex < 0 && select.options.length) {
+          select.selectedIndex = 0;
+        }
+        updateDisplay();
+
+        display.addEventListener('click', function (){
+          if (wrapper.classList.contains('open')) {
+            closeCustomSelect(wrapper);
+          } else {
+            if (list) list.scrollTop = 0;
+            openCustomSelect(wrapper);
+          }
+        });
+
+        list.addEventListener('click', function (event){
+          var optionBtn = event.target.closest('.select-option');
+          if (!optionBtn) return;
+          var newValue = optionBtn.dataset.value;
+          if (select.value !== newValue) {
+            select.value = newValue;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          updateDisplay();
+          wrapper.classList.remove('open');
+          openWrapper = null;
+        });
+
+        select.addEventListener('change', updateDisplay);
+      });
+
+      document.addEventListener('click', function (event){
+        wrappers.forEach(function (wrapper){
+          if (!wrapper.contains(event.target)) {
+            closeCustomSelect(wrapper);
+          }
+        });
+      });
+
+      function openCustomSelect(wrapper){
+        if (openWrapper && openWrapper !== wrapper) {
+          closeCustomSelect(openWrapper);
+        }
+        wrapper.classList.add('open');
+        openWrapper = wrapper;
+        var sheet = wrapper.closest('.sheet');
+        if (sheet) {
+          activeSheet = sheet;
+          sheet.classList.add('select-open');
+          ensureSelectBackdrop(sheet);
+        }
+      }
+
+      function closeCustomSelect(wrapper){
+        if (!wrapper.classList.contains('open')) return;
+        wrapper.classList.remove('open');
+        if (openWrapper === wrapper) openWrapper = null;
+        if (activeSheet && !activeSheet.querySelector('.select-control.open')) {
+          activeSheet.classList.remove('select-open');
+          removeSelectBackdrop();
+        }
+      }
+
+      function ensureSelectBackdrop(sheet){
+        removeSelectBackdrop();
+        var backdrop = document.createElement('div');
+        backdrop.className = 'select-backdrop';
+        sheet.appendChild(backdrop);
+        activeBackdrop = backdrop;
+        requestAnimationFrame(function (){
+          backdrop.classList.add('show');
+        });
+      }
+
+      function removeSelectBackdrop(){
+        if (activeBackdrop) {
+          activeBackdrop.classList.remove('show');
+          activeBackdrop.addEventListener('transitionend', function (){
+            if (activeBackdrop && activeBackdrop.parentNode) {
+              activeBackdrop.parentNode.removeChild(activeBackdrop);
+            }
+          }, { once: true });
+          activeBackdrop = null;
+        }
+      }
+    }
+
+    /* sr announce */
+    var srAnnouncer = document.createElement('div');
+    srAnnouncer.className = 'visually-hidden';
+    srAnnouncer.setAttribute('aria-live', 'polite');
+    srAnnouncer.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(srAnnouncer);
+    function announce(msg){
+      srAnnouncer.textContent = msg;
+      setTimeout(function (){ srAnnouncer.textContent = ''; }, 1000);
+    }
+
+    /* init */
+    async function initializeApp() {
+      // For Firebase mode, wait for auth state to be ready
+      if (typeof Auth !== 'undefined' && Auth.useFirebase) {
+        await new Promise(function(resolve) {
+          var unsubscribe = Auth.onAuthStateChanged(function(user) {
+            if (user) {
+              console.log('Auth ready, loading data for user:', user.uid);
+              unsubscribe();
+              resolve();
+            }
+          });
+        });
+      }
+
+      // Load habits from storage (Firebase or localStorage)
+      var loadedHabits = await loadHabits();
+      HABITS = loadedHabits.map(rolloverIfNeeded);
+
+      // Set initial view
+      var initialView = getInitialView();
+      document.documentElement.dataset.view = initialView;
+      updateViewToggleLabels(initialView);
+
+      // Render the UI
+      render();
+      ensureWaveStyles();
+
+      initCustomSelects();
+    }
+
+    /* ────────── Year Wheel Centering Fix ────────── */
+    var yearWheelResizeObservers = {}; // Store resize observers for cleanup
+
+    function centerSelectedYear(habitId, smooth) {
+      // 1. Find the relevant elements for this specific habit's year wheel.
+      var container = document.getElementById('year-wheel-' + habitId);
+      if (!container) return; // Exit if the card isn't in the DOM
+
+      var scrollArea = container.querySelector('.year-wheel-scroll');
+      var selectedItem = container.querySelector('.year-item.selected');
+
+      if (!scrollArea || !selectedItem) {
+        // If we can't find the necessary elements, we can't proceed.
+        return;
+      }
+
+      // 2. Calculate the target scroll position.
+      var scrollAreaWidth = scrollArea.offsetWidth;
+      var selectedItemOffsetLeft = selectedItem.offsetLeft;
+      var selectedItemWidth = selectedItem.offsetWidth;
+
+      // The goal is to position the center of the selected item at the center of the scroll area.
+      var scrollLeftTarget = selectedItemOffsetLeft - (scrollAreaWidth / 2) + (selectedItemWidth / 2);
+
+      // 3. Apply the scroll with a smooth animation.
+      scrollArea.scrollTo({
+        left: scrollLeftTarget,
+        behavior: smooth === false ? 'instant' : 'smooth'
+      });
+    }
+
+    function setupDynamicCentering(habitId) {
+      var container = document.getElementById('year-wheel-' + habitId);
+      if (!container) return;
+
+      var scrollArea = container.querySelector('.year-wheel-scroll');
+      if (!scrollArea) return;
+
+      // Clean up existing observer if any
+      if (yearWheelResizeObservers[habitId]) {
+        yearWheelResizeObservers[habitId].disconnect();
+      }
+
+      var resizeTimeout = null;
+      var lastWidth = scrollArea.offsetWidth;
+
+      // Create a new ResizeObserver to watch for size changes
+      var resizeObserver = new ResizeObserver(function(entries) {
+        var entry = entries[0];
+        var currentWidth = entry.contentRect.width;
+
+        // Only recenter if width actually changed
+        if (Math.abs(currentWidth - lastWidth) > 1) {
+          lastWidth = currentWidth;
+
+          // Clear previous timeout
+          if (resizeTimeout) {
+            clearTimeout(resizeTimeout);
+          }
+
+          // Debounce the recentering
+          resizeTimeout = setTimeout(function() {
+            requestAnimationFrame(function() {
+              centerSelectedYear(habitId, false);
+            });
+          }, 50);
+        }
+      });
+
+      // Observe the scroll area for size changes
+      resizeObserver.observe(scrollArea);
+
+      // Also observe the card itself for width changes
+      var card = container.closest('.card');
+      if (card) {
+        resizeObserver.observe(card);
+      }
+
+      // Store the observer for cleanup later
+      yearWheelResizeObservers[habitId] = resizeObserver;
+
+      // Store cleanup function
+      if (!container._cleanupResize) {
+        container._cleanupResize = function() {
+          if (resizeTimeout) {
+            clearTimeout(resizeTimeout);
+          }
+          if (yearWheelResizeObservers[habitId]) {
+            yearWheelResizeObservers[habitId].disconnect();
+            delete yearWheelResizeObservers[habitId];
+          }
+        };
+      }
+    }
+
+    /* ────────── Individual Habit Year Wheel Initialization ────────── */
+    var habitYearWheels = {}; // Store year wheel instances
+
+    function initHabitYearWheel(habit) {
+      var containerId = 'year-wheel-' + habit.id;
+      var container = document.getElementById(containerId);
+
+      if (!container) {
+        console.warn('YearWheel container not found for habit:', habit.id);
+        return;
+      }
+
+      // Clean up existing wheel if it exists
+      if (habitYearWheels[habit.id]) {
+        // If you have a destroy method on YearWheel, call it here.
+        // e.g., habitYearWheels[habit.id].destroy();
+        delete habitYearWheels[habit.id];
+      }
+
+      // The ResizeObserver will wait until the browser has calculated the
+      // final dimensions of the container before we initialize the YearWheel.
+      var observer = new ResizeObserver(function(entries) {
+        // We only need to run this setup once when the element gets its initial size.
+        var entry = entries[0];
+        if (entry.contentRect.width > 0) {
+
+          // Now that we have a stable width, initialize the YearWheel.
+          // Its centering calculation will now be accurate.
+
+          // Calculate the minimum year based on habit start date
+          var habitStartDate = getHabitStartDate(habit);
+          var minYear = 2000; // Default fallback
+
+          if (habitStartDate && !isNaN(habitStartDate.getTime())) {
+            minYear = habitStartDate.getFullYear();
+          } else if (habit.createdAt) {
+            // Fallback to createdAt if startDate is invalid
+            var createdDate = parseDateValue(habit.createdAt);
+            if (createdDate && !isNaN(createdDate.getTime())) {
+              minYear = createdDate.getFullYear();
+            }
+          }
+
+          var currentYear = new Date().getFullYear();
+          var maxSelectableYear = currentYear + 2; // Only allow 2 years into future
+          var maxYear = Math.max(maxSelectableYear + 5, 2040); // Display range extends further
+
+          // Ensure the habit's current year is within the range
+          if (habit.year < minYear) {
+            habit.year = minYear;
+          }
+          if (habit.year > maxSelectableYear) {
+            habit.year = maxSelectableYear;
+          }
+
+          var yearWheel = new YearWheel(containerId, {
+            startYear: minYear,
+            endYear: maxYear,
+            initialYear: habit.year,
+            minSelectableYear: minYear,
+            maxSelectableYear: maxSelectableYear,
+            fadeColor: getComputedStyle(document.body).backgroundColor,
+            onChange: function(selectedYear) {
+              // The year we are navigating AWAY from
+              var yearToSave = habit.year;
+
+              // Determine the valid range for saving data
+              var habitStartDate = getHabitStartDate(habit);
+
+              // Robust check in case the start date is missing or invalid
+              if (habitStartDate && !isNaN(habitStartDate.getTime())) {
+                var startYear = habitStartDate.getFullYear();
+
+                // ONLY save the data if the year we are leaving is within the valid range
+                // (from its start year up to the current year)
+                if (yearToSave >= startYear && yearToSave <= CURRENTYEAR) {
+                  if (!habit.yearHistory) habit.yearHistory = {};
+
+                  // Unconditionally save the state for the valid year we are leaving
+                  // This ensures any changes made are persistent
+                  habit.yearHistory[yearToSave] = {
+                    dots: habit.dots.slice(),
+                    offDays: habit.offDays.slice(),
+                    notes: habit.notes.slice()
+                  };
+                }
+              }
+
+              // Now, proceed to load the data for the newly selected year
+              habit.year = selectedYear;
+              habit.days = daysInYear(selectedYear);
+
+              // Check if we have historical data for the new year
+              if (habit.yearHistory && habit.yearHistory[selectedYear]) {
+                // Restore historical data
+                var history = habit.yearHistory[selectedYear];
+                habit.dots = history.dots.slice();
+                habit.offDays = history.offDays.slice();
+                habit.notes = history.notes.slice();
+              } else {
+                // No historical data, create fresh arrays for this year
+                habit.dots = new Array(habit.days).fill(false);
+                habit.offDays = new Array(habit.days).fill(false);
+                habit.notes = new Array(habit.days).fill('');
+
+                // Apply the habit's frequency rules to the new, empty year
+                if (habit.frequency) {
+                  applyFrequencyToHabit(habit);
+                }
+              }
+
+              // Persist all changes to storage (Firebase or localStorage)
+              saveHabits(HABITS);
+
+              // Re-render the habit card with the new year's data
+              updateHabitCardContent(habit);
+
+              // After all data is updated, center the selected year in the view
+              requestAnimationFrame(function() {
+                centerSelectedYear(habit.id, true);
+              });
+            },
+            animationSpeed: 300,
+            fadePercent: 20,
+            windowSize: 11,
+            edgeMargin: 3
+          });
+
+          habitYearWheels[habit.id] = yearWheel;
+
+          // Set up dynamic centering that responds to size changes
+          setupDynamicCentering(habit.id);
+
+          // Center the initial year after a brief delay to ensure everything is rendered
+          setTimeout(function() {
+            centerSelectedYear(habit.id, false);
+          }, 150);
+
+          // Once initialized, we don't need to observe anymore for this purpose.
+          // The YearWheel component itself should handle resizing if needed.
+          observer.unobserve(container);
+        }
+      });
+
+      // Start observing the container element.
+      observer.observe(container);
+    }
+
+    function updateHabitCardContent(habit) {
+      var card = document.querySelector('[data-habit-id="' + habit.id + '"]');
+      if (!card) return;
+
+      // Update stats
+      var todayIdx = dayIndexForYear(habit.year);
+      var stats = calcStats(habit.dots, habit.offDays, todayIdx);
+      var completionRate = getCompletionRate(habit, stats);
+
+      // Update subtitle stats
+      var subtitle = card.querySelector('.card-subtitle');
+      if (subtitle) {
+        var startLabel = formatStartDateLabel(habit);
+        subtitle.innerHTML =
+          '<span class="stat-item">Total <span class="total-count">' + stats.total + '</span></span>' +
+          '<span class="stat-item">Longest <span class="longest-streak">' + stats.longest + '</span></span>' +
+          '<span class="stat-item">Current <span class="current-streak">' + stats.current + '</span></span>' +
+          '<span class="stat-item">Rate <span class="completion-rate">' + completionRate + '%</span></span>' +
+          '<span class="stat-item start-pill">Start <span class="start-date">' + startLabel + '</span></span>' +
+          '<span class="stat-item frequency-pill">' + formatFrequency(habit.frequency) + '</span>';
+      }
+
+      // Update mark today button
+      var markTodayBtn = card.querySelector('.mark-today-btn');
+      if (markTodayBtn) {
+        var isTodayMarked = habit.dots[todayIdx];
+        if (isTodayMarked) {
+          markTodayBtn.classList.add('marked');
+        } else {
+          markTodayBtn.classList.remove('marked');
+        }
+        markTodayBtn.setAttribute('aria-label', isTodayMarked ? 'Unmark today' : 'Mark today');
+        markTodayBtn.setAttribute('title', isTodayMarked ? 'Unmark today' : 'Mark today');
+      }
+
+      // Update dots grid
+      var gridContainer = card.querySelector('.dots-grid, .months-container');
+      if (gridContainer) {
+        gridContainer.innerHTML = '';
+        if (document.documentElement.dataset.view === 'month') {
+          gridContainer.className = 'months-container';
+          buildMonthViews(habit, gridContainer, todayIdx);
+        } else {
+          gridContainer.className = 'dots-grid';
+          buildYearView(habit, gridContainer, todayIdx);
+        }
+      }
+    }
+
+    // Start the app
+    initializeApp().catch(function(error) {
+      console.error('Error initializing app:', error);
+    });
