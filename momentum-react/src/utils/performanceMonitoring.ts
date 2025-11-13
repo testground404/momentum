@@ -3,12 +3,12 @@
  * Tracks Core Web Vitals and sends to analytics
  */
 
-import { onCLS, onFID, onFCP, onLCP, onTTFB, type Metric } from 'web-vitals';
+import { onCLS, onINP, onFCP, onLCP, onTTFB, type Metric } from 'web-vitals';
 
 /**
- * Core Web Vitals:
+ * Core Web Vitals (web-vitals v5+):
  * - CLS (Cumulative Layout Shift): Visual stability
- * - FID (First Input Delay): Interactivity
+ * - INP (Interaction to Next Paint): Interactivity (replaces FID)
  * - FCP (First Contentful Paint): Initial load
  * - LCP (Largest Contentful Paint): Loading performance
  * - TTFB (Time to First Byte): Server response time
@@ -89,7 +89,7 @@ function sendToAnalytics(metric: Metric): void {
 export function getMetricThresholds(metricName: string) {
   const thresholds = {
     CLS: { good: 0.1, needsImprovement: 0.25 },
-    FID: { good: 100, needsImprovement: 300 },
+    INP: { good: 200, needsImprovement: 500 },
     FCP: { good: 1800, needsImprovement: 3000 },
     LCP: { good: 2500, needsImprovement: 4000 },
     TTFB: { good: 800, needsImprovement: 1800 },
@@ -106,7 +106,7 @@ export function initPerformanceMonitoring(): void {
 
   // Track Core Web Vitals
   onCLS(sendToAnalytics);
-  onFID(sendToAnalytics);
+  onINP(sendToAnalytics);
   onFCP(sendToAnalytics);
   onLCP(sendToAnalytics);
   onTTFB(sendToAnalytics);
