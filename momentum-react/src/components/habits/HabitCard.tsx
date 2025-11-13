@@ -13,7 +13,7 @@ interface HabitCardProps {
   habit: Habit;
 }
 
-export const HabitCard = memo(({ habit }: HabitCardProps) => {
+const HabitCardComponent = ({ habit }: HabitCardProps) => {
   const { currentView, currentYear, currentMonth } = useHabitStore();
   const stats = useHabitStats(habit);
   const { toggleCompletion, openModal } = useHabitActions();
@@ -187,6 +187,35 @@ export const HabitCard = memo(({ habit }: HabitCardProps) => {
       </div>
     </Card>
   );
+};
+
+// Custom memo comparison - only re-render if relevant habit data changed
+export const HabitCard = memo(HabitCardComponent, (prevProps, nextProps) => {
+  const prevHabit = prevProps.habit;
+  const nextHabit = nextProps.habit;
+
+  // Check if any of the displayed fields changed
+  if (
+    prevHabit.id !== nextHabit.id ||
+    prevHabit.name !== nextHabit.name ||
+    prevHabit.description !== nextHabit.description ||
+    prevHabit.icon !== nextHabit.icon ||
+    prevHabit.color !== nextHabit.color ||
+    prevHabit.archived !== nextHabit.archived
+  ) {
+    return false; // Props changed, re-render
+  }
+
+  // Deep compare completions object
+  const prevCompletions = JSON.stringify(prevHabit.completions);
+  const nextCompletions = JSON.stringify(nextHabit.completions);
+
+  if (prevCompletions !== nextCompletions) {
+    return false; // Completions changed, re-render
+  }
+
+  // Props are equal, skip re-render
+  return true;
 });
 
 HabitCard.displayName = 'HabitCard';

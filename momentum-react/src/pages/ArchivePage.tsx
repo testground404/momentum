@@ -1,8 +1,12 @@
+import { lazy, Suspense } from 'react';
 import { useHabitStore } from '../store/habitStore';
 import { HabitList } from '../components/habits';
-import { HabitFormModal, ConfirmDeleteModal } from '../components/modals';
 import { useHabitActions } from '../hooks/useHabitActions';
 import type { Habit } from '../types';
+
+// Lazy load modals for code splitting
+const HabitFormModal = lazy(() => import('../components/modals').then(module => ({ default: module.HabitFormModal })));
+const ConfirmDeleteModal = lazy(() => import('../components/modals').then(module => ({ default: module.ConfirmDeleteModal })));
 
 export function ArchivePage() {
   const { habits, addHabit, modal, closeModal } = useHabitStore();
@@ -85,22 +89,28 @@ export function ArchivePage() {
         </>
       )}
 
-      {/* Modals */}
-      <HabitFormModal
-        isOpen={modal.type === 'habit-edit'}
-        onClose={closeModal}
-        onSubmit={handleUpdateHabit}
-        habit={modal.data?.habit || null}
-        isLoading={isUpdating}
-      />
+      {/* Modals - Lazy loaded with Suspense */}
+      <Suspense fallback={null}>
+        {modal.type === 'habit-edit' && (
+          <HabitFormModal
+            isOpen={true}
+            onClose={closeModal}
+            onSubmit={handleUpdateHabit}
+            habit={modal.data?.habit || null}
+            isLoading={isUpdating}
+          />
+        )}
 
-      <ConfirmDeleteModal
-        isOpen={modal.type === 'confirm-delete'}
-        onClose={closeModal}
-        onConfirm={handleDeleteHabit}
-        habit={modal.data?.habit || null}
-        isLoading={isDeleting}
-      />
+        {modal.type === 'confirm-delete' && (
+          <ConfirmDeleteModal
+            isOpen={true}
+            onClose={closeModal}
+            onConfirm={handleDeleteHabit}
+            habit={modal.data?.habit || null}
+            isLoading={isDeleting}
+          />
+        )}
+      </Suspense>
     </>
   );
 }

@@ -1,9 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useHabitStore } from '../store/habitStore';
 import { HabitList } from '../components/habits';
-import { HabitFormModal, ConfirmDeleteModal } from '../components/modals';
 import { useHabitActions } from '../hooks/useHabitActions';
 import type { Habit } from '../types';
+
+// Lazy load modals for code splitting
+const HabitFormModal = lazy(() => import('../components/modals').then(module => ({ default: module.HabitFormModal })));
+const ConfirmDeleteModal = lazy(() => import('../components/modals').then(module => ({ default: module.ConfirmDeleteModal })));
 
 export function HabitsPage() {
   const { habits, addHabit, modal, closeModal } = useHabitStore();
@@ -99,22 +102,28 @@ export function HabitsPage() {
       {/* Habit List */}
       <HabitList />
 
-      {/* Modals */}
-      <HabitFormModal
-        isOpen={modal.type === 'habit-form' || modal.type === 'habit-edit'}
-        onClose={closeModal}
-        onSubmit={modal.type === 'habit-edit' ? handleUpdateHabit : handleCreateHabit}
-        habit={modal.type === 'habit-edit' ? modal.data?.habit : null}
-        isLoading={isCreating || isUpdating}
-      />
+      {/* Modals - Lazy loaded with Suspense */}
+      <Suspense fallback={null}>
+        {(modal.type === 'habit-form' || modal.type === 'habit-edit') && (
+          <HabitFormModal
+            isOpen={true}
+            onClose={closeModal}
+            onSubmit={modal.type === 'habit-edit' ? handleUpdateHabit : handleCreateHabit}
+            habit={modal.type === 'habit-edit' ? modal.data?.habit : null}
+            isLoading={isCreating || isUpdating}
+          />
+        )}
 
-      <ConfirmDeleteModal
-        isOpen={modal.type === 'confirm-delete'}
-        onClose={closeModal}
-        onConfirm={handleDeleteHabit}
-        habit={modal.data?.habit || null}
-        isLoading={isDeleting}
-      />
+        {modal.type === 'confirm-delete' && (
+          <ConfirmDeleteModal
+            isOpen={true}
+            onClose={closeModal}
+            onConfirm={handleDeleteHabit}
+            habit={modal.data?.habit || null}
+            isLoading={isDeleting}
+          />
+        )}
+      </Suspense>
     </>
   );
 }

@@ -1,9 +1,22 @@
-import { memo } from 'react';
+import { memo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { useHabitStore } from '../../store/habitStore';
 import { HabitCard } from './HabitCard';
 
 export const HabitList = memo(() => {
   const habits = useHabitStore((state) => state.getFilteredHabits());
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  // Use virtual scrolling only if there are many habits (>10)
+  const useVirtual = habits.length > 10;
+
+  const virtualizer = useVirtualizer({
+    count: habits.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 450, // Estimated height of HabitCard with margin
+    overscan: 3,
+    enabled: useVirtual,
+  });
 
   if (habits.length === 0) {
     return (
@@ -33,11 +46,48 @@ export const HabitList = memo(() => {
     );
   }
 
+  // For small lists, use regular grid rendering
+  if (!useVirtual) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {habits.map((habit) => (
+          <HabitCard key={habit.id} habit={habit} />
+        ))}
+      </div>
+    );
+  }
+
+  // For large lists, use virtual scrolling with single column
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {habits.map((habit) => (
-        <HabitCard key={habit.id} habit={habit} />
-      ))}
+    <div ref={parentRef} className="max-w-4xl mx-auto" style={{ height: '100vh', overflow: 'auto' }}>
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualItem) => {
+          const habit = habits[virtualItem.index];
+          return (
+            <div
+              key={habit.id}
+              data-index={virtualItem.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualItem.start}px)`,
+              }}
+              className="px-4 py-3"
+            >
+              <HabitCard habit={habit} />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 });
