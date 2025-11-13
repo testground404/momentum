@@ -9,7 +9,7 @@ const HabitFormModal = lazy(() => import('../components/modals').then(module => 
 const ConfirmDeleteModal = lazy(() => import('../components/modals').then(module => ({ default: module.ConfirmDeleteModal })));
 
 export function HabitsPage() {
-  const { habits, addHabit, modal, closeModal } = useHabitStore();
+  const { habits, addHabit, updateHabit, modal, closeModal } = useHabitStore();
   const { isCreating, isUpdating, isDeleting } = useHabitActions();
 
   // Add demo habit on first load
@@ -39,7 +39,8 @@ export function HabitsPage() {
       };
       addHabit(demoHabit);
     }
-  }, [habits.length, addHabit]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Modal handlers
   const handleCreateHabit = async (habitData: Partial<Habit>) => {
@@ -69,15 +70,7 @@ export function HabitsPage() {
       const habitId = modal.data?.habit?.id;
       if (!habitId) return;
 
-      const updatedHabit = habits.find((h) => h.id === habitId);
-      if (updatedHabit) {
-        const updated = {
-          ...updatedHabit,
-          ...habitData,
-          updatedAt: new Date().toISOString(),
-        };
-        addHabit(updated);
-      }
+      updateHabit(habitId, habitData);
       closeModal();
     } catch (error) {
       console.error('Failed to update habit:', error);

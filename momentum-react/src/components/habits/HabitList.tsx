@@ -1,10 +1,23 @@
-import { memo, useRef } from 'react';
+import { memo, useRef, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useHabitStore } from '../../store/habitStore';
+import { filterHabits, sortHabits } from '../../utils/habitUtils';
 import { HabitCard } from './HabitCard';
 
 export const HabitList = memo(() => {
-  const habits = useHabitStore((state) => state.getFilteredHabits());
+  // Get state values directly without calling functions in the selector
+  const { habits: allHabits, searchQuery, sortOption, showArchived } = useHabitStore((state) => ({
+    habits: state.habits,
+    searchQuery: state.searchQuery,
+    sortOption: state.sortOption,
+    showArchived: state.showArchived,
+  }));
+
+  // Compute filtered habits with useMemo to avoid recalculating on every render
+  const habits = useMemo(() => {
+    const filtered = filterHabits(allHabits, searchQuery, showArchived);
+    return sortHabits(filtered, sortOption);
+  }, [allHabits, searchQuery, sortOption, showArchived]);
   const parentRef = useRef<HTMLDivElement>(null);
 
   // Use virtual scrolling only if there are many habits (>10)
