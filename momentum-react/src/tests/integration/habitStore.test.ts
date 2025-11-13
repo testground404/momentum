@@ -33,7 +33,7 @@ describe('HabitStore Integration', () => {
 
   describe('Habit CRUD Operations', () => {
     it('adds a habit', () => {
-      const { addHabit, habits } = useHabitStore.getState();
+      const { addHabit } = useHabitStore.getState();
 
       addHabit(mockHabit);
 
