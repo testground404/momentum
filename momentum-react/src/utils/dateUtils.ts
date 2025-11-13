@@ -95,3 +95,33 @@ export const getCurrentStreak = (completions: { date: string }[]): number => {
 
   return streak;
 };
+
+/**
+ * Check if a year is a leap year
+ */
+export const isLeapYear = (year: number): boolean => {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+};
+
+/**
+ * Get the number of days in a specific year
+ */
+export const getDaysInYearCount = (year: number): number => {
+  return isLeapYear(year) ? 366 : 365;
+};
+
+/**
+ * Get the day index (0-365) for a specific date within a year
+ */
+export const getDayIndex = (date: Date, year: number): number => {
+  const startOfYearDate = new Date(year, 0, 1);
+  const diffTime = date.getTime() - startOfYearDate.getTime();
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+};
+
+/**
+ * Get the current day index of the year
+ */
+export const getCurrentDayIndex = (year: number): number => {
+  return getDayIndex(new Date(), year);
+};
