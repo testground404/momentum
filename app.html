@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en" data-view="year">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Habit Tracker - Multi Habit</title>
+  <link rel="icon" type="image/png" href="icon.png">
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind utilities only; preflight OFF, to avoid UI changes -->
+  <script>
+    window.tailwind = { config: { darkMode: "class", corePlugins: { preflight: false } } };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Tabler Icons webfont -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="app-shell">
+  <div id="scroll-blur-overlay"></div>
+  <div class="container">
+    <header class="app-header">
+      <div class="header-top">
+        <h1 class="title">Momentum</h1>
+        <div class="year-banner" id="year-banner"></div>
+      </div>
+      <div class="header-toolbar">
+        <div class="search-field" id="search-field">
+          <span class="visually-hidden" id="search-label">Search habits</span>
+          <input
+            type="search"
+            class="input search-input"
+            id="habit-search"
+            placeholder="Search habits…"
+            aria-labelledby="search-label"
+            autocomplete="off"
+          >
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </div>
+        <div class="sort-field">
+          <span class="visually-hidden" id="sort-label">Sort habits</span>
+          <div class="select-control" data-custom-select>
+            <select class="input custom-select-source" id="habit-sort" aria-labelledby="sort-label" tabindex="-1" aria-hidden="true">
+              <option value="created-newest">Newest first</option>
+              <option value="created-oldest">Oldest first</option>
+              <option value="name-az">Name A → Z</option>
+              <option value="name-za">Name Z → A</option>
+              <option value="rate-high-low">Highest completion</option>
+              <option value="rate-low-high">Lowest completion</option>
+            </select>
+            <button type="button" id="habit-sort-display" class="select-display sort-select-display" data-select-display aria-labelledby="sort-label"></button>
+            <div class="select-options" data-select-options></div>
+          </div>
+        </div>
+        <div class="toolbar-actions">
+          <button id="view-toggle" class="control-btn" aria-label="Switch to month view" title="Switch to month view">
+            <svg class="icon-year-view" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <svg class="icon-month-view" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path><path d="M16 18h.01"></path></svg>
+          </button>
+          <button id="theme-toggle" class="control-btn theme-toggle" aria-label="Switch to dark mode" title="Switch to dark mode">
+            <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          </button>
+          <button id="btn-new" class="btn primary toolbar-add-btn" aria-label="Add habit" title="Add habit"><span aria-hidden="true">+</span></button>
+          <div class="account-menu">
+            <button id="account-menu-btn" class="control-btn account-menu-btn" aria-expanded="false" aria-haspopup="true" aria-controls="account-menu" aria-label="Account menu" type="button">
+              <svg class="icon-user" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <span class="account-menu-label">Account</span>
+              <svg class="icon-caret" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+            </button>
+            <div id="account-menu" class="account-menu-dropdown" role="menu" aria-labelledby="account-menu-btn">
+              <button type="button" class="account-menu-item" data-account-menu="logout">Log out</button>
+              <button type="button" class="account-menu-item danger" data-account-menu="delete">Delete account</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div id="skeleton-list" class="skeleton-list">
+      <div class="skeleton-card">
+        <div class="sk-header">
+          <div class="sk-circle skeleton-shimmer"></div>
+          <div class="sk-lines">
+            <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            <div class="sk-line sk-line-sm skeleton-shimmer"></div>
+          </div>
+          <div class="sk-pill skeleton-shimmer"></div>
+        </div>
+        <div class="sk-grid">
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+        </div>
+      </div>
+      <div class="skeleton-card">
+        <div class="sk-header">
+          <div class="sk-circle skeleton-shimmer"></div>
+          <div class="sk-lines">
+            <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            <div class="sk-line sk-line-sm skeleton-shimmer"></div>
+          </div>
+          <div class="sk-pill skeleton-shimmer"></div>
+        </div>
+        <div class="sk-grid">
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+        </div>
+      </div>
+      <div class="skeleton-card">
+        <div class="sk-header">
+          <div class="sk-circle skeleton-shimmer"></div>
+          <div class="sk-lines">
+            <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            <div class="sk-line sk-line-sm skeleton-shimmer"></div>
+          </div>
+          <div class="sk-pill skeleton-shimmer"></div>
+        </div>
+        <div class="sk-grid">
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+          <span class="skeleton-shimmer"></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="list" hidden></div>
+
+    <div class="empty-state" id="empty">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted); margin-bottom:12px"><path d="M8 18L12 22L16 18"></path> <path d="M12 12V22"></path> <path d="M12 2a4 4 0 1 0 0 8a4 4 0 0 0 0-8z"></path> <path d="M20.29 10.29L16 6"></path> <path d="M3.71 10.29L8 6"></path></svg>
+      <h2>Create Your First Habit</h2>
+      <p>Click the + button to get started.</p>
+    </div>
+
+    <div class="empty-state" id="search-empty" hidden>
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted); margin-bottom:12px"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <h2>No matching habits</h2>
+      <p>Try a different search term or sorting option.</p>
+    </div>
+  </div>
+
+  <div class="sort-modal" id="sort-modal" aria-hidden="true">
+    <div class="sort-modal-backdrop" data-sort-close></div>
+    <div class="sort-modal-sheet" role="dialog" aria-labelledby="sort-modal-title">
+      <div class="sort-modal-header">
+        <h2 id="sort-modal-title">Sort habits</h2>
+        <button type="button" class="sort-modal-close" data-sort-close aria-label="Close sort options">✕</button>
+      </div>
+      <div class="sort-modal-body" id="sort-options"></div>
+    </div>
+  </div>
+
+  <div class="account-modal" id="account-modal" aria-hidden="true">
+    <div class="account-modal-backdrop" data-account-close></div>
+    <div class="account-modal-sheet" role="dialog" aria-labelledby="account-modal-title">
+      <div class="account-modal-header">
+        <h2 id="account-modal-title">Account</h2>
+        <button type="button" class="account-modal-close" data-account-close aria-label="Close account options">✕</button>
+      </div>
+      <div class="account-modal-body">
+        <button type="button" id="account-theme-toggle" class="account-action">
+          <span>Light/Dark Mode</span>
+          <i class="ti ti-adjustments"></i>
+        </button>
+        <button type="button" id="account-logout" class="account-action">
+          <span>Log Out</span>
+          <i class="ti ti-logout"></i>
+        </button>
+        <button type="button" id="account-delete" class="account-action danger">
+          <span>Delete Account</span>
+          <i class="ti ti-trash"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Primary">
+    <button type="button" id="nav-view-toggle" class="nav-toggle" aria-label="Switch to month view" title="Switch to month view">
+      <span class="nav-toggle-icon">
+        <svg class="icon-year-view" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <svg class="icon-month-view" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path><path d="M16 18h.01"></path></svg>
+      </span>
+      <span>View</span>
+    </button>
+    <button type="button" id="sort-toggle"><i class="ti ti-arrows-sort"></i><span>Sort</span></button>
+    <button type="button" id="nav-add" class="nav-fab" aria-label="Add habit" title="Add habit">+</button>
+    <button type="button" id="nav-search-toggle"><i class="ti ti-search"></i><span>Search</span></button>
+    <button type="button" id="account-toggle"><i class="ti ti-user"></i><span>Account</span></button>
+  </nav>
+
+  <!-- offscreen measuring layer -->
+  <div id="measure-layer" style="position:absolute; inset:0; pointer-events:none; visibility:hidden; height:0; overflow:hidden"></div>
+
+  <!-- New Habit Overlay -->
+  <div class="overlay" id="new-habit-overlay">
+    <div class="sheet">
+      <div class="sheet-header">
+        <h2 class="sheet-title">New Habit</h2>
+        <button type="button" class="icon-x" id="new-sheet-close" aria-label="Close">✕</button>
+      </div>
+      <form id="new-habit-form" class="sheet-body">
+        <div class="form-inline">
+          <button type="button" id="new-preview-btn" class="icon-preview" title="Edit icon &amp; color">
+            <span class="hint">Click to change</span>
+            <span class="chip" id="new-preview-chip"><i class="ti ti-target"></i></span>
+          </button>
+          <input class="input" id="habit-name" name="name" type="text" placeholder="Habit Name" aria-label="Habit Name" required>
+        </div>
+
+        <div style="margin-top:14px">
+          <label class="form-label" for="habit-start-date">Start date</label>
+          <input class="input" id="habit-start-date" type="text" inputmode="numeric" pattern="\d{2}-\d{2}-\d{4}" placeholder="DD-MM-YYYY" aria-label="Start date" required>
+        </div>
+
+        <!-- FREQUENCY (NEW) -->
+        <div style="margin-top:14px">
+          <label class="form-label" for="habit-frequency">Frequency</label>
+          <div class="select-control" data-custom-select>
+            <select id="habit-frequency" class="input custom-select-source" tabindex="-1" aria-hidden="true">
+              <option value="daily">Every day</option>
+              <option value="weekdays">Weekdays (Mon–Fri)</option>
+              <option value="daysOfWeek">Specific days…</option>
+              <option value="timesPerWeek">X times per week…</option>
+            </select>
+            <button type="button" class="select-display" data-select-display></button>
+            <div class="select-options" data-select-options></div>
+          </div>
+        </div>
+        <div id="freq-extra" style="margin-top:10px; display:none"></div>
+      </form>
+      <div class="sheet-footer">
+        <button class="btn sheet-action" type="button" id="new-sheet-cancel">Cancel</button>
+        <button class="btn primary sheet-action" type="submit" form="new-habit-form">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Habit Overlay -->
+  <div class="overlay" id="edit-habit-overlay">
+    <div class="sheet">
+      <div class="sheet-header">
+        <h2 class="sheet-title">Edit Habit</h2>
+        <button type="button" class="icon-x" id="edit-sheet-close" aria-label="Close">✕</button>
+      </div>
+      <form id="edit-habit-form" class="sheet-body">
+        <input type="hidden" id="edit-habit-id" name="id">
+        <div class="form-inline">
+          <button type="button" id="edit-preview-btn" class="icon-preview" title="Edit icon &amp; color">
+            <span class="hint">Click to change</span>
+            <span class="chip" id="edit-preview-chip"><i class="ti ti-target"></i></span>
+          </button>
+          <input class="input" id="edit-habit-name" name="name" type="text" placeholder="Habit Name" aria-label="Habit Name" required>
+        </div>
+
+        <div style="margin-top:14px">
+          <label class="form-label" for="edit-habit-start-date">Start date</label>
+          <input class="input" id="edit-habit-start-date" type="text" inputmode="numeric" pattern="\d{2}-\d{2}-\d{4}" placeholder="DD-MM-YYYY" aria-label="Start date" required>
+        </div>
+
+        <!-- FREQUENCY FOR EDIT (NEW) -->
+        <div style="margin-top:14px">
+          <label class="form-label" for="edit-habit-frequency">Frequency</label>
+          <div class="select-control" data-custom-select>
+            <select id="edit-habit-frequency" class="input custom-select-source" tabindex="-1" aria-hidden="true">
+              <option value="daily">Every day</option>
+              <option value="weekdays">Weekdays (Mon–Fri)</option>
+              <option value="daysOfWeek">Specific days…</option>
+              <option value="timesPerWeek">X times per week…</option>
+            </select>
+            <button type="button" class="select-display" data-select-display></button>
+            <div class="select-options" data-select-options></div>
+          </div>
+        </div>
+        <div id="edit-freq-extra" style="margin-top:10px; display:none"></div>
+      </form>
+      <div class="sheet-footer">
+        <button class="btn danger sheet-action" type="button" id="btn-delete">Delete</button>
+        <button class="btn sheet-action" type="button" id="edit-sheet-cancel">Cancel</button>
+        <button class="btn primary sheet-action" type="submit" form="edit-habit-form">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Note Overlay -->
+  <div class="overlay" id="note-overlay">
+    <div class="sheet" style="max-width:360px">
+      <div class="sheet-header">
+        <h2 class="sheet-title" id="note-title">Add note</h2>
+        <button type="button" class="icon-x" id="note-close" aria-label="Close">✕</button>
+      </div>
+      <form id="note-form" class="sheet-body">
+        <div style="margin-bottom:12px">
+          <label class="form-label">Date</label>
+          <div id="note-date" style="font-weight:700"></div>
+        </div>
+        <label class="form-label" for="note-text">Note</label>
+        <textarea id="note-text" class="input" rows="3" placeholder="Type a quick note..." style="height:100px; resize:vertical"></textarea>
+        <input type="hidden" id="note-habit-id">
+        <input type="hidden" id="note-index">
+      </form>
+      <div class="sheet-footer">
+        <button class="btn" type="button" id="note-cancel">Cancel</button>
+        <button class="btn primary" type="submit" form="note-form">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Confirm Overlay -->
+  <div class="overlay" id="confirm-overlay">
+    <div class="sheet" style="max-width:360px">
+      <div class="sheet-header">
+        <h2 class="sheet-title" id="confirm-title">Confirm</h2>
+        <button type="button" class="icon-x" id="confirm-close" aria-label="Close">✕</button>
+      </div>
+      <div class="sheet-body">
+        <p id="confirm-message" style="color:var(--muted); font-size:.9rem"></p>
+      </div>
+      <div class="sheet-footer">
+        <button class="btn" type="button" id="confirm-cancel-btn">Cancel</button>
+        <button class="btn danger" type="button" id="confirm-ok-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Overlay -->
+  <div class="overlay" id="stats-overlay">
+    <div class="sheet" style="max-width:720px">
+      <div class="sheet-header">
+        <h2 class="sheet-title" id="stats-title">Habit Stats</h2>
+        <button type="button" class="icon-x" id="stats-close" aria-label="Close">✕</button>
+      </div>
+      <div class="sheet-body" id="stats-body">
+        <!-- filled by JS -->
+      </div>
+      <div class="sheet-footer">
+        <div></div>
+        <button class="btn" type="button" id="stats-ok">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabler Icon + Color Picker Overlay -->
+  <div class="overlay" id="picker-overlay" aria-hidden="true">
+    <div id="picker-modal" class="w-full max-w-md max-h-[680px] flex flex-col" style="transform: translateY(20px)">
+      <div class="picker-header">
+        <h2 class="picker-title">Choose Icon</h2>
+        <div class="flex gap-2">
+          <button id="ip-densityBtn" class="picker-icon-btn" title="Toggle density">
+            <i class="ti ti-layout-grid"></i>
+          </button>
+          <button id="ip-closeBtn" class="picker-icon-btn" title="Close">
+            <i class="ti ti-x"></i>
+          </button>
+        </div>
+      </div>
+      <div class="picker-search">
+        <div class="picker-search-field">
+          <i class="ti ti-search"></i>
+          <input id="ip-search" type="text" placeholder="Search icons..." autocomplete="off">
+        </div>
+      </div>
+      <div id="ip-cats" class="picker-cats" aria-label="Icon categories"></div>
+      <div class="picker-color-row">
+        <small>
+          <span>Icon Color</span>
+          <div style="display:flex; gap:.5rem; align-items:center">
+            <input id="ip-customColor" value="#1e293b" maxlength="7" style="width:5rem; padding:.35rem .5rem; border:1px solid var(--border); border-radius:.5rem; background:var(--bg); color:var(--text); text-align:center; font-size:.7rem">
+            <div id="ip-colorPreview" style="width:1.5rem; height:1.5rem; border-radius:.45rem; background:#1e293b; border:2px solid rgba(255,255,255,.15)"></div>
+          </div>
+        </small>
+        <div id="ip-colors" class="picker-color-grid"></div>
+      </div>
+      <div class="picker-body" id="ip-scroll">
+        <div id="ip-icons" class="picker-icon-grid"></div>
+        <div id="ip-empty" class="text-center py-10 hidden" style="text-align:center; padding:2.5rem 0; color:var(--muted)">
+          <div style="width:3rem; height:3rem; background:rgba(148,163,184,.08); border-radius:9999px; margin:0 auto .6rem; display:grid; place-items:center">
+            <i class="ti ti-search" style="font-size:1.25rem; color:var(--muted)"></i>
+          </div>
+          <p style="font-size:.7rem">No icons found</p>
+        </div>
+      </div>
+      <div class="picker-footer">
+        <button id="ip-cancel" class="flex-1 btn" style="text-align:center">
+          Cancel
+        </button>
+        <button id="ip-select" class="flex-1 btn primary" disabled style="text-align:center">
+          Select
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast toast-secondary" id="undo-toast" role="status" aria-live="polite">
+    <span data-undo-message>Habit deleted</span>
+    <button type="button" class="btn secondary" data-undo-trigger>Undo</button>
+    <div class="toast-progress"><div></div></div>
+  </div>
+
+  <!-- Custom Confirmation Modal -->
+  <div class="modal-overlay" id="confirm-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+    <div class="confirm-modal">
+      <div class="confirm-modal-header">
+        <h3 id="confirm-modal-title" class="confirm-modal-title">Confirm Action</h3>
+      </div>
+      <div class="confirm-modal-body">
+        <p id="confirm-modal-message">Are you sure?</p>
+      </div>
+      <div class="confirm-modal-footer">
+        <button type="button" class="btn" id="confirm-modal-cancel">Cancel</button>
+        <button type="button" class="btn primary" id="confirm-modal-confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Alert Modal -->
+  <div class="modal-overlay" id="alert-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title">
+    <div class="confirm-modal">
+      <div class="confirm-modal-header">
+        <h3 id="alert-modal-title" class="confirm-modal-title">Notice</h3>
+      </div>
+      <div class="confirm-modal-body">
+        <p id="alert-modal-message">Message</p>
+      </div>
+      <div class="confirm-modal-footer">
+        <button type="button" class="btn primary" id="alert-modal-ok" style="width: 100%;">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <!-- Firebase Configuration -->
+  <script src="js/firebase-config.js"></script>
+
+  <!-- App modules -->
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/year-wheel.js"></script>
+
+  <!-- Authentication check -->
+  <script>
+    // Check authentication status
+    if (Auth.useFirebase) {
+      // For Firebase, wait for auth state to be restored
+      Auth.onAuthStateChanged((user) => {
+        if (!user) {
+          console.log('User not authenticated, redirecting to login...');
+          window.location.href = 'index.html';
+        } else {
+          console.log('User authenticated:', user.uid);
+        }
+      });
+    } else {
+      // For localStorage, check synchronously
+      if (!Auth.isAuthenticated()) {
+        window.location.href = 'index.html';
+      }
+    }
+  </script>
+
+  <!-- App logic -->
+  <script src="script.js"></script>
+
+  <!-- Card stagger load microinteraction -->
+  <script>
+    (function() {
+      // Apply stagger animation to cards on initial load
+      let hasAnimated = false;
+
+      function animateCards() {
+        if (hasAnimated) return;
+
+        const cards = document.querySelectorAll('.card');
+        if (cards.length === 0) return;
+
+        hasAnimated = true;
+
+        cards.forEach(function(card, index) {
+          // Add entering class immediately
+          card.classList.add('card-entering');
+
+          // Stagger with 35ms delay between each card
+          setTimeout(function() {
+            card.classList.add('card-enter-active');
+            card.classList.remove('card-entering');
+          }, index * 35);
+        });
+      }
+
+      // Wait for DOM to be ready and run animation
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(animateCards, 100);
+        });
+      } else {
+        setTimeout(animateCards, 100);
+      }
+    })();
+  </script>
+
+  <!-- Add this script before the closing </body> tag in app.html -->
+<script>
+  // This script guarantees a 30px gap below the fixed header at all times.
+  (function() {
+    const header = document.querySelector('.app-header');
+    const bodyShell = document.querySelector('body.app-shell');
+    const DESIRED_GAP_PX = 30;
+
+    if (!header || !bodyShell) {
+      console.warn('Could not find header or body shell to adjust spacing.');
+      return;
+    }
+
+    // This function calculates and applies the correct top padding to the body
+    function adjustBodyPadding() {
+      // Get the full, rendered height of the header
+      const headerHeight = header.offsetHeight;
+      
+      // Get the 'top' value from the CSS (e.g., 30px)
+      const headerTopOffset = parseInt(window.getComputedStyle(header).top, 10);
+      
+      // Calculate the total required padding
+      const totalPadding = headerHeight + headerTopOffset + DESIRED_GAP_PX;
+      
+      // Apply the new padding to the body
+      bodyShell.style.paddingTop = `${totalPadding}px`;
+    }
+
+    // Use a ResizeObserver to automatically run the function whenever the header's size changes.
+    // This is more efficient than listening for general window resize events.
+    const observer = new ResizeObserver(() => {
+      adjustBodyPadding();
+    });
+
+    // Start observing the header element for size changes.
+    observer.observe(header);
+
+    // Run it once on initial load to set the correct spacing.
+    adjustBodyPadding();
+  })();
+</script>
+
+<!-- Scroll-based Blur Effect -->
+<script>
+  (function() {
+    const header = document.querySelector('.app-header');
+    const blurOverlay = document.getElementById('scroll-blur-overlay');
+    
+    if (!header || !blurOverlay) {
+      console.warn('Blur effect requires .app-header and #scroll-blur-overlay elements.');
+      return;
+    }
+
+    const MAX_BLUR_PX = 16;
+    const SCROLL_DISTANCE_FOR_MAX_BLUR = 300;
+
+    function updateBlurEffect() {
+      const headerBottom = header.getBoundingClientRect().bottom;
+      const scrollY = window.scrollY;
+
+      // Ensure the overlay covers the area from the top of the screen to the bottom of the header
+      blurOverlay.style.height = `${Math.max(0, headerBottom)}px`;
+
+      // Calculate the opacity based on scroll position
+      const scrollProgress = Math.min(1, scrollY / SCROLL_DISTANCE_FOR_MAX_BLUR);
+
+      // Apply the opacity to fade the whole overlay in/out
+      blurOverlay.style.opacity = scrollProgress;
+    }
+
+    // Update on scroll and resize
+    window.addEventListener('scroll', updateBlurEffect, { passive: true });
+    window.addEventListener('resize', updateBlurEffect, { passive: true });
+
+    // Initial call
+    updateBlurEffect();
+  })();
+</script>
+
+</body>
+</html>
