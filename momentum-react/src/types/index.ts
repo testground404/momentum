@@ -6,19 +6,28 @@ export interface Habit {
   id: string;
   name: string;
   description?: string;
-  icon?: string;
+  icon: string;
   color: string;
-  createdAt: Date;
-  updatedAt: Date;
-  archived: boolean;
-  userId: string;
-  completions: Completion[];
-  order: number;
+  year: number;
+  startDate: string; // ISO date string
+  createdAt: string;
+  updatedAt?: string;
+  archived?: boolean;
+  userId?: string;
+
+  // Tracking data - dayIndex is 0-365 (or 0-366 for leap years)
+  completions: { [dayIndex: string]: boolean };
+  notes?: { [dayIndex: string]: string };
+  order?: number;
 }
 
-export interface Completion {
-  date: string; // ISO date string (YYYY-MM-DD)
-  timestamp: Date;
+export interface HabitStats {
+  totalDays: number;
+  completedDays: number;
+  completionRate: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastCompletedDate?: string;
 }
 
 export interface User {
@@ -28,25 +37,59 @@ export interface User {
   photoURL: string | null;
 }
 
-export interface Theme {
-  mode: 'light' | 'dark';
-}
-
 export interface HabitFormData {
   name: string;
   description?: string;
-  icon?: string;
+  icon: string;
   color: string;
 }
 
-export type SortOption = 'manual' | 'name' | 'created' | 'completion';
 export type ViewMode = 'year' | 'month';
+
+export type SortOption =
+  | 'created-newest'
+  | 'created-oldest'
+  | 'name-az'
+  | 'name-za'
+  | 'rate-high-low'
+  | 'rate-low-high'
+  | 'manual';
 
 export interface AppState {
   habits: Habit[];
+  currentView: ViewMode;
+  currentYear: number;
+  currentMonth?: number;
   searchQuery: string;
-  sortBy: SortOption;
-  viewMode: ViewMode;
+  sortOption: SortOption;
   showArchived: boolean;
-  selectedDate: Date;
+  selectedHabitId?: string;
+}
+
+// Icon and color picker types
+export interface IconOption {
+  name: string;
+  category: string;
+  tags: string[];
+}
+
+export interface ColorOption {
+  name: string;
+  value: string;
+  textColor?: string;
+}
+
+// Modal types
+export type ModalType = 'habit-form' | 'habit-edit' | 'confirm-delete' | 'settings' | null;
+
+export interface ModalState {
+  type: ModalType;
+  data?: any;
+}
+
+// Firebase types
+export interface FirebaseHabit extends Omit<Habit, 'id'> {
+  // Server timestamps
+  createdAt: any; // Firestore Timestamp
+  updatedAt?: any; // Firestore Timestamp
 }

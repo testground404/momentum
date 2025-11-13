@@ -83,7 +83,6 @@ export const getCurrentStreak = (completions: { date: string }[]): number => {
   }
 
   for (const completion of sortedCompletions) {
-    const completionDate = new Date(completion.date);
     const expectedDateKey = formatDateKey(currentDate);
 
     if (completion.date === expectedDateKey) {

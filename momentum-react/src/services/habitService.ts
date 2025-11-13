@@ -9,14 +9,45 @@ import {
   doc,
   serverTimestamp,
   orderBy,
+  onSnapshot,
+  Timestamp,
 } from 'firebase/firestore';
+import type { Unsubscribe } from 'firebase/firestore';
 import { db } from './firebase';
-import { Habit, HabitFormData } from '../types';
+import type { Habit, FirebaseHabit } from '../types';
 
 const HABITS_COLLECTION = 'habits';
 
 /**
- * Fetch all habits for a user
+ * Convert Firestore habit data to app Habit type
+ */
+const convertFirebaseHabit = (id: string, data: any): Habit => {
+  return {
+    id,
+    name: data.name,
+    description: data.description,
+    icon: data.icon,
+    color: data.color,
+    year: data.year,
+    startDate: data.startDate,
+    createdAt:
+      data.createdAt instanceof Timestamp
+        ? data.createdAt.toDate().toISOString()
+        : data.createdAt,
+    updatedAt:
+      data.updatedAt instanceof Timestamp
+        ? data.updatedAt.toDate().toISOString()
+        : data.updatedAt,
+    archived: data.archived || false,
+    userId: data.userId,
+    completions: data.completions || {},
+    notes: data.notes,
+    order: data.order,
+  };
+};
+
+/**
+ * Fetch all habits for a user (one-time fetch)
  */
 export const fetchUserHabits = async (userId: string): Promise<Habit[]> => {
   try {
@@ -31,10 +62,7 @@ export const fetchUserHabits = async (userId: string): Promise<Habit[]> => {
     const habits: Habit[] = [];
 
     querySnapshot.forEach((doc) => {
-      habits.push({
-        id: doc.id,
-        ...doc.data(),
-      } as Habit);
+      habits.push(convertFirebaseHabit(doc.id, doc.data()));
     });
 
     return habits;
@@ -45,31 +73,57 @@ export const fetchUserHabits = async (userId: string): Promise<Habit[]> => {
 };
 
 /**
+ * Subscribe to real-time updates for user habits
+ */
+export const subscribeToUserHabits = (
+  userId: string,
+  callback: (habits: Habit[]) => void
+): Unsubscribe => {
+  const habitsRef = collection(db, HABITS_COLLECTION);
+  const q = query(
+    habitsRef,
+    where('userId', '==', userId),
+    orderBy('order', 'asc')
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const habits: Habit[] = [];
+      snapshot.forEach((doc) => {
+        habits.push(convertFirebaseHabit(doc.id, doc.data()));
+      });
+      callback(habits);
+    },
+    (error) => {
+      console.error('Error subscribing to habits:', error);
+    }
+  );
+};
+
+/**
  * Create a new habit
  */
-export const createHabit = async (
-  userId: string,
-  habitData: HabitFormData
-): Promise<Habit> => {
+export const createHabit = async (habitData: Omit<Habit, 'id'>): Promise<string> => {
   try {
-    const newHabit = {
-      ...habitData,
-      userId,
-      archived: false,
-      completions: [],
-      order: Date.now(),
+    const newHabit: FirebaseHabit = {
+      name: habitData.name,
+      description: habitData.description,
+      icon: habitData.icon,
+      color: habitData.color,
+      year: habitData.year,
+      startDate: habitData.startDate,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+      archived: habitData.archived || false,
+      userId: habitData.userId,
+      completions: habitData.completions || {},
+      notes: habitData.notes,
+      order: habitData.order || Date.now(),
     };
 
     const docRef = await addDoc(collection(db, HABITS_COLLECTION), newHabit);
-
-    return {
-      id: docRef.id,
-      ...newHabit,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as Habit;
+    return docRef.id;
   } catch (error) {
     console.error('Error creating habit:', error);
     throw error;
@@ -81,7 +135,7 @@ export const createHabit = async (
  */
 export const updateHabit = async (
   habitId: string,
-  updates: Partial<Habit>
+  updates: Partial<Omit<Habit, 'id'>>
 ): Promise<void> => {
   try {
     const habitRef = doc(db, HABITS_COLLECTION, habitId);
@@ -109,28 +163,54 @@ export const deleteHabit = async (habitId: string): Promise<void> => {
 };
 
 /**
- * Toggle habit completion for a specific date
+ * Archive a habit
+ */
+export const archiveHabit = async (habitId: string): Promise<void> => {
+  try {
+    const habitRef = doc(db, HABITS_COLLECTION, habitId);
+    await updateDoc(habitRef, {
+      archived: true,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error archiving habit:', error);
+    throw error;
+  }
+};
+
+/**
+ * Unarchive a habit
+ */
+export const unarchiveHabit = async (habitId: string): Promise<void> => {
+  try {
+    const habitRef = doc(db, HABITS_COLLECTION, habitId);
+    await updateDoc(habitRef, {
+      archived: false,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error unarchiving habit:', error);
+    throw error;
+  }
+};
+
+/**
+ * Toggle habit completion for a specific day
  */
 export const toggleHabitCompletion = async (
   habitId: string,
-  date: string,
-  currentCompletions: { date: string; timestamp: Date }[]
+  dayIndex: number,
+  currentCompletions: { [dayIndex: string]: boolean }
 ): Promise<void> => {
   try {
     const habitRef = doc(db, HABITS_COLLECTION, habitId);
+    const key = dayIndex.toString();
+    const newCompletions = { ...currentCompletions };
 
-    const isCompleted = currentCompletions.some((c) => c.date === date);
-    let newCompletions;
-
-    if (isCompleted) {
-      // Remove completion
-      newCompletions = currentCompletions.filter((c) => c.date !== date);
+    if (newCompletions[key]) {
+      delete newCompletions[key];
     } else {
-      // Add completion
-      newCompletions = [
-        ...currentCompletions,
-        { date, timestamp: new Date() },
-      ];
+      newCompletions[key] = true;
     }
 
     await updateDoc(habitRef, {
@@ -142,3 +222,64 @@ export const toggleHabitCompletion = async (
     throw error;
   }
 };
+
+/**
+ * Update habit note for a specific day
+ */
+export const updateHabitNote = async (
+  habitId: string,
+  dayIndex: number,
+  note: string,
+  currentNotes: { [dayIndex: string]: string } = {}
+): Promise<void> => {
+  try {
+    const habitRef = doc(db, HABITS_COLLECTION, habitId);
+    const key = dayIndex.toString();
+    const newNotes = { ...currentNotes };
+
+    if (note.trim() === '') {
+      delete newNotes[key];
+    } else {
+      newNotes[key] = note;
+    }
+
+    await updateDoc(habitRef, {
+      notes: Object.keys(newNotes).length > 0 ? newNotes : null,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error updating habit note:', error);
+    throw error;
+  }
+};
+
+/**
+ * Batch update habit order (for drag-and-drop reordering)
+ */
+export const updateHabitOrder = async (habitId: string, order: number): Promise<void> => {
+  try {
+    const habitRef = doc(db, HABITS_COLLECTION, habitId);
+    await updateDoc(habitRef, {
+      order,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error updating habit order:', error);
+    throw error;
+  }
+};
+
+export const habitService = {
+  fetchUserHabits,
+  subscribeToUserHabits,
+  createHabit,
+  updateHabit,
+  deleteHabit,
+  archiveHabit,
+  unarchiveHabit,
+  toggleHabitCompletion,
+  updateHabitNote,
+  updateHabitOrder,
+};
+
+export default habitService;
