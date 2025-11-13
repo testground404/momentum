@@ -1,17 +1,20 @@
 import { memo, useRef, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useShallow } from 'zustand/react/shallow';
 import { useHabitStore } from '../../store/habitStore';
 import { filterHabits, sortHabits } from '../../utils/habitUtils';
 import { HabitCard } from './HabitCard';
 
 export const HabitList = memo(() => {
-  // Get state values directly without calling functions in the selector
-  const { habits: allHabits, searchQuery, sortOption, showArchived } = useHabitStore((state) => ({
-    habits: state.habits,
-    searchQuery: state.searchQuery,
-    sortOption: state.sortOption,
-    showArchived: state.showArchived,
-  }));
+  // Get state values with useShallow to prevent unnecessary re-renders
+  const { habits: allHabits, searchQuery, sortOption, showArchived } = useHabitStore(
+    useShallow((state) => ({
+      habits: state.habits,
+      searchQuery: state.searchQuery,
+      sortOption: state.sortOption,
+      showArchived: state.showArchived,
+    }))
+  );
 
   // Compute filtered habits with useMemo to avoid recalculating on every render
   const habits = useMemo(() => {
