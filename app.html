@@ -29,7 +29,11 @@
     <header class="app-header">
       <div class="header-top">
         <h1 class="title">Momentum</h1>
-        <div class="year-banner" id="year-banner"></div>
+        <div class="year-banner" id="year-banner">
+          <div class="year-banner-skeleton">
+            <div class="sk-pill skeleton-shimmer"></div>
+          </div>
+        </div>
       </div>
       <div class="header-toolbar">
         <div class="search-field" id="search-field">
@@ -54,6 +58,11 @@
               <option value="name-za">Name Z → A</option>
               <option value="rate-high-low">Highest completion</option>
               <option value="rate-low-high">Lowest completion</option>
+              <option value="custom-manual">Manual order</option>
+              <option value="streak-longest">Longest streak</option>
+              <option value="streak-current">Current streak</option>
+              <option value="total-high">Most completions</option>
+              <option value="total-low">Least completions</option>
             </select>
             <button type="button" id="habit-sort-display" class="select-display sort-select-display" data-select-display aria-labelledby="sort-label"></button>
             <div class="select-options" data-select-options></div>
@@ -85,76 +94,285 @@
     </header>
 
     <div id="skeleton-list" class="skeleton-list">
-      <div class="skeleton-card">
-        <div class="sk-header">
-          <div class="sk-circle skeleton-shimmer"></div>
-          <div class="sk-lines">
-            <div class="sk-line sk-line-lg skeleton-shimmer"></div>
-            <div class="sk-line sk-line-sm skeleton-shimmer"></div>
+      <!-- DESKTOP SKELETONS (>900px) - 3 cards with full complexity -->
+      <div class="skeleton-card skeleton-desktop">
+        <div class="card-header">
+          <div class="header-top-row">
+            <div class="left">
+              <div class="sk-circle skeleton-shimmer"></div>
+              <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            </div>
+            <div class="card-header-buttons">
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+            </div>
           </div>
-          <div class="sk-pill skeleton-shimmer"></div>
+          <div class="card-pills-wrapper">
+            <div class="card-subtitle-wrap">
+              <div class="card-subtitle">
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill sk-pill-wide skeleton-shimmer"></div>
+                <div class="sk-pill sk-pill-wide skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="divider">
+            <div class="sk-year-wheel skeleton-shimmer"></div>
+          </div>
         </div>
-        <div class="sk-grid">
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
+        <div class="card-content">
+          <div class="dots-grid sk-dots-desktop"></div>
         </div>
       </div>
-      <div class="skeleton-card">
-        <div class="sk-header">
-          <div class="sk-circle skeleton-shimmer"></div>
-          <div class="sk-lines">
-            <div class="sk-line sk-line-lg skeleton-shimmer"></div>
-            <div class="sk-line sk-line-sm skeleton-shimmer"></div>
+      <div class="skeleton-card skeleton-desktop">
+        <div class="card-header">
+          <div class="header-top-row">
+            <div class="left">
+              <div class="sk-circle skeleton-shimmer"></div>
+              <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            </div>
+            <div class="card-header-buttons">
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+            </div>
           </div>
-          <div class="sk-pill skeleton-shimmer"></div>
+          <div class="card-pills-wrapper">
+            <div class="card-subtitle-wrap">
+              <div class="card-subtitle">
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill sk-pill-wide skeleton-shimmer"></div>
+                <div class="sk-pill sk-pill-wide skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="divider">
+            <div class="sk-year-wheel skeleton-shimmer"></div>
+          </div>
         </div>
-        <div class="sk-grid">
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
+        <div class="card-content">
+          <div class="dots-grid sk-dots-desktop"></div>
         </div>
       </div>
-      <div class="skeleton-card">
-        <div class="sk-header">
-          <div class="sk-circle skeleton-shimmer"></div>
-          <div class="sk-lines">
-            <div class="sk-line sk-line-lg skeleton-shimmer"></div>
-            <div class="sk-line sk-line-sm skeleton-shimmer"></div>
+      <div class="skeleton-card skeleton-desktop">
+        <div class="card-header">
+          <div class="header-top-row">
+            <div class="left">
+              <div class="sk-circle skeleton-shimmer"></div>
+              <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            </div>
+            <div class="card-header-buttons">
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+            </div>
           </div>
-          <div class="sk-pill skeleton-shimmer"></div>
+          <div class="card-pills-wrapper">
+            <div class="card-subtitle-wrap">
+              <div class="card-subtitle">
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill sk-pill-wide skeleton-shimmer"></div>
+                <div class="sk-pill sk-pill-wide skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="divider">
+            <div class="sk-year-wheel skeleton-shimmer"></div>
+          </div>
         </div>
-        <div class="sk-grid">
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
-          <span class="skeleton-shimmer"></span>
+        <div class="card-content">
+          <div class="dots-grid sk-dots-desktop"></div>
+        </div>
+      </div>
+
+      <!-- TABLET SKELETONS (640-900px) - 3 cards with medium complexity -->
+      <div class="skeleton-card skeleton-tablet">
+        <div class="card-header">
+          <div class="header-top-row">
+            <div class="left">
+              <div class="sk-circle skeleton-shimmer"></div>
+              <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            </div>
+            <div class="card-header-buttons">
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+            </div>
+          </div>
+          <div class="card-pills-wrapper">
+            <div class="card-subtitle-wrap">
+              <div class="card-subtitle">
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill sk-pill-wide skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="divider">
+            <div class="sk-year-wheel skeleton-shimmer"></div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="dots-grid sk-dots-tablet"></div>
+        </div>
+      </div>
+      <div class="skeleton-card skeleton-tablet">
+        <div class="card-header">
+          <div class="header-top-row">
+            <div class="left">
+              <div class="sk-circle skeleton-shimmer"></div>
+              <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            </div>
+            <div class="card-header-buttons">
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+            </div>
+          </div>
+          <div class="card-pills-wrapper">
+            <div class="card-subtitle-wrap">
+              <div class="card-subtitle">
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill sk-pill-wide skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="divider">
+            <div class="sk-year-wheel skeleton-shimmer"></div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="dots-grid sk-dots-tablet"></div>
+        </div>
+      </div>
+      <div class="skeleton-card skeleton-tablet">
+        <div class="card-header">
+          <div class="header-top-row">
+            <div class="left">
+              <div class="sk-circle skeleton-shimmer"></div>
+              <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            </div>
+            <div class="card-header-buttons">
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+            </div>
+          </div>
+          <div class="card-pills-wrapper">
+            <div class="card-subtitle-wrap">
+              <div class="card-subtitle">
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill sk-pill-wide skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="divider">
+            <div class="sk-year-wheel skeleton-shimmer"></div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="dots-grid sk-dots-tablet"></div>
+        </div>
+      </div>
+
+      <!-- MOBILE SKELETONS (<640px) - 3 cards with simplified layout -->
+      <div class="skeleton-card skeleton-mobile">
+        <div class="card-header">
+          <div class="header-top-row">
+            <div class="left">
+              <div class="sk-circle skeleton-shimmer"></div>
+              <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            </div>
+            <div class="card-header-buttons">
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+            </div>
+          </div>
+          <div class="card-pills-wrapper">
+            <div class="card-subtitle-wrap">
+              <div class="card-subtitle">
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="divider">
+            <div class="sk-year-wheel skeleton-shimmer"></div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="dots-grid sk-dots-mobile"></div>
+        </div>
+      </div>
+      <div class="skeleton-card skeleton-mobile">
+        <div class="card-header">
+          <div class="header-top-row">
+            <div class="left">
+              <div class="sk-circle skeleton-shimmer"></div>
+              <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            </div>
+            <div class="card-header-buttons">
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+            </div>
+          </div>
+          <div class="card-pills-wrapper">
+            <div class="card-subtitle-wrap">
+              <div class="card-subtitle">
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="divider">
+            <div class="sk-year-wheel skeleton-shimmer"></div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="dots-grid sk-dots-mobile"></div>
+        </div>
+      </div>
+      <div class="skeleton-card skeleton-mobile">
+        <div class="card-header">
+          <div class="header-top-row">
+            <div class="left">
+              <div class="sk-circle skeleton-shimmer"></div>
+              <div class="sk-line sk-line-lg skeleton-shimmer"></div>
+            </div>
+            <div class="card-header-buttons">
+              <div class="sk-button sk-button-small skeleton-shimmer"></div>
+            </div>
+          </div>
+          <div class="card-pills-wrapper">
+            <div class="card-subtitle-wrap">
+              <div class="card-subtitle">
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+                <div class="sk-pill skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="divider">
+            <div class="sk-year-wheel skeleton-shimmer"></div>
+          </div>
+        </div>
+        <div class="card-content">
+          <div class="dots-grid sk-dots-mobile"></div>
         </div>
       </div>
     </div>
@@ -500,43 +718,6 @@
   <!-- App logic -->
   <script src="script.js"></script>
 
-  <!-- Card stagger load microinteraction -->
-  <script>
-    (function() {
-      // Apply stagger animation to cards on initial load
-      let hasAnimated = false;
-
-      function animateCards() {
-        if (hasAnimated) return;
-
-        const cards = document.querySelectorAll('.card');
-        if (cards.length === 0) return;
-
-        hasAnimated = true;
-
-        cards.forEach(function(card, index) {
-          // Add entering class immediately
-          card.classList.add('card-entering');
-
-          // Stagger with 35ms delay between each card
-          setTimeout(function() {
-            card.classList.add('card-enter-active');
-            card.classList.remove('card-entering');
-          }, index * 35);
-        });
-      }
-
-      // Wait for DOM to be ready and run animation
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-          setTimeout(animateCards, 100);
-        });
-      } else {
-        setTimeout(animateCards, 100);
-      }
-    })();
-  </script>
-
   <!-- Add this script before the closing </body> tag in app.html -->
 <script>
   // This script guarantees a 30px gap below the fixed header at all times.
@@ -579,40 +760,37 @@
   })();
 </script>
 
-<!-- Scroll-based Blur Effect -->
+<!-- Dynamic Fade Overlay Height -->
 <script>
   (function() {
     const header = document.querySelector('.app-header');
-    const blurOverlay = document.getElementById('scroll-blur-overlay');
-    
-    if (!header || !blurOverlay) {
-      console.warn('Blur effect requires .app-header and #scroll-blur-overlay elements.');
+    const fadeOverlay = document.getElementById('scroll-blur-overlay');
+
+    if (!header || !fadeOverlay) {
+      console.warn('Fade effect requires .app-header and #scroll-blur-overlay elements.');
       return;
     }
 
-    const MAX_BLUR_PX = 16;
-    const SCROLL_DISTANCE_FOR_MAX_BLUR = 300;
+    function updateFadeHeight() {
+      // Get the header's bottom position relative to the viewport
+      const headerRect = header.getBoundingClientRect();
+      const headerBottom = headerRect.bottom;
 
-    function updateBlurEffect() {
-      const headerBottom = header.getBoundingClientRect().bottom;
-      const scrollY = window.scrollY;
-
-      // Ensure the overlay covers the area from the top of the screen to the bottom of the header
-      blurOverlay.style.height = `${Math.max(0, headerBottom)}px`;
-
-      // Calculate the opacity based on scroll position
-      const scrollProgress = Math.min(1, scrollY / SCROLL_DISTANCE_FOR_MAX_BLUR);
-
-      // Apply the opacity to fade the whole overlay in/out
-      blurOverlay.style.opacity = scrollProgress;
+      // Set fade overlay height to extend beyond the header
+      // Add extra height for a smoother fade (1.5x the header height)
+      const fadeHeight = Math.max(0, headerBottom * 1.5);
+      fadeOverlay.style.height = `${fadeHeight}px`;
     }
 
-    // Update on scroll and resize
-    window.addEventListener('scroll', updateBlurEffect, { passive: true });
-    window.addEventListener('resize', updateBlurEffect, { passive: true });
+    // Update on resize
+    const resizeObserver = new ResizeObserver(updateFadeHeight);
+    resizeObserver.observe(header);
+
+    // Update on window resize
+    window.addEventListener('resize', updateFadeHeight, { passive: true });
 
     // Initial call
-    updateBlurEffect();
+    updateFadeHeight();
   })();
 </script>
 

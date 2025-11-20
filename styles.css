@@ -155,8 +155,6 @@ body.scroll-lock {
   right: 0;
   height: 200px;
   background: var(--surface-frost);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   z-index: -2;
   pointer-events: none;
   -webkit-mask-image: linear-gradient(
@@ -284,6 +282,13 @@ html.dark .account-menu-item:focus-visible {
 html.dark .account-menu-item.danger {
   color: #f87171;
 }
+/* Register CSS custom property for smooth animation */
+@property --year-completion {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
 .header-top .year-banner {
   margin: 0;
   color: var(--text);
@@ -299,6 +304,39 @@ html.dark .account-menu-item.danger {
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.08em;
+  position: relative;
+  overflow: hidden;
+  --year-completion: 0;
+}
+
+/* Progress bar layer with MAXIMUM visibility */
+.header-top .year-banner::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background: #3b82f6;
+  opacity: 0.2;
+  border-radius: 999px 0 0 999px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 10;
+  will-change: transform;
+}
+
+html.dark .header-top .year-banner::before {
+  background: #60a5fa;
+  opacity: 0.2;
+}
+
+/* Text layer (top) - ensure it's above everything */
+.header-top .year-banner > * {
+  position: relative;
+  z-index: 20;
 }
 .year-banner .yb-label {
   font-weight: 600;
@@ -311,6 +349,18 @@ html.dark .account-menu-item.danger {
 }
 .year-banner:empty {
   display: none;
+}
+.year-banner-skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.year-banner-skeleton .sk-pill {
+  width: 160px; /* Wider for the year banner */
+  height: 24px;
 }
 
 /* ─── Year Wheel Selector (Per Habit Card) ─── */
@@ -387,20 +437,21 @@ html.dark .account-menu-item.danger {
   font-size: 1.125rem;
   font-weight: 700;
   transform: translateX(0) scale(1.15);
-  background-image: linear-gradient(
-      135deg,
-      rgba(var(--accent-rgb), 0) 0%,
-      rgba(var(--accent-rgb), 0.6) 35%,
-      rgba(var(--accent-rgb), 1) 50%,
-      rgba(var(--accent-rgb), 0.6) 65%,
-      rgba(var(--accent-rgb), 0) 100%
+  background: linear-gradient(
+      -45deg,
+      var(--accent-base),
+      rgba(var(--accent-rgb), 0.7),
+      var(--accent-base),
+      rgba(var(--accent-rgb), 0.5)
   );
-  background-size: 400% 400%;
+  background-size: 300% 300%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  animation: shimmer 3s linear infinite alternate;
+  animation: yearWheelFlow 15s ease-in-out infinite;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
   min-width: 3.5rem;
   width: 3.5rem;
 }
@@ -499,8 +550,7 @@ html.dark .account-menu-item.danger {
 .sort-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.6);
 }
 .sort-modal-sheet {
   position: absolute;
@@ -582,8 +632,7 @@ html.dark .account-menu-item.danger {
 .account-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.6);
 }
 .account-modal-sheet {
   position: absolute;
@@ -653,8 +702,7 @@ html.dark .account-menu-item.danger {
   position: fixed;
   inset: auto 0 0 0;
   height: 72px;
-  background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(18px);
+  background: rgba(255,255,255,0.95);
   border-top: 1px solid var(--surface-muted);
   display: none;
   align-items: center;
@@ -662,7 +710,7 @@ html.dark .account-menu-item.danger {
   z-index: 1100;
 }
 html.dark .bottom-nav {
-  background: rgba(16,16,16,0.9);
+  background: rgba(16,16,16,0.95);
 }
 .bottom-nav button {
   border: none;
@@ -943,10 +991,10 @@ html.dark .bottom-nav {
 
   /* --- COPIED 480px RULES --- */
   :root {
-    --dot-outer: 10px;
-    --dot-inner: 5px;
-    --dot-active: 8px;
-    --gap: 3px;
+    --dot-outer: 20px;
+    --dot-inner: 10px;
+    --dot-active: 16px;
+    --gap: 4px;
   }
   .app-header {
     padding: 18px 20px;
@@ -1105,13 +1153,24 @@ html.dark .btn.danger:hover {
   display: grid;
   gap: 28px;
   margin-bottom: 28px;
+  width: 100%;
+  max-width: min(80vw, 1500px);
+  margin-left: auto;
+  margin-right: auto;
 }
 .skeleton-card {
-  padding: 24px;
+  padding: 22px 28px 28px;
   border-radius: var(--radius);
   border: 1px solid var(--surface-muted);
   background: var(--card);
   box-shadow: var(--shadow-card);
+  width: 100%;
+}
+
+/* Match actual card structure */
+.skeleton-card .card-header {
+  padding: 0;
+  background: transparent;
 }
 .skeleton-shimmer {
   background: linear-gradient(90deg, rgba(148, 163, 184, 0.2) 0%, rgba(148, 163, 184, 0.35) 50%, rgba(148, 163, 184, 0.2) 100%);
@@ -1124,10 +1183,63 @@ html.dark .btn.danger:hover {
   gap: 14px;
   margin-bottom: 20px;
 }
+.skeleton-card .header-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+.skeleton-card .header-top-row .left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.skeleton-card .card-header-buttons {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.skeleton-card .card-pills-wrapper {
+  margin-bottom: 24px;
+  padding: 0;
+}
+.skeleton-card .card-subtitle-wrap {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-card .card-subtitle {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.skeleton-card .card-subtitle::-webkit-scrollbar {
+  display: none;
+}
+.skeleton-card .divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 24px 0;
+  border: none;
+}
+.skeleton-card .divider::before,
+.skeleton-card .divider::after {
+  content: none;
+}
+.skeleton-card .card-content {
+  padding: 0;
+}
 .sk-circle {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  flex-shrink: 0;
 }
 .sk-lines {
   flex: 1;
@@ -1136,19 +1248,56 @@ html.dark .btn.danger:hover {
   gap: 10px;
 }
 .sk-line {
-  height: 14px;
-  border-radius: 999px;
+  height: 18px;
+  border-radius: 8px;
 }
 .sk-line-lg {
-  width: 60%;
-}
-.sk-line-sm {
-  width: 40%;
+  width: 140px;
+  height: 20px;
 }
 .sk-pill {
-  width: 120px;
-  height: 32px;
+  width: 80px;
+  height: 26px;
   border-radius: 999px;
+}
+.sk-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+.sk-button-small {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+.sk-pill-wide {
+  min-width: 100px;
+}
+.sk-year-wheel {
+  height: 25px;
+  width: 100%;
+  max-width: 350px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.sk-dot {
+  width: var(--dot-outer);
+  height: var(--dot-outer);
+  border-radius: 50%;
+}
+.sk-dot-small {
+  width: calc(var(--dot-outer) * 0.65);
+  height: calc(var(--dot-outer) * 0.65);
+  border-radius: 50%;
+}
+.skeleton-card .dots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--dot-outer), 1fr));
+  gap: var(--gap);
+  justify-items: center;
+  align-items: center;
 }
 .sk-grid {
   display: grid;
@@ -1159,15 +1308,114 @@ html.dark .btn.danger:hover {
   height: 14px;
   border-radius: 999px;
 }
+/* Smooth transition from skeleton to content */
+#skeleton-list {
+  opacity: 1;
+  transition: opacity 0.3s ease-out;
+}
+
+#skeleton-list[hidden] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#list {
+  opacity: 0;
+  transition: opacity 0.3s ease-in;
+}
+
+#list:not([hidden]) {
+  opacity: 1;
+}
+
 .skeleton-list[hidden] {
   display: none;
 }
+/* Show/hide skeletons based on screen size */
+.skeleton-desktop {
+  display: block;
+}
+.skeleton-tablet,
+.skeleton-mobile {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .skeleton-desktop {
+    display: none;
+  }
+  .skeleton-tablet {
+    display: block;
+  }
+  .skeleton-mobile {
+    display: none;
+  }
+
+  .skeleton-list {
+    width: 96vw;
+    max-width: 96vw;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .skeleton-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .skeleton-desktop,
+  .skeleton-tablet {
+    display: none;
+  }
+  .skeleton-mobile {
+    display: block;
+  }
+}
+
+@media (max-width: 750px) {
+  .skeleton-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .sk-line-lg {
+    width: 120px;
+  }
+
+  .sk-button,
+  .sk-button-small {
+    width: 42px;
+    height: 42px;
+  }
+
+  .skeleton-card .header-top-row {
+    margin-bottom: 16px;
+  }
+
+  .skeleton-card .card-pills-wrapper {
+    margin-bottom: 20px;
+  }
+}
+
 @media (max-width: 640px) {
   .skeleton-card {
     padding: 20px;
   }
   .sk-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .skeleton-card {
+    padding: 18px;
+  }
+
+  .sk-line-lg {
+    width: 100px;
   }
 }
 @media (max-width: 420px) {
@@ -1191,8 +1439,6 @@ html.dark .btn.danger:hover {
   position:relative;
   z-index: 1;
   transform-origin: top center;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   cursor: pointer;
   user-select: none;
   max-width: min(80vw, 1500px); /* Updated for responsive width */
@@ -1273,21 +1519,35 @@ html.dark .btn.danger:hover {
   padding: 0 10px;
   font-weight: 600;
   font-size: 14px;
-  background-image: linear-gradient(
-      135deg,
-      rgba(var(--accent-rgb), 0) 0%,    /* More transparent */
-      rgba(var(--accent-rgb), 0.6) 35%, /* Brighter base */
-      rgba(var(--accent-rgb), 1) 50%,   /* Full intensity */
-      rgba(var(--accent-rgb), 0.6) 65%, /* Brighter base */
-      rgba(var(--accent-rgb), 0) 100%   /* More transparent */
+  background: linear-gradient(
+      -45deg,
+      var(--accent-base),
+      rgba(var(--accent-rgb), 0.7),
+      var(--accent-base),
+      rgba(var(--accent-rgb), 0.5)
   );
-  background-size: 400% 400%; /* Increased size for diagonal movement */
+  background-size: 300% 300%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  animation: shimmer 3s linear infinite alternate;
+  animation: yearWheelFlow 15s ease-in-out infinite;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
   opacity: 1;
+}
+
+/* Fluid gradient animation for year wheel selected item */
+@keyframes yearWheelFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 @keyframes shimmer {
@@ -1370,7 +1630,17 @@ html.dark .btn.danger:hover {
 .habit-visual i {
   font-size: 22px;
   line-height: 1;
-  color: var(--accent-base, var(--text));
+  font-style: normal;
+  display: block;
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Ensure icons are never hidden */
+.ti {
+  opacity: 1;
+  visibility: visible;
+  display: inline-block;
 }
 .habit-name {
   overflow:hidden;
@@ -1437,6 +1707,9 @@ html.dark .card-subtitle .stat-item {
 
 .card-content {
   padding:0 28px 28px;
+  overflow: hidden;
+  position: relative;
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .eyebrow {
   font-size: 10px;
@@ -1462,6 +1735,57 @@ html.dark .card-subtitle .stat-item {
   gap: 20px 16px;
   justify-content: center;
   user-select: none;
+}
+
+/* View transition animations - CSS-driven approach */
+.dots-grid-year-view,
+.months-container-month-view {
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0.5s;
+  will-change: opacity, transform;
+}
+
+/* Hide month view by default (when in year view) */
+html[data-view="year"] .months-container-month-view {
+  opacity: 0;
+  transform: translateY(20px);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+html[data-view="year"] .dots-grid-year-view {
+  opacity: 1;
+  transform: translateY(0);
+  position: relative;
+  visibility: visible;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hide year view when month is active */
+html[data-view="month"] .dots-grid-year-view {
+  opacity: 0;
+  transform: translateY(-20px);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+html[data-view="month"] .months-container-month-view {
+  opacity: 1;
+  transform: translateY(0);
+  position: relative;
+  visibility: visible;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .month-container {
   flex-shrink: 0;
@@ -1505,12 +1829,13 @@ html.dark .card-subtitle .stat-item {
   transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease, opacity .15s ease;
   will-change: transform;
 }
-.dot:hover::before {
+/* Disable hover effect during toggle animation for consistent experience */
+.dot:not(.just-toggled):hover::before {
   transform:scale(1.2);
   background: radial-gradient(circle, rgba(255,255,255,0.65) 10%, var(--accent-base, var(--muted)) 70%);
   box-shadow: inset 0 0 6px rgba(255,255,255,0.35), 0 0 2px rgba(0,0,0,0.08);
 }
-html.dark .dot:hover::before {
+html.dark .dot:not(.just-toggled):hover::before {
   background: radial-gradient(circle, rgba(255,255,255,0.35) 15%, var(--accent-base, rgba(226,232,240,.6)) 70%);
   box-shadow: inset 0 0 6px rgba(0,0,0,0.4), 0 0 2px rgba(0,0,0,0.3);
 }
@@ -1646,9 +1971,7 @@ html.dark .dot:hover::before {
 .overlay {
   position:fixed;
   inset:0;
-  background:rgba(15,23,42,.45);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  background:rgba(15,23,42,.65);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -2092,7 +2415,6 @@ html.dark .toast-progress {
   border: 1px solid var(--surface-muted);
   position: relative;
   box-shadow: 0 12px 24px rgba(15,23,42,0.08);
-  backdrop-filter: blur(8px);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1), background 0.08s ease;
@@ -2203,34 +2525,30 @@ html.dark .theme-toggle .icon-moon {
   border-color: #D92D20 !important;
 }
 
-/* ─── Scroll Blur Overlay ─── */
+/* ─── Scroll Fade Overlay ─── */
 #scroll-blur-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 0; /* Will be set by JS */
+  height: 18rem; /* Initial height, will be set by JS based on header */
   z-index: 99; /* Below header (100), above cards (1) */
   pointer-events: none;
-  
-  /* Set a constant, max blur value */
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 
-  /* Use a mask to create a vertical gradient for the blur effect */
-  mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 20%, transparent 100%);
+  /* Fade gradient background */
+  background: linear-gradient(to bottom, var(--bg) 0%, rgba(243, 244, 246, 0) 100%);
 
-  /* Hide the overlay initially; JS will fade it in */
-  opacity: 0;
-  
+  /* Always visible */
+  opacity: 1;
+
   /* Define what properties will be animated */
-  will-change: opacity, height;
-  transition: opacity 0.1s ease-out;
+  will-change: background-color, height;
+  transition: background-color 0.3s ease, height 0.2s ease;
 }
 
 html.dark #scroll-blur-overlay {
-  /* The mask will be applied to the content underneath, so a separate dark mode rule isn't strictly necessary unless we add a background back. */
+  /* Dark mode fade gradient */
+  background: linear-gradient(to bottom, var(--bg) 0%, rgba(5, 5, 5, 0) 100%);
 }
 
 
@@ -2441,6 +2759,10 @@ html.dark .picker-search-field input {
   transition: transform .12s ease, background .12s ease;
   font-size: 0;
 }
+/* Fix: Icons need visible font-size to display (webfont rendering) */
+.picker-icon-btn-entry i {
+  font-size: 1.75rem; /* Override inherited font-size: 0 from parent button */
+}
 .picker-icon-btn-entry:hover {
   background: rgba(148,163,184,.15);
   transform: translateY(-1px);
@@ -2588,12 +2910,11 @@ html.dark .card .card-subtitle .stat-item {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
   display: none;
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  backdrop-filter: blur(4px);
   opacity: 0;
   transition: opacity 0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -2700,4 +3021,131 @@ html.dark .modal-overlay {
 html.dark .confirm-modal {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4),
               0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* ─── Lazy Loading Styles ─── */
+
+/* Placeholder card styles */
+.card-placeholder {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: opacity 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-placeholder::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+html.dark .card-placeholder::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.card-loading {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Performance optimization: reduce paint on placeholders */
+.card-placeholder * {
+  will-change: auto;
+}
+
+/* Ensure placeholder icons are visible */
+.card-placeholder .habit-visual i {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Smoother transitions when cards are hydrated */
+.card:not(.card-placeholder) {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Drag and Drop for Manual Sorting ─── */
+
+/* Cards in manual sort mode */
+.card.draggable-card {
+  cursor: grab;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.card.draggable-card:active {
+  cursor: grabbing;
+}
+
+/* Card being dragged */
+.card.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+/* Drop target indicator */
+.card.drag-over {
+  border-top: 3px solid var(--primary);
+  padding-top: calc(22px - 3px); /* Compensate for border */
+}
+
+html.dark .card.drag-over {
+  border-top-color: var(--primary);
+}
+
+/* Visual hint for draggable cards */
+.card.draggable-card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--surface-muted);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.card.draggable-card:hover::after {
+  opacity: 1;
+}
+
+html.dark .card.draggable-card::after {
+  background: rgba(255, 255, 255, 0.1);
 }

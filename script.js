@@ -296,22 +296,66 @@ function hexToRgb(hex) {
 
     /* ────────── Storage Model ────────── */
     var STORAGEKEY = 'habits';
-    async function loadHabits() {
+    var habitCache = {
+      data: null,
+      timestamp: 0,
+      TTL: 5 * 60 * 1000 // 5 minutes
+    };
+
+    async function loadHabits(force = false) {
+      const now = Date.now();
+      if (!force && habitCache.data && (now - habitCache.timestamp < habitCache.TTL)) {
+        return habitCache.data;
+      }
+
       try {
         var arr = await Storage.loadHabits();
-        if (!Array.isArray(arr)) return [];
-        return arr.map(normalizeHabit).filter(Boolean);
+        if (!Array.isArray(arr)) {
+          habitCache.data = [];
+        } else {
+          habitCache.data = arr.map(normalizeHabit).filter(Boolean);
+        }
+        habitCache.timestamp = now;
+        return habitCache.data;
       } catch (e) {
         console.error('Error loading habits:', e);
         return [];
       }
     }
     var saveQueued = false;
-    async function saveHabits(habits){
+    var saveTimeout = null;
+    var lastSavedHabitsJSON = null;
+
+    async function saveHabits(habits, immediate = false){
+      // Invalidate cache when habits change
+      invalidateVisibleHabitsCache();
+
+      // Clear any pending save
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        saveTimeout = null;
+      }
+
+      // Check if habits actually changed
+      const currentJSON = JSON.stringify(habits);
+      if (currentJSON === lastSavedHabitsJSON) {
+        return; // No changes, skip save
+      }
+
+      // Debounce: wait 500ms before saving (unless immediate)
+      if (!immediate && !saveQueued) {
+        saveTimeout = setTimeout(() => {
+          saveHabits(habits, true);
+        }, 500);
+        return;
+      }
+
       if (saveQueued) return;
       saveQueued = true;
+
       try {
         await Storage.saveHabits(habits);
+        lastSavedHabitsJSON = currentJSON;
       } catch (e){
         console.warn('Save failed', e);
       } finally {
@@ -880,14 +924,75 @@ function hexToRgb(hex) {
       }
     });
 
+    var hasAnimatedYearBanner = false;
+    var progressBarStyle = null;
+
+    function createProgressBar() {
+      // Create a style element to directly control the ::before transform
+      if (!progressBarStyle) {
+        progressBarStyle = document.createElement('style');
+        progressBarStyle.id = 'year-progress-style';
+        document.head.appendChild(progressBarStyle);
+      }
+      return progressBarStyle;
+    }
+
+    function setProgressBarScale(percentage) {
+      var scale = percentage / 100; // Convert percentage to 0-1 scale
+      var style = createProgressBar();
+      style.textContent = '.header-top .year-banner::before { transform: scaleX(' + scale + ') !important; }';
+      console.log('Set progress bar scaleX to:', scale.toFixed(4), '(' + percentage.toFixed(2) + '%)');
+    }
+
     function updateYearBanner() {
+      if (!yearBanner) {
+        console.error('ERROR: yearBanner element not found!');
+        return;
+      }
+
       var y = CURRENTYEAR;
       var today = Math.min(dayIndexForYear(y)+1, daysInYear(y));
       var total = daysInYear(y);
+      var completionPercentage = (today / total) * 100;
+
+      console.log('=== YEAR BANNER DEBUG ===');
+      console.log('Year:', y);
+      console.log('Today (day of year):', today);
+      console.log('Total days:', total);
+      console.log('Completion percentage:', completionPercentage.toFixed(2) + '%');
+
       yearBanner.innerHTML =
         '<span class="yb-label">Year</span> <span class="yb-value">' + y + '</span>' +
         ' • ' +
         '<span class="yb-label">Days</span> <span class="yb-value">' + today + '/' + total + '</span>';
+
+      // Animate fill on first load
+      if (!hasAnimatedYearBanner) {
+        hasAnimatedYearBanner = true;
+        console.log('First load - animating from 0% to', completionPercentage.toFixed(2) + '%');
+
+        // Start at 0%
+        setProgressBarScale(0);
+
+        // Animate to actual percentage after a brief delay
+        setTimeout(function() {
+          setProgressBarScale(completionPercentage);
+          console.log('Animation started - smooth GPU-accelerated transition');
+
+          // Verify after animation
+          setTimeout(function() {
+            var beforeStyle = getComputedStyle(yearBanner, '::before');
+            console.log('Verification - ::before transform:', beforeStyle.transform);
+            console.log('Verification - ::before background:', beforeStyle.background);
+            console.log('Verification - ::before opacity:', beforeStyle.opacity);
+          }, 1300);
+        }, 100);
+      } else {
+        // Direct update for subsequent calls
+        console.log('Direct update to', completionPercentage.toFixed(2) + '%');
+        setProgressBarScale(completionPercentage);
+      }
+      console.log('=========================');
     }
 
     function dotTitle(habit, index, baseLabel, isToday) {
@@ -931,25 +1036,73 @@ function hexToRgb(hex) {
       return Math.round((completed / eligible) * 100);
     }
 
+    // Memoization cache for getVisibleHabits
+    var visibleHabitsCache = {
+      habitsLength: -1,
+      searchQuery: null,
+      sortKey: null,
+      result: null
+    };
+
     function getVisibleHabits() {
       var query = (habitViewState.searchQuery || '').toLowerCase();
+      var sortKey = habitViewState.sortKey;
+
+      // Check if we can use cached result
+      if (visibleHabitsCache.result !== null &&
+          visibleHabitsCache.habitsLength === HABITS.length &&
+          visibleHabitsCache.searchQuery === query &&
+          visibleHabitsCache.sortKey === sortKey) {
+        return visibleHabitsCache.result;
+      }
+
+      // Compute new result
       var filtered = HABITS.filter(function (habit) {
         if (!query) return true;
         return String(habit.name || '').toLowerCase().indexOf(query) !== -1;
       });
-      return sortHabits(filtered, habitViewState.sortKey);
+      var result = sortHabits(filtered, sortKey);
+
+      // Update cache
+      visibleHabitsCache = {
+        habitsLength: HABITS.length,
+        searchQuery: query,
+        sortKey: sortKey,
+        result: result
+      };
+
+      return result;
+    }
+
+    // Function to invalidate cache when habits change
+    function invalidateVisibleHabitsCache() {
+      visibleHabitsCache.result = null;
     }
 
     function sortHabits(list, sortKey) {
       var key = sortKey || 'created-newest';
       var arr = list.slice();
       var completionCache;
+      var statsCache;
+
+      // Pre-calculate completion rates if needed
       if (key === 'rate-high-low' || key === 'rate-low-high') {
         completionCache = new Map();
         arr.forEach(function (habit) {
           completionCache.set(habit.id, completionSortValue(habit));
         });
       }
+
+      // Pre-calculate stats if needed for streak/total sorts
+      if (key.includes('streak') || key.includes('total')) {
+        statsCache = new Map();
+        arr.forEach(function (habit) {
+          var todayIdx = dayIndexForYear(habit.year);
+          var stats = calcStats(habit.dots, habit.offDays, todayIdx);
+          statsCache.set(habit.id, stats);
+        });
+      }
+
       arr.sort(function (a, b) {
         switch (key) {
           case 'name-az':
@@ -962,6 +1115,35 @@ function hexToRgb(hex) {
             return (completionCache.get(b.id) || 0) - (completionCache.get(a.id) || 0);
           case 'rate-low-high':
             return (completionCache.get(a.id) || 0) - (completionCache.get(b.id) || 0);
+
+          // NEW: Custom manual order
+          case 'custom-manual':
+            return (a.customOrder || 0) - (b.customOrder || 0);
+
+          // NEW: Sort by longest streak
+          case 'streak-longest':
+            var statsA = statsCache.get(a.id);
+            var statsB = statsCache.get(b.id);
+            return (statsB.longest || 0) - (statsA.longest || 0);
+
+          // NEW: Sort by current streak
+          case 'streak-current':
+            var statsA = statsCache.get(a.id);
+            var statsB = statsCache.get(b.id);
+            return (statsB.current || 0) - (statsA.current || 0);
+
+          // NEW: Sort by total completions (high to low)
+          case 'total-high':
+            var statsA = statsCache.get(a.id);
+            var statsB = statsCache.get(b.id);
+            return (statsB.total || 0) - (statsA.total || 0);
+
+          // NEW: Sort by total completions (low to high)
+          case 'total-low':
+            var statsA = statsCache.get(a.id);
+            var statsB = statsCache.get(b.id);
+            return (statsA.total || 0) - (statsB.total || 0);
+
           case 'created-newest':
           default:
             return createdAtValue(b) - createdAtValue(a);
@@ -980,6 +1162,80 @@ function hexToRgb(hex) {
       if (!isNaN(parsed)) return parsed;
       var year = habit.year || CURRENTYEAR;
       return new Date(year, 0, 1).getTime();
+    }
+
+    /**
+     * Render a lightweight placeholder card for lazy loading
+     */
+    function renderPlaceholderCard(habit) {
+      var wrap = document.createElement('section');
+      wrap.className = 'card card-placeholder';
+      wrap.dataset.habitId = habit.id;
+      wrap.style.minHeight = '400px'; // Reserve space to prevent layout shift
+
+      var acc = habit.accent || '#3d85c6';
+      try {
+        var rgb = hexToRgb(acc);
+        wrap.style.setProperty('--accent-base', acc);
+        wrap.style.setProperty('--accent-rgb', rgb);
+        wrap.style.borderColor = 'rgba(' + rgb + ',0.1)';
+      } catch (e){}
+
+      // Create minimal header with just the title
+      var header = document.createElement('div');
+      header.className = 'card-header';
+
+      var title = document.createElement('h2');
+      title.className = 'card-title';
+      title.style.opacity = '0.5';
+
+      var visualEl = document.createElement('span');
+      visualEl.className = 'habit-visual';
+
+      var icon = document.createElement('i');
+      icon.className = 'ti ti-' + (habit.visualValue || 'target');
+      icon.style.color = acc;
+      visualEl.appendChild(icon);
+
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'habit-name';
+      nameSpan.textContent = habit.name;
+
+      title.appendChild(visualEl);
+      title.appendChild(nameSpan);
+      header.appendChild(title);
+      wrap.appendChild(header);
+
+      // Add loading indicator
+      var loadingDiv = document.createElement('div');
+      loadingDiv.className = 'card-loading';
+      loadingDiv.style.cssText = 'padding: 2rem; text-align: center; opacity: 0.3;';
+      loadingDiv.textContent = 'Loading...';
+      wrap.appendChild(loadingDiv);
+
+      return wrap;
+    }
+
+    /**
+     * Hydrate a placeholder card with full content
+     */
+    function hydrateCard(placeholderCard, habitId) {
+      var habit = HABITS.find(function(h) { return h.id === habitId; });
+      if (!habit) return;
+
+      // Render full card
+      var fullCard = renderHabitCard(habit);
+
+      // Copy over the placeholder's position in DOM
+      placeholderCard.parentNode.replaceChild(fullCard, placeholderCard);
+
+      // Remove placeholder class
+      fullCard.classList.remove('card-placeholder');
+
+      // Initialize year wheel for the hydrated card
+      requestAnimationFrame(function() {
+        initHabitYearWheel(habit);
+      });
     }
 
     function renderHabitCard(habit) {
@@ -1021,8 +1277,12 @@ function hexToRgb(hex) {
 
       var visualEl = document.createElement('span');
       visualEl.className = 'habit-visual';
-      visualEl.innerHTML = '<i class="ti ti-' + (habit.visualValue || 'target') + '"></i>';
-      visualEl.style.color = acc;
+
+      var icon = document.createElement('i');
+      icon.className = 'ti ti-' + (habit.visualValue || 'target');
+      icon.style.color = acc;
+      visualEl.appendChild(icon);
+
       titleBtn.appendChild(visualEl);
 
       var nameSpan = document.createElement('span');
@@ -1096,43 +1356,159 @@ function hexToRgb(hex) {
       var content = document.createElement('div');
       content.className = 'card-content';
 
-      var gridContainer = document.createElement('div');
-      if (document.documentElement.dataset.view === 'month') {
-        gridContainer.className = 'months-container';
-        buildMonthViews(habit, gridContainer, todayIdx);
-      } else {
-        gridContainer.className = 'dots-grid';
-        buildYearView(habit, gridContainer, todayIdx);
-      }
-      content.appendChild(gridContainer);
+      // Create both year and month views
+      var yearGridContainer = document.createElement('div');
+      yearGridContainer.className = 'dots-grid dots-grid-year-view';
+      buildYearView(habit, yearGridContainer, todayIdx);
+
+      var monthGridContainer = document.createElement('div');
+      monthGridContainer.className = 'months-container months-container-month-view';
+      buildMonthViews(habit, monthGridContainer, todayIdx);
+
+      content.appendChild(yearGridContainer);
+      content.appendChild(monthGridContainer);
       wrap.appendChild(header);
       wrap.appendChild(content);
 
       return wrap;
     }
 
+    var hasAnimatedInitialLoad = false;
     var hasHydratedList = false;
+
+    function animateCard(card, index) {
+      // Add entering class immediately
+      card.classList.add('card-entering');
+
+      // Stagger with 35ms delay between each card
+      setTimeout(function() {
+        card.classList.add('card-enter-active');
+        card.classList.remove('card-entering');
+      }, index * 35);
+    }
+
+    // Lazy loading with Intersection Observer
+    var cardObserver = null;
+    var lazyLoadQueue = new Set();
+
+    function initLazyLoading() {
+      if (cardObserver) return;
+
+      // Create Intersection Observer for lazy loading cards
+      cardObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            var card = entry.target;
+            var habitId = card.dataset.habitId;
+
+            // Hydrate the card if it's a placeholder
+            if (card.classList.contains('card-placeholder')) {
+              hydrateCard(card, habitId);
+              cardObserver.unobserve(card);
+            }
+          }
+        });
+      }, {
+        root: null,
+        rootMargin: '50px', // Start loading 50px before card enters viewport
+        threshold: 0.01
+      });
+    }
 
     function render() {
       var visibleHabits = getVisibleHabits();
-      listEl.innerHTML = '';
+
+      // Initialize lazy loading observer
+      initLazyLoading();
+
+      // Update empty states
       emptyEl.hidden = HABITS.length !== 0;
       if (searchEmptyEl) {
         searchEmptyEl.hidden = !(HABITS.length && visibleHabits.length === 0);
       }
-      visibleHabits.forEach(function (h, index) {
-        var card = renderHabitCard(h);
-        card.style.animationDelay = (index * 50) + 'ms';
-        listEl.appendChild(card);
+
+      // DOM reconciliation: map existing cards by habit ID
+      var existingCards = new Map();
+      Array.prototype.forEach.call(listEl.children, function(card) {
+        if (card.dataset && card.dataset.habitId) {
+          existingCards.set(card.dataset.habitId, card);
+        }
       });
+
+      // Create a fragment for efficient reordering
+      var fragment = document.createDocumentFragment();
+      var visibleIds = new Set();
+      var newCards = [];
+      var cardsToAnimate = [];
+
+      // Number of cards to render immediately (visible above fold)
+      var EAGER_LOAD_COUNT = 3;
+
+      // Reorder existing cards and create new ones
+      visibleHabits.forEach(function(habit, index) {
+        visibleIds.add(habit.id);
+        var card = existingCards.get(habit.id);
+
+        if (card) {
+          // Card already exists, just move it to the fragment for reordering
+          fragment.appendChild(card);
+
+          // If it's still a placeholder, observe it
+          if (card.classList.contains('card-placeholder')) {
+            cardObserver.observe(card);
+          }
+        } else {
+          // Card is new - render full card for first few, placeholder for rest
+          if (index < EAGER_LOAD_COUNT) {
+            // Eagerly load first few cards
+            card = renderHabitCard(habit);
+            fragment.appendChild(card);
+            newCards.push(habit);
+            cardsToAnimate.push(card);
+          } else {
+            // Lazy load remaining cards
+            card = renderPlaceholderCard(habit);
+            fragment.appendChild(card);
+            cardsToAnimate.push(card);
+            // Observe for lazy loading
+            setTimeout(function() {
+              cardObserver.observe(card);
+            }, 100);
+          }
+        }
+      });
+
+      // Remove cards that are no longer visible
+      existingCards.forEach(function(card, id) {
+        if (!visibleIds.has(id)) {
+          if (listEl.contains(card)) {
+            listEl.removeChild(card);
+          }
+        }
+      });
+
+      // Append the reordered and new cards in one efficient operation
+      listEl.appendChild(fragment);
+
       updateYearBanner();
       buildPositionCacheForView('year');
       buildPositionCacheForView('month');
 
       if (!hasHydratedList) {
         hasHydratedList = true;
-        if (skeletonEl) skeletonEl.hidden = true;
-        listEl.hidden = false;
+
+        // IMPROVED: Wait for cards to be fully rendered before hiding skeleton
+        requestAnimationFrame(function() {
+          if (skeletonEl) skeletonEl.hidden = true;
+          listEl.hidden = false;
+
+          if (!hasAnimatedInitialLoad) {
+            hasAnimatedInitialLoad = true;
+            cardsToAnimate.forEach(function(card, index) {
+              animateCard(card, index);
+            });
+          }
+        });
       }
 
       // NEW: run staggered wave on initial load
@@ -1146,27 +1522,175 @@ function hexToRgb(hex) {
         HAS_RUN_INITIAL_WAVE = true;
       }
 
-      // Add scroll listeners for fade effect
-      document.querySelectorAll('.card-subtitle').forEach(function (scroller) {
-        var wrap = scroller.parentElement; // .card-subtitle-wrap
+      // Add scroll listeners for fade effect (only for new cards to avoid duplicate listeners)
+      if (newCards.length > 0) {
+        newCards.forEach(function(habit) {
+          var card = listEl.querySelector('[data-habit-id="' + habit.id + '"]');
+          if (card) {
+            var scroller = card.querySelector('.card-subtitle');
+            if (scroller) {
+              var wrap = scroller.parentElement; // .card-subtitle-wrap
 
-        function updateFades() {
-          var atStart = scroller.scrollLeft < 1;
-          var atEnd = Math.ceil(scroller.scrollLeft + scroller.clientWidth) >= scroller.scrollWidth - 1;
+              function updateFades() {
+                var atStart = scroller.scrollLeft < 1;
+                var atEnd = Math.ceil(scroller.scrollLeft + scroller.clientWidth) >= scroller.scrollWidth - 1;
 
-          wrap.classList.toggle('fade-right', !atEnd);
-          wrap.classList.toggle('fade-left', !atStart);
-        }
+                wrap.classList.toggle('fade-right', !atEnd);
+                wrap.classList.toggle('fade-left', !atStart);
+              }
 
-        scroller.addEventListener('scroll', updateFades);
-        updateFades(); // run once
-      });
+              scroller.addEventListener('scroll', updateFades);
+              updateFades(); // run once
+            }
+          }
+        });
+      }
 
       // Initialize year wheels for all visible habits after DOM is ready
-      requestAnimationFrame(function() {
-        visibleHabits.forEach(function(habit) {
-          initHabitYearWheel(habit);
+      // Only initialize for new cards to avoid re-initializing existing wheels
+      if (newCards.length > 0) {
+        requestAnimationFrame(function() {
+          newCards.forEach(function(habit) {
+            initHabitYearWheel(habit);
+          });
         });
+      }
+
+      // Check and initialize year wheels for reused cards after DOM settles
+      // This handles cards that were reused during re-render (sorting, filtering, etc.)
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          visibleHabits.forEach(function(habit) {
+            var card = listEl.querySelector('[data-habit-id="' + habit.id + '"]');
+
+            if (card && !card.classList.contains('card-placeholder')) {
+              if (!habitYearWheels[habit.id]) {
+                // Case 1: Wheel doesn't exist yet, initialize it
+                initHabitYearWheel(habit);
+              } else {
+                // Case 2: Wheel exists, but sorting moved the DOM element.
+                // Moving DOM elements resets their scrollLeft to 0.
+                // We must re-attach observers and force the scroll position back to center.
+                setupDynamicCentering(habit.id);
+                centerSelectedYear(habit.id, false); // false = instant jump, no animation
+              }
+            }
+          });
+        });
+      });
+
+      // Build dot position cache for optimized painting
+      requestAnimationFrame(function() {
+        buildDotPositionCache();
+      });
+
+      // Enable drag-and-drop for manual sorting
+      enableDragAndDrop();
+    }
+
+    // ========== DRAG-AND-DROP FOR MANUAL SORTING ==========
+    var draggedCard = null;
+    var draggedHabitId = null;
+    var dragPlaceholder = null;
+
+    function enableDragAndDrop() {
+      var isManualSort = habitViewState.sortKey === 'custom-manual';
+      var cards = listEl.querySelectorAll('.card');
+
+      cards.forEach(function(card) {
+        if (isManualSort) {
+          card.setAttribute('draggable', 'true');
+          card.classList.add('draggable-card');
+
+          // Remove old listeners to avoid duplicates
+          card.removeEventListener('dragstart', handleDragStart);
+          card.removeEventListener('dragover', handleDragOver);
+          card.removeEventListener('drop', handleDrop);
+          card.removeEventListener('dragend', handleDragEnd);
+          card.removeEventListener('dragenter', handleDragEnter);
+          card.removeEventListener('dragleave', handleDragLeave);
+
+          // Add new listeners
+          card.addEventListener('dragstart', handleDragStart);
+          card.addEventListener('dragover', handleDragOver);
+          card.addEventListener('drop', handleDrop);
+          card.addEventListener('dragend', handleDragEnd);
+          card.addEventListener('dragenter', handleDragEnter);
+          card.addEventListener('dragleave', handleDragLeave);
+        } else {
+          card.removeAttribute('draggable');
+          card.classList.remove('draggable-card');
+        }
+      });
+    }
+
+    function handleDragStart(e) {
+      draggedCard = this;
+      draggedHabitId = this.dataset.habitId;
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', this.innerHTML);
+    }
+
+    function handleDragOver(e) {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      e.dataTransfer.dropEffect = 'move';
+      return false;
+    }
+
+    function handleDragEnter(e) {
+      if (this !== draggedCard) {
+        this.classList.add('drag-over');
+      }
+    }
+
+    function handleDragLeave(e) {
+      this.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+      if (e.stopPropagation) {
+        e.stopPropagation();
+      }
+
+      this.classList.remove('drag-over');
+
+      if (draggedCard !== this) {
+        var draggedId = draggedHabitId;
+        var targetId = this.dataset.habitId;
+
+        var draggedIndex = HABITS.findIndex(function(h) { return h.id === draggedId; });
+        var targetIndex = HABITS.findIndex(function(h) { return h.id === targetId; });
+
+        if (draggedIndex !== -1 && targetIndex !== -1) {
+          // Reorder the HABITS array
+          var draggedHabit = HABITS.splice(draggedIndex, 1)[0];
+          HABITS.splice(targetIndex, 0, draggedHabit);
+
+          // Update customOrder for all habits
+          HABITS.forEach(function(habit, index) {
+            habit.customOrder = index;
+            habit.lastModified = Date.now();
+          });
+
+          // Save and re-render
+          saveHabits(HABITS);
+          render();
+          announce('Habit order updated');
+        }
+      }
+
+      return false;
+    }
+
+    function handleDragEnd(e) {
+      this.classList.remove('dragging');
+
+      var cards = listEl.querySelectorAll('.card');
+      cards.forEach(function(card) {
+        card.classList.remove('drag-over');
       });
     }
 
@@ -1290,6 +1814,8 @@ function hexToRgb(hex) {
     var paintAction = null;
     var habitsToUpdate = new Set();
     var HAS_RUN_INITIAL_WAVE = false; // <--- new flag
+    var dotPositionCache = [];
+    var lastHoveredDot = null;
 
     function setDotState(dotEl, shouldBeChecked){
       if (!dotEl || dotEl.disabled) return;
@@ -1313,18 +1839,48 @@ function hexToRgb(hex) {
       }
     }
 
+    function buildDotPositionCache() {
+      dotPositionCache = [];
+      var dots = listEl.querySelectorAll('.dot:not([disabled])');
+      dots.forEach(function(dot) {
+        var rect = dot.getBoundingClientRect();
+        dotPositionCache.push({
+          el: dot,
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom
+        });
+      });
+    }
+
     function handlePointerMove(e){
       if (!isPainting) return;
       var clientX = e.touches ? e.touches[0].clientX : e.clientX;
       var clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      var el = document.elementFromPoint(clientX, clientY);
-      var targetDot = el && el.closest('.dot');
-      setDotState(targetDot, paintAction === 'check');
+
+      var targetDot = null;
+
+      // Extremely fast lookup in the cached data
+      for (var i = 0; i < dotPositionCache.length; i++) {
+        var pos = dotPositionCache[i];
+        if (clientX >= pos.left && clientX <= pos.right && clientY >= pos.top && clientY <= pos.bottom) {
+          targetDot = pos.el;
+          break;
+        }
+      }
+
+      // Only call setDotState if the dot is different from the last one
+      if (targetDot !== lastHoveredDot) {
+        setDotState(targetDot, paintAction === 'check');
+        lastHoveredDot = targetDot;
+      }
     }
 
     function handlePointerUp(){
       if (!isPainting) return;
       isPainting = false;
+      lastHoveredDot = null;
       habitsToUpdate.forEach(function (hid){
         var h = HABITS.find(function (x){ return x.id === hid; });
         if (h) onHabitChanged(h);
@@ -1347,21 +1903,24 @@ function hexToRgb(hex) {
     window.addEventListener('mouseup', function (){
       if (isPainting) handlePointerUp();
     });
-    listEl.addEventListener('touchstart', function (e){
-      var dot = e.target.closest('.dot');
-      if (dot && !dot.disabled) {
-        e.preventDefault(); // Prevent emulated mouse events
-        isPainting = true;
-        habitsToUpdate.clear();
-        var h = HABITS.find(function (x){ return x.id === dot.dataset.habitId; });
-        paintAction = !h.dots[Number(dot.dataset.index)] ? 'check' : 'uncheck';
-        setDotState(dot, paintAction === 'check');
-      }
-    });
-    listEl.addEventListener('touchmove', handlePointerMove, { passive: true });
-    window.addEventListener('touchend', function (){
-      if (isPainting) handlePointerUp();
-    });
+    // Disable drag-to-toggle on mobile (screens <= 750px)
+    if (window.innerWidth > 750) {
+      listEl.addEventListener('touchstart', function (e){
+        var dot = e.target.closest('.dot');
+        if (dot && !dot.disabled) {
+          e.preventDefault(); // Prevent emulated mouse events
+          isPainting = true;
+          habitsToUpdate.clear();
+          var h = HABITS.find(function (x){ return x.id === dot.dataset.habitId; });
+          paintAction = !h.dots[Number(dot.dataset.index)] ? 'check' : 'uncheck';
+          setDotState(dot, paintAction === 'check');
+        }
+      });
+      listEl.addEventListener('touchmove', handlePointerMove, { passive: true });
+      window.addEventListener('touchend', function (){
+        if (isPainting) handlePointerUp();
+      });
+    }
 
     listEl.addEventListener('click', function (e){
       var markTodayBtn = e.target.closest('[data-action="mark-today"]');
@@ -1377,7 +1936,14 @@ function hexToRgb(hex) {
         // Case 1: The user is already viewing the current year
         if (habit.year === CURRENTYEAR) {
           var todayIdx = dayIndexForYear(CURRENTYEAR);
-          var todayDot = card.querySelector('.dot[data-index="' + todayIdx + '"]');
+
+          // Find the dot in the currently active view (year or month)
+          var currentView = document.documentElement.dataset.view || 'year';
+          var activeContainer = currentView === 'year'
+            ? card.querySelector('.dots-grid-year-view')
+            : card.querySelector('.months-container-month-view');
+
+          var todayDot = activeContainer ? activeContainer.querySelector('.dot[data-index="' + todayIdx + '"]') : null;
 
           if (todayDot && !todayDot.disabled) {
             var currentState = habit.dots[todayIdx];
@@ -2590,121 +3156,45 @@ function hexToRgb(hex) {
       measureLayer.style.visibility = 'hidden';
     }
 
-    /* view toggle */
+    /* view toggle - simplified CSS-driven approach with smooth height animation */
     viewToggle.addEventListener('click', function (){
-      ensureWaveStyles();
       var currentView = document.documentElement.dataset.view || 'year';
       var targetView = currentView === 'year' ? 'month' : 'year';
 
-      var cards = Array.prototype.slice.call(listEl.querySelectorAll('.card'));
-      var cardHeights = new Map();
-      var cardRects = new Map();
-      cards.forEach(function (card){
-        cardHeights.set(card.dataset.habitId, card.offsetHeight);
-        cardRects.set(card.dataset.habitId, card.getBoundingClientRect());
+      var cards = listEl.querySelectorAll('.card');
+      var contentHeights = [];
+
+      // Step 1: Capture current heights
+      cards.forEach(function(card) {
+        var content = card.querySelector('.card-content');
+        if (content) {
+          var currentHeight = content.offsetHeight;
+          contentHeights.push({ content: content, oldHeight: currentHeight });
+          // Set explicit height to current height
+          content.style.height = currentHeight + 'px';
+        }
       });
 
+      // Step 2: Toggle the view (CSS will hide/show the containers)
       document.documentElement.dataset.view = targetView;
       localStorage.setItem(VIEWKEY, targetView);
       updateViewToggleLabels(targetView);
 
-      listEl.classList.add('is-transitioning');
-
-      cards.forEach(function (card){
-        var content = card.querySelector('.card-content');
-        if (!content) return;
-        var gridContainer = content.querySelector('.dots-grid, .months-container');
-        var habit = HABITS.find(function (hab){ return hab.id === card.dataset.habitId; });
-        if (!habit) return;
-        var todayIdx = dayIndexForYear(habit.year);
-        if (targetView === 'month') {
-          gridContainer.className = 'months-container';
-          gridContainer.innerHTML = '';
-          buildMonthViews(habit, gridContainer, todayIdx);
-          applyWave(gridContainer.querySelectorAll('.dot'));
-        } else {
-          gridContainer.className = 'dots-grid';
-          gridContainer.innerHTML = '';
-          buildYearView(habit, gridContainer, todayIdx);
-          applyWave(gridContainer.querySelectorAll('.dot'));
-        }
-      });
-
-      requestAnimationFrame(function (){
-        cards.forEach(function (card){
-          var hid = card.dataset.habitId;
-          var oldH = cardHeights.get(hid) || card.offsetHeight;
-          var newH = card.offsetHeight;
-          var needsHeight = Math.abs(newH - oldH) > 2;
-
-          var firstRect = cardRects.get(hid);
-          var lastRect = card.getBoundingClientRect();
-          var deltaX = 0;
-          var deltaY = 0;
-          var scaleX = 1;
-          var scaleY = 1;
-          var needsTransform = false;
-
-          if (firstRect && lastRect) {
-            deltaX = firstRect.left - lastRect.left;
-            deltaY = firstRect.top - lastRect.top;
-            scaleX = lastRect.width ? firstRect.width / lastRect.width : 1;
-            scaleY = lastRect.height ? firstRect.height / lastRect.height : 1;
-            needsTransform =
-              Math.abs(deltaX) > 1 ||
-              Math.abs(deltaY) > 1 ||
-              Math.abs(scaleX - 1) > 0.02 ||
-              Math.abs(scaleY - 1) > 0.02;
-          }
-
-          if (!needsHeight && !needsTransform) {
-            card.style.transition = '';
-            return;
-          }
-
-          var transitions = [];
-          if (needsHeight) {
-            card.style.height = oldH + 'px';
-            transitions.push('height 480ms ' + EASEIO);
-          }
-          if (needsTransform) {
-            card.style.transformOrigin = 'top left';
-            card.style.transform = 'translate(' + deltaX + 'px,' + deltaY + 'px) scale(' + scaleX + ',' + scaleY + ')';
-            transitions.push('transform 480ms ' + EASEIO);
-          }
-
-          card.offsetHeight;
-          card.style.transition = transitions.join(', ');
-          card.style.willChange = 'transform, height';
-
-          if (needsHeight) {
-            card.style.height = newH + 'px';
-          }
-          if (needsTransform) {
-            requestAnimationFrame(function (){
-              card.style.transform = '';
-            });
-          }
-
-          var heightDone = !needsHeight;
-          var transformDone = !needsTransform;
-          var cleanup = function (evt){
-            if (evt.propertyName === 'height') {
-              heightDone = true;
-              card.style.height = '';
-            } else if (evt.propertyName === 'transform') {
-              transformDone = true;
-              card.style.transformOrigin = '';
-            }
-            if (heightDone && transformDone) {
-              card.style.transition = '';
-              card.style.willChange = '';
-              card.removeEventListener('transitionend', cleanup);
-            }
-          };
-          card.addEventListener('transitionend', cleanup);
+      // Step 3: Measure new heights and animate
+      requestAnimationFrame(function() {
+        contentHeights.forEach(function(item) {
+          var newHeight = item.content.scrollHeight;
+          // Animate to new height
+          item.content.style.height = newHeight + 'px';
         });
-        listEl.classList.remove('is-transitioning');
+
+        // Step 4: Clean up after transition
+        setTimeout(function() {
+          contentHeights.forEach(function(item) {
+            item.content.style.height = '';
+          });
+          buildDotPositionCache();
+        }, 500);
       });
     });
 
@@ -2843,6 +3333,77 @@ function hexToRgb(hex) {
     function announce(msg){
       srAnnouncer.textContent = msg;
       setTimeout(function (){ srAnnouncer.textContent = ''; }, 1000);
+    }
+
+    /* Generate dynamic skeleton dots per screen size */
+    function generateSkeletonDots() {
+      // Helper to calculate dots per row based on container width
+      function calculateDotsPerRow(containerWidth) {
+        var dotSize = 24; // Approximate dot outer size
+        var gap = 8; // Approximate gap
+        return Math.floor(containerWidth / (dotSize + gap));
+      }
+
+      // Helper to generate dots with varied sizes and incomplete last row
+      function generateDotsForGrid(grid, screenType) {
+        grid.innerHTML = '';
+        var containerWidth = grid.offsetWidth || (screenType === 'desktop' ? 800 : screenType === 'tablet' ? 600 : 400);
+        var dotsPerRow = Math.max(10, calculateDotsPerRow(containerWidth));
+
+        // Generate at least 5 rows, with last row ~60-70% filled
+        var fullRows = 5;
+        var lastRowFillPercent = 0.6 + Math.random() * 0.15; // 60-75%
+        var lastRowDots = Math.floor(dotsPerRow * lastRowFillPercent);
+        var totalDots = (fullRows * dotsPerRow) + lastRowDots;
+
+        for (var i = 0; i < totalDots; i++) {
+          var dot = document.createElement('span');
+          // Randomly make ~30% of dots small
+          var isSmall = Math.random() < 0.3;
+          dot.className = (isSmall ? 'sk-dot-small' : 'sk-dot') + ' skeleton-shimmer';
+          grid.appendChild(dot);
+        }
+      }
+
+      // Desktop dots (>900px)
+      var desktopGrids = document.querySelectorAll('.sk-dots-desktop');
+      desktopGrids.forEach(function(grid) {
+        generateDotsForGrid(grid, 'desktop');
+      });
+
+      // Tablet dots (640-900px)
+      var tabletGrids = document.querySelectorAll('.sk-dots-tablet');
+      tabletGrids.forEach(function(grid) {
+        generateDotsForGrid(grid, 'tablet');
+      });
+
+      // Mobile dots (<640px)
+      var mobileGrids = document.querySelectorAll('.sk-dots-mobile');
+      mobileGrids.forEach(function(grid) {
+        generateDotsForGrid(grid, 'mobile');
+      });
+    }
+
+    /* Debounce helper */
+    function debounce(func, wait) {
+      var timeout;
+      return function executedFunction() {
+        var context = this;
+        var args = arguments;
+        var later = function() {
+          timeout = null;
+          func.apply(context, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // Call skeleton generation on load and resize
+    if (typeof window !== 'undefined') {
+      window.addEventListener('load', generateSkeletonDots);
+      window.addEventListener('resize', debounce(generateSkeletonDots, 250));
+      window.addEventListener('resize', debounce(buildDotPositionCache, 250));
     }
 
     /* init */
@@ -2990,12 +3551,29 @@ function hexToRgb(hex) {
         delete habitYearWheels[habit.id];
       }
 
+      // Clean up existing ResizeObserver for this habit
+      if (yearWheelResizeObservers[habit.id]) {
+        yearWheelResizeObservers[habit.id].disconnect();
+        delete yearWheelResizeObservers[habit.id];
+      }
+
+      // Clean up container's cleanup function if it exists
+      if (container._cleanupResize) {
+        container._cleanupResize();
+        container._cleanupResize = null;
+      }
+
       // The ResizeObserver will wait until the browser has calculated the
       // final dimensions of the container before we initialize the YearWheel.
+      var hasInitialized = false; // Flag to prevent duplicate initialization
+
       var observer = new ResizeObserver(function(entries) {
         // We only need to run this setup once when the element gets its initial size.
         var entry = entries[0];
-        if (entry.contentRect.width > 0) {
+
+        // Only initialize once and when we have a stable width
+        if (!hasInitialized && entry.contentRect.width > 0) {
+          hasInitialized = true;
 
           // Now that we have a stable width, initialize the YearWheel.
           // Its centering calculation will now be accurate.
@@ -3154,18 +3732,33 @@ function hexToRgb(hex) {
         markTodayBtn.setAttribute('title', isTodayMarked ? 'Unmark today' : 'Mark today');
       }
 
-      // Update dots grid
-      var gridContainer = card.querySelector('.dots-grid, .months-container');
-      if (gridContainer) {
-        gridContainer.innerHTML = '';
-        if (document.documentElement.dataset.view === 'month') {
-          gridContainer.className = 'months-container';
-          buildMonthViews(habit, gridContainer, todayIdx);
-        } else {
-          gridContainer.className = 'dots-grid';
-          buildYearView(habit, gridContainer, todayIdx);
-        }
+      // Update both year and month views (since both exist in DOM now)
+      var yearGridContainer = card.querySelector('.dots-grid-year-view');
+      if (yearGridContainer) {
+        yearGridContainer.innerHTML = '';
+        buildYearView(habit, yearGridContainer, todayIdx);
       }
+
+      var monthGridContainer = card.querySelector('.months-container-month-view');
+      if (monthGridContainer) {
+        monthGridContainer.innerHTML = '';
+        buildMonthViews(habit, monthGridContainer, todayIdx);
+      }
+
+      // Reinitialize year wheel to ensure it's in sync with the new year
+      // This is important when switching years via the year wheel itself
+      requestAnimationFrame(function() {
+        // Clean up and reinitialize the year wheel
+        if (habitYearWheels[habit.id]) {
+          delete habitYearWheels[habit.id];
+        }
+        initHabitYearWheel(habit);
+      });
+
+      // Rebuild dot position cache after updating
+      requestAnimationFrame(function() {
+        buildDotPositionCache();
+      });
     }
 
     // Start the app

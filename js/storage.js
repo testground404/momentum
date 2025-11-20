@@ -1,0 +1,695 @@
+/**
+ * Storage Module
+ * Handles all data storage operations
+ * Supports both Firestore (Firebase) and localStorage
+ */
+
+const Storage = (function() {
+  'use strict';
+
+  const STORAGE_PREFIX = 'momentum_';
+
+  // Check if Firebase is available
+  const useFirebase = typeof window !== 'undefined' &&
+                      typeof firebase !== 'undefined' &&
+                      window.FirebaseDB;
+
+  console.log('Storage mode:', useFirebase ? 'Firestore' : 'LocalStorage');
+
+  // ========== Firestore Methods ==========
+
+  // Cache for delta-based updates
+  let lastSavedHabits = new Map(); // habitId -> habit data (as JSON string)
+
+  /**
+   * Save habits to Firestore (with delta-based updates)
+   */
+  async function saveHabitsToFirestore(habits) {
+    try {
+      const userId = Auth.getCurrentUser();
+      if (!userId) {
+        console.error('No authenticated user');
+        return false;
+      }
+
+      const habitsRef = window.FirebaseDB.collection('users').doc(userId).collection('habits');
+      const batch = window.FirebaseDB.batch();
+
+      // Create maps for quick lookup
+      const currentHabitsMap = new Map();
+      habits.forEach(habit => {
+        currentHabitsMap.set(habit.id, JSON.stringify(habit));
+      });
+
+      let operationCount = 0;
+
+      // Find habits to update or add
+      habits.forEach(habit => {
+        const habitId = habit.id || generateId();
+        const currentJSON = JSON.stringify(habit);
+        const previousJSON = lastSavedHabits.get(habitId);
+
+        // Only update if habit is new or changed
+        if (previousJSON !== currentJSON) {
+          const docRef = habitsRef.doc(habitId);
+          batch.set(docRef, habit, { merge: true });
+          operationCount++;
+        }
+      });
+
+      // Find habits to delete (exist in cache but not in current)
+      lastSavedHabits.forEach((habitJSON, habitId) => {
+        if (!currentHabitsMap.has(habitId)) {
+          batch.delete(habitsRef.doc(habitId));
+          operationCount++;
+        }
+      });
+
+      // Only commit if there are changes
+      if (operationCount > 0) {
+        await batch.commit();
+        console.log(`Habits saved to Firestore (${operationCount} operations)`);
+
+        // Update cache
+        lastSavedHabits = currentHabitsMap;
+
+        // Also save to IndexedDB cache
+        saveToIndexedDB(userId, habits);
+      } else {
+        console.log('No changes detected, skipping Firestore write');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error saving habits to Firestore:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Load habits from Firestore (with IndexedDB cache)
+   */
+  async function loadHabitsFromFirestore() {
+    try {
+      const userId = Auth.getCurrentUser();
+      if (!userId) {
+        console.log('No authenticated user');
+        return [];
+      }
+
+      // Try loading from IndexedDB cache first for instant load
+      const cachedHabits = await loadFromIndexedDB(userId);
+      if (cachedHabits && cachedHabits.length > 0) {
+        console.log('Using IndexedDB cache for instant load');
+
+        // Populate delta cache
+        lastSavedHabits.clear();
+        cachedHabits.forEach(habit => {
+          lastSavedHabits.set(habit.id, JSON.stringify(habit));
+        });
+
+        // Load from Firebase in background to check for updates
+        loadFromFirestoreInBackground(userId, cachedHabits);
+
+        return cachedHabits;
+      }
+
+      // No cache, load from Firestore
+      const habitsRef = window.FirebaseDB.collection('users').doc(userId).collection('habits');
+      const snapshot = await habitsRef.get();
+
+      const habits = [];
+      lastSavedHabits.clear(); // Reset cache
+
+      snapshot.forEach(doc => {
+        const habit = { id: doc.id, ...doc.data() };
+        habits.push(habit);
+        // Populate cache on load
+        lastSavedHabits.set(habit.id, JSON.stringify(habit));
+      });
+
+      console.log('Loaded', habits.length, 'habits from Firestore');
+
+      // Cache to IndexedDB for next time
+      if (habits.length > 0) {
+        saveToIndexedDB(userId, habits);
+      }
+
+      return habits;
+    } catch (error) {
+      console.error('Error loading habits from Firestore:', error);
+
+      // Fallback to IndexedDB if Firebase fails
+      const userId = Auth.getCurrentUser();
+      if (userId) {
+        const cachedHabits = await loadFromIndexedDB(userId);
+        if (cachedHabits) {
+          console.log('Using IndexedDB fallback due to Firebase error');
+          return cachedHabits;
+        }
+      }
+
+      return [];
+    }
+  }
+
+  /**
+   * Background sync to check for updates from Firestore
+   */
+  async function loadFromFirestoreInBackground(userId, cachedHabits) {
+    try {
+      const habitsRef = window.FirebaseDB.collection('users').doc(userId).collection('habits');
+      const snapshot = await habitsRef.get();
+
+      const habits = [];
+      snapshot.forEach(doc => {
+        habits.push({ id: doc.id, ...doc.data() });
+      });
+
+      // Check if there are differences
+      const cachedJSON = JSON.stringify(cachedHabits);
+      const firestoreJSON = JSON.stringify(habits);
+
+      if (cachedJSON !== firestoreJSON) {
+        console.log('Firestore has updates, updating cache');
+        saveToIndexedDB(userId, habits);
+        // Note: In a real app, you'd want to notify the UI to refresh
+      }
+    } catch (error) {
+      console.warn('Background sync failed:', error);
+    }
+  }
+
+  /**
+   * Save settings to Firestore
+   */
+  async function saveSettingsToFirestore(settings) {
+    try {
+      const userId = Auth.getCurrentUser();
+      if (!userId) {
+        console.error('No authenticated user');
+        return false;
+      }
+
+      await window.FirebaseDB.collection('users').doc(userId)
+        .collection('settings').doc('preferences').set(settings);
+
+      console.log('Settings saved to Firestore');
+      return true;
+    } catch (error) {
+      console.error('Error saving settings to Firestore:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Load settings from Firestore
+   */
+  async function loadSettingsFromFirestore() {
+    try {
+      const userId = Auth.getCurrentUser();
+      if (!userId) {
+        console.log('No authenticated user');
+        return getDefaultSettings();
+      }
+
+      const doc = await window.FirebaseDB.collection('users').doc(userId)
+        .collection('settings').doc('preferences').get();
+
+      if (doc.exists) {
+        console.log('Settings loaded from Firestore');
+        return doc.data();
+      }
+
+      return getDefaultSettings();
+    } catch (error) {
+      console.error('Error loading settings from Firestore:', error);
+      return getDefaultSettings();
+    }
+  }
+
+  /**
+   * Clear all user data from Firestore
+   */
+  async function clearUserDataFromFirestore() {
+    try {
+      const userId = Auth.getCurrentUser();
+      if (!userId) {
+        return false;
+      }
+
+      const userRef = window.FirebaseDB.collection('users').doc(userId);
+
+      // Delete habits
+      const habitsSnapshot = await userRef.collection('habits').get();
+      const batch = window.FirebaseDB.batch();
+
+      habitsSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      // Delete settings
+      const settingsSnapshot = await userRef.collection('settings').get();
+      settingsSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+      console.log('User data cleared from Firestore');
+
+      // Also clear IndexedDB cache
+      await clearIndexedDBCache(userId);
+      clearDayBasedCache();
+
+      return true;
+    } catch (error) {
+      console.error('Error clearing Firestore data:', error);
+      return false;
+    }
+  }
+
+  // ========== IndexedDB Cache Layer ==========
+
+  const DB_NAME = 'MomentumHabitsDB';
+  const DB_VERSION = 1;
+  const STORE_NAME = 'habits_cache';
+  let db = null;
+
+  /**
+   * Initialize IndexedDB
+   */
+  async function initIndexedDB() {
+    if (db) return db;
+
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+      request.onerror = () => {
+        console.warn('IndexedDB failed to open:', request.error);
+        resolve(null);
+      };
+
+      request.onsuccess = () => {
+        db = request.result;
+        console.log('IndexedDB initialized');
+        resolve(db);
+      };
+
+      request.onupgradeneeded = (event) => {
+        const database = event.target.result;
+
+        if (!database.objectStoreNames.contains(STORE_NAME)) {
+          const objectStore = database.createObjectStore(STORE_NAME, { keyPath: 'userId' });
+          objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+        }
+      };
+    });
+  }
+
+  /**
+   * Save habits to IndexedDB cache
+   */
+  async function saveToIndexedDB(userId, habits) {
+    try {
+      const database = await initIndexedDB();
+      if (!database) return false;
+
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction([STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(STORE_NAME);
+
+        const cacheEntry = {
+          userId: userId,
+          habits: habits,
+          timestamp: new Date().toISOString()
+        };
+
+        const request = objectStore.put(cacheEntry);
+
+        request.onsuccess = () => {
+          console.log('Habits cached to IndexedDB');
+          resolve(true);
+        };
+
+        request.onerror = () => {
+          console.warn('Failed to cache to IndexedDB:', request.error);
+          resolve(false);
+        };
+      });
+    } catch (error) {
+      console.warn('IndexedDB cache error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Load habits from IndexedDB cache
+   */
+  async function loadFromIndexedDB(userId) {
+    try {
+      const database = await initIndexedDB();
+      if (!database) return null;
+
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction([STORE_NAME], 'readonly');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = objectStore.get(userId);
+
+        request.onsuccess = () => {
+          const result = request.result;
+          if (result && result.habits) {
+            console.log('Loaded habits from IndexedDB cache');
+            resolve(result.habits);
+          } else {
+            resolve(null);
+          }
+        };
+
+        request.onerror = () => {
+          console.warn('Failed to load from IndexedDB:', request.error);
+          resolve(null);
+        };
+      });
+    } catch (error) {
+      console.warn('IndexedDB load error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Clear IndexedDB cache
+   */
+  async function clearIndexedDBCache(userId = null) {
+    try {
+      const database = await initIndexedDB();
+      if (!database) return false;
+
+      return new Promise((resolve) => {
+        const transaction = database.transaction([STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(STORE_NAME);
+
+        let request;
+        if (userId) {
+          request = objectStore.delete(userId);
+        } else {
+          request = objectStore.clear();
+        }
+
+        request.onsuccess = () => {
+          console.log('IndexedDB cache cleared');
+          resolve(true);
+        };
+
+        request.onerror = () => {
+          console.warn('Failed to clear IndexedDB:', request.error);
+          resolve(false);
+        };
+      });
+    } catch (error) {
+      console.warn('IndexedDB clear error:', error);
+      return false;
+    }
+  }
+
+  // ========== Day-based Caching ==========
+
+  /**
+   * Cache for habit data with daily invalidation
+   * Structure: { habitId: { date: 'YYYY-MM-DD', data: {...} } }
+   */
+  const dayBasedCache = new Map();
+
+  /**
+   * Get today's date string
+   */
+  function getTodayDateString() {
+    const now = new Date();
+    return now.getFullYear() + '-' +
+           String(now.getMonth() + 1).padStart(2, '0') + '-' +
+           String(now.getDate()).padStart(2, '0');
+  }
+
+  /**
+   * Get cached habit data for today
+   */
+  function getCachedHabitData(habitId) {
+    const cached = dayBasedCache.get(habitId);
+    const today = getTodayDateString();
+
+    if (cached && cached.date === today) {
+      return cached.data;
+    }
+
+    return null;
+  }
+
+  /**
+   * Cache habit data for today
+   */
+  function setCachedHabitData(habitId, data) {
+    dayBasedCache.set(habitId, {
+      date: getTodayDateString(),
+      data: data
+    });
+  }
+
+  /**
+   * Clear cache for specific habit or all habits
+   */
+  function clearDayBasedCache(habitId = null) {
+    if (habitId) {
+      dayBasedCache.delete(habitId);
+    } else {
+      dayBasedCache.clear();
+    }
+  }
+
+  // ========== LocalStorage Methods (Fallback) ==========
+
+  /**
+   * Get user-specific storage key
+   */
+  function getUserKey(key) {
+    const username = Auth.getCurrentUser();
+    if (!username) {
+      console.warn('No user logged in');
+      return null;
+    }
+    return STORAGE_PREFIX + username + '_' + key;
+  }
+
+  /**
+   * Save data to localStorage
+   */
+  function saveToLocalStorage(key, data) {
+    const storageKey = getUserKey(key);
+    if (!storageKey) return false;
+
+    try {
+      const jsonData = JSON.stringify(data);
+      localStorage.setItem(storageKey, jsonData);
+      return true;
+    } catch (e) {
+      console.error('Error saving to localStorage:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Load data from localStorage
+   */
+  function loadFromLocalStorage(key, defaultValue = null) {
+    const storageKey = getUserKey(key);
+    if (!storageKey) return defaultValue;
+
+    try {
+      const data = localStorage.getItem(storageKey);
+      return data ? JSON.parse(data) : defaultValue;
+    } catch (e) {
+      console.error('Error loading from localStorage:', e);
+      return defaultValue;
+    }
+  }
+
+  /**
+   * Remove data from localStorage
+   */
+  function removeFromLocalStorage(key) {
+    const storageKey = getUserKey(key);
+    if (!storageKey) return false;
+
+    try {
+      localStorage.removeItem(storageKey);
+      return true;
+    } catch (e) {
+      console.error('Error removing from localStorage:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Clear all user data from localStorage
+   */
+  function clearUserDataFromLocalStorage() {
+    const username = Auth.getCurrentUser();
+    if (!username) return false;
+
+    const prefix = STORAGE_PREFIX + username + '_';
+
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith(prefix)) {
+          localStorage.removeItem(key);
+        }
+      });
+      return true;
+    } catch (e) {
+      console.error('Error clearing user data:', e);
+      return false;
+    }
+  }
+
+  // ========== Helper Functions ==========
+
+  function getDefaultSettings() {
+    return {
+      theme: 'light',
+      view: 'year',
+      sortOrder: 'created-newest'
+    };
+  }
+
+  function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  }
+
+  // ========== Public API ==========
+
+  /**
+   * Save habits
+   */
+  async function saveHabits(habits) {
+    if (useFirebase) {
+      return await saveHabitsToFirestore(habits);
+    } else {
+      return saveToLocalStorage('habits', habits);
+    }
+  }
+
+  /**
+   * Load habits
+   */
+  async function loadHabits() {
+    if (useFirebase) {
+      return await loadHabitsFromFirestore();
+    } else {
+      return loadFromLocalStorage('habits', []);
+    }
+  }
+
+  /**
+   * Save app settings
+   */
+  async function saveSettings(settings) {
+    if (useFirebase) {
+      return await saveSettingsToFirestore(settings);
+    } else {
+      return saveToLocalStorage('settings', settings);
+    }
+  }
+
+  /**
+   * Load app settings
+   */
+  async function loadSettings() {
+    if (useFirebase) {
+      return await loadSettingsFromFirestore();
+    } else {
+      return loadFromLocalStorage('settings', getDefaultSettings());
+    }
+  }
+
+  /**
+   * Clear all user data
+   */
+  async function clearUserData() {
+    if (useFirebase) {
+      return await clearUserDataFromFirestore();
+    } else {
+      return clearUserDataFromLocalStorage();
+    }
+  }
+
+  /**
+   * Export user data
+   */
+  async function exportData() {
+    const username = Auth.getCurrentUserEmail() || Auth.getCurrentUser();
+    if (!username) return null;
+
+    const data = {
+      exportDate: new Date().toISOString(),
+      username: username,
+      habits: await loadHabits(),
+      settings: await loadSettings()
+    };
+
+    return data;
+  }
+
+  /**
+   * Import user data
+   */
+  async function importData(data) {
+    if (!data || !data.habits) return false;
+
+    try {
+      await saveHabits(data.habits);
+      if (data.settings) {
+        await saveSettings(data.settings);
+      }
+      return true;
+    } catch (e) {
+      console.error('Error importing data:', e);
+      return false;
+    }
+  }
+
+  // Legacy methods for backward compatibility
+  function save(key, data) {
+    return saveToLocalStorage(key, data);
+  }
+
+  function load(key, defaultValue = null) {
+    return loadFromLocalStorage(key, defaultValue);
+  }
+
+  function remove(key) {
+    return removeFromLocalStorage(key);
+  }
+
+  // Public API
+  return {
+    save: save,
+    load: load,
+    remove: remove,
+    clearUserData: clearUserData,
+    saveHabits: saveHabits,
+    loadHabits: loadHabits,
+    saveSettings: saveSettings,
+    loadSettings: loadSettings,
+    exportData: exportData,
+    importData: importData,
+    useFirebase: useFirebase,
+    // Day-based caching
+    getCachedHabitData: getCachedHabitData,
+    setCachedHabitData: setCachedHabitData,
+    clearDayBasedCache: clearDayBasedCache
+  };
+})();
+
+// Make Storage available globally
+if (typeof window !== 'undefined') {
+  window.Storage = Storage;
+}
