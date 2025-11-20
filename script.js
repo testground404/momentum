@@ -3176,138 +3176,141 @@ function hexToRgb(hex) {
         container._cleanupResize = null;
       }
 
-      // The ResizeObserver will wait until the browser has calculated the
-      // final dimensions of the container before we initialize the YearWheel.
-      var hasInitialized = false; // Flag to prevent duplicate initialization
+      // Function to create the year wheel
+      function createYearWheel() {
+        // Calculate the minimum year based on habit start date
+        var habitStartDate = getHabitStartDate(habit);
+        var minYear = 2000; // Default fallback
 
-      var observer = new ResizeObserver(function(entries) {
-        // We only need to run this setup once when the element gets its initial size.
-        var entry = entries[0];
-
-        // Only initialize once and when we have a stable width
-        if (!hasInitialized && entry.contentRect.width > 0) {
-          hasInitialized = true;
-
-          // Now that we have a stable width, initialize the YearWheel.
-          // Its centering calculation will now be accurate.
-
-          // Calculate the minimum year based on habit start date
-          var habitStartDate = getHabitStartDate(habit);
-          var minYear = 2000; // Default fallback
-
-          if (habitStartDate && !isNaN(habitStartDate.getTime())) {
-            minYear = habitStartDate.getFullYear();
-          } else if (habit.createdAt) {
-            // Fallback to createdAt if startDate is invalid
-            var createdDate = parseDateValue(habit.createdAt);
-            if (createdDate && !isNaN(createdDate.getTime())) {
-              minYear = createdDate.getFullYear();
-            }
+        if (habitStartDate && !isNaN(habitStartDate.getTime())) {
+          minYear = habitStartDate.getFullYear();
+        } else if (habit.createdAt) {
+          // Fallback to createdAt if startDate is invalid
+          var createdDate = parseDateValue(habit.createdAt);
+          if (createdDate && !isNaN(createdDate.getTime())) {
+            minYear = createdDate.getFullYear();
           }
-
-          var currentYear = new Date().getFullYear();
-          var maxSelectableYear = currentYear; // Only allow up to current year
-          var maxYear = Math.max(maxSelectableYear + 5, 2040); // Display range extends further
-
-          // Ensure the habit's current year is within the range
-          if (habit.year < minYear) {
-            habit.year = minYear;
-          }
-          if (habit.year > maxSelectableYear) {
-            habit.year = maxSelectableYear;
-          }
-
-          var yearWheel = new YearWheel(containerId, {
-            startYear: minYear,
-            endYear: maxYear,
-            initialYear: habit.year,
-            minSelectableYear: minYear,
-            maxSelectableYear: maxSelectableYear,
-            fadeColor: getComputedStyle(document.body).backgroundColor,
-            onChange: function(selectedYear) {
-              // The year we are navigating AWAY from
-              var yearToSave = habit.year;
-
-              // Determine the valid range for saving data
-              var habitStartDate = getHabitStartDate(habit);
-
-              // Robust check in case the start date is missing or invalid
-              if (habitStartDate && !isNaN(habitStartDate.getTime())) {
-                var startYear = habitStartDate.getFullYear();
-
-                // ONLY save the data if the year we are leaving is within the valid range
-                // (from its start year up to the current year)
-                if (yearToSave >= startYear && yearToSave <= CURRENTYEAR) {
-                  if (!habit.yearHistory) habit.yearHistory = {};
-
-                  // Unconditionally save the state for the valid year we are leaving
-                  // This ensures any changes made are persistent
-                  habit.yearHistory[yearToSave] = {
-                    dots: habit.dots.slice(),
-                    offDays: habit.offDays.slice(),
-                    notes: habit.notes.slice()
-                  };
-                }
-              }
-
-              // Now, proceed to load the data for the newly selected year
-              habit.year = selectedYear;
-              habit.days = daysInYear(selectedYear);
-
-              // Check if we have historical data for the new year
-              if (habit.yearHistory && habit.yearHistory[selectedYear]) {
-                // Restore historical data
-                var history = habit.yearHistory[selectedYear];
-                habit.dots = history.dots.slice();
-                habit.offDays = history.offDays.slice();
-                habit.notes = history.notes.slice();
-              } else {
-                // No historical data, create fresh arrays for this year
-                habit.dots = new Array(habit.days).fill(false);
-                habit.offDays = new Array(habit.days).fill(false);
-                habit.notes = new Array(habit.days).fill('');
-
-                // Apply the habit's frequency rules to the new, empty year
-                if (habit.frequency) {
-                  applyFrequencyToHabit(habit);
-                }
-              }
-
-              // Persist all changes to storage (Firebase or localStorage)
-              saveHabits(HABITS);
-
-              // Re-render the habit card with the new year's data
-              updateHabitCardContent(habit);
-
-              // After all data is updated, center the selected year in the view
-              requestAnimationFrame(function() {
-                centerSelectedYear(habit.id, true);
-              });
-            },
-            animationSpeed: 300,
-            fadePercent: 20,
-            windowSize: 11,
-            edgeMargin: 3
-          });
-
-          habitYearWheels[habit.id] = yearWheel;
-
-          // Set up dynamic centering that responds to size changes
-          setupDynamicCentering(habit.id);
-
-          // Center the initial year after a brief delay to ensure everything is rendered
-          setTimeout(function() {
-            centerSelectedYear(habit.id, false);
-          }, 150);
-
-          // Once initialized, we don't need to observe anymore for this purpose.
-          // The YearWheel component itself should handle resizing if needed.
-          observer.unobserve(container);
         }
-      });
 
-      // Start observing the container element.
-      observer.observe(container);
+        var currentYear = new Date().getFullYear();
+        var maxSelectableYear = currentYear; // Only allow up to current year
+        var maxYear = Math.max(maxSelectableYear + 5, 2040); // Display range extends further
+
+        // Ensure the habit's current year is within the range
+        if (habit.year < minYear) {
+          habit.year = minYear;
+        }
+        if (habit.year > maxSelectableYear) {
+          habit.year = maxSelectableYear;
+        }
+
+        var yearWheel = new YearWheel(containerId, {
+          startYear: minYear,
+          endYear: maxYear,
+          initialYear: habit.year,
+          minSelectableYear: minYear,
+          maxSelectableYear: maxSelectableYear,
+          fadeColor: getComputedStyle(document.body).backgroundColor,
+          onChange: function(selectedYear) {
+            // The year we are navigating AWAY from
+            var yearToSave = habit.year;
+
+            // Determine the valid range for saving data
+            var habitStartDate = getHabitStartDate(habit);
+
+            // Robust check in case the start date is missing or invalid
+            if (habitStartDate && !isNaN(habitStartDate.getTime())) {
+              var startYear = habitStartDate.getFullYear();
+
+              // ONLY save the data if the year we are leaving is within the valid range
+              // (from its start year up to the current year)
+              if (yearToSave >= startYear && yearToSave <= CURRENTYEAR) {
+                if (!habit.yearHistory) habit.yearHistory = {};
+
+                // Unconditionally save the state for the valid year we are leaving
+                // This ensures any changes made are persistent
+                habit.yearHistory[yearToSave] = {
+                  dots: habit.dots.slice(),
+                  offDays: habit.offDays.slice(),
+                  notes: habit.notes.slice()
+                };
+              }
+            }
+
+            // Now, proceed to load the data for the newly selected year
+            habit.year = selectedYear;
+            habit.days = daysInYear(selectedYear);
+
+            // Check if we have historical data for the new year
+            if (habit.yearHistory && habit.yearHistory[selectedYear]) {
+              // Restore historical data
+              var history = habit.yearHistory[selectedYear];
+              habit.dots = history.dots.slice();
+              habit.offDays = history.offDays.slice();
+              habit.notes = history.notes.slice();
+            } else {
+              // No historical data, create fresh arrays for this year
+              habit.dots = new Array(habit.days).fill(false);
+              habit.offDays = new Array(habit.days).fill(false);
+              habit.notes = new Array(habit.days).fill('');
+
+              // Apply the habit's frequency rules to the new, empty year
+              if (habit.frequency) {
+                applyFrequencyToHabit(habit);
+              }
+            }
+
+            // Persist all changes to storage (Firebase or localStorage)
+            saveHabits(HABITS);
+
+            // Re-render the habit card with the new year's data
+            updateHabitCardContent(habit);
+
+            // After all data is updated, center the selected year in the view
+            requestAnimationFrame(function() {
+              centerSelectedYear(habit.id, true);
+            });
+          },
+          animationSpeed: 300,
+          fadePercent: 20,
+          windowSize: 11,
+          edgeMargin: 3
+        });
+
+        habitYearWheels[habit.id] = yearWheel;
+
+        // Set up dynamic centering that responds to size changes
+        setupDynamicCentering(habit.id);
+
+        // Center the initial year after a brief delay to ensure everything is rendered
+        setTimeout(function() {
+          centerSelectedYear(habit.id, false);
+        }, 150);
+      }
+
+      // Check if container already has dimensions (common on initial render)
+      var currentWidth = container.offsetWidth || container.clientWidth;
+      if (currentWidth > 0) {
+        // Container already has dimensions, initialize immediately
+        createYearWheel();
+      } else {
+        // Container doesn't have dimensions yet, wait for ResizeObserver
+        var hasInitialized = false;
+        var observer = new ResizeObserver(function(entries) {
+          var entry = entries[0];
+
+          // Only initialize once and when we have a stable width
+          if (!hasInitialized && entry.contentRect.width > 0) {
+            hasInitialized = true;
+            createYearWheel();
+            // Once initialized, we don't need to observe anymore
+            observer.unobserve(container);
+          }
+        });
+
+        // Start observing the container element
+        observer.observe(container);
+      }
     }
 
     function updateHabitCardContent(habit) {
