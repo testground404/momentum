@@ -3593,7 +3593,7 @@ function hexToRgb(hex) {
           }
 
           var currentYear = new Date().getFullYear();
-          var maxSelectableYear = currentYear + 2; // Only allow 2 years into future
+          var maxSelectableYear = currentYear; // Only allow up to current year
           var maxYear = Math.max(maxSelectableYear + 5, 2040); // Display range extends further
 
           // Ensure the habit's current year is within the range
