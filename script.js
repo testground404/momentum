@@ -1704,30 +1704,40 @@ function hexToRgb(hex) {
       // Create a document fragment to minimize reflows
       var frag = document.createDocumentFragment();
 
-      for (var i=0;i<habit.days;i++){
-        var dot = document.createElement('div'); // CHANGED: button -> div
-        dot.className = 'dot';
-        dot.dataset.index = String(i);
-        dot.dataset.habitId = habit.id;
+      // Hoist constant checks outside loop
+      var isCurrentYear = habit.year === CURRENTYEAR;
+      var hasNotes = habit.notes && habit.notes.length > 0;
+      var habitId = habit.id;
+      var days = habit.days;
+      var dots = habit.dots;
+      var offDays = habit.offDays;
+      var notes = habit.notes;
 
-        // Only render the visual state
-        if (habit.dots[i]) {
-          dot.setAttribute('aria-pressed', 'true'); // CSS styling hook
+      for (var i = 0; i < days; i++) {
+        var dot = document.createElement('div');
+        dot.className = 'dot';
+
+        // Only set essential data attributes for read-only divs
+        dot.dataset.index = i;
+        dot.dataset.habitId = habitId;
+
+        // Set visual state using attributes (minimal DOM operations)
+        if (dots[i]) {
+          dot.setAttribute('aria-pressed', 'true');
         }
-        if (habit.offDays[i]) {
+        if (offDays[i]) {
           dot.dataset.off = 'true';
         }
-        if (habit.notes && habit.notes[i] && habit.notes[i].trim()) {
+        if (hasNotes && notes[i] && notes[i].trim()) {
           dot.dataset.note = 'true';
         }
-
-        // OPTIONAL: Highlight today visually, but it's not a button
-        if (habit.year === CURRENTYEAR && i === todayIndex) {
+        if (isCurrentYear && i === todayIndex) {
           dot.setAttribute('aria-current', 'date');
         }
 
         frag.appendChild(dot);
       }
+
       container.appendChild(frag);
     }
 
@@ -1735,40 +1745,51 @@ function hexToRgb(hex) {
       var year = habit.year;
       var dayOfYearIndex = 0;
 
-      for (var month=0; month<12; month++) {
+      // Hoist constant checks outside loops
+      var isCurrentYear = habit.year === CURRENTYEAR;
+      var hasNotes = habit.notes && habit.notes.length > 0;
+      var habitId = habit.id;
+      var dots = habit.dots;
+      var offDays = habit.offDays;
+      var notes = habit.notes;
+
+      for (var month = 0; month < 12; month++) {
         var monthContainer = document.createElement('div');
         monthContainer.className = 'month-container';
         var monthGrid = document.createElement('div');
         monthGrid.className = 'month-grid';
 
+        // Date calculations needed for calendar layout (only 12x per habit)
         var firstDateOfMonth = new Date(year, month, 1);
         var startingDayOfWeek = firstDateOfMonth.getDay();
-        var daysInMonth = new Date(year, month+1, 0).getDate();
+        var daysInMonth = new Date(year, month + 1, 0).getDate();
 
         // Add empty cells for alignment
-        for (var i=0;i<startingDayOfWeek;i++){
+        for (var i = 0; i < startingDayOfWeek; i++) {
           monthGrid.appendChild(document.createElement('div'));
         }
 
         // Create a document fragment for this month's days
         var frag = document.createDocumentFragment();
-        for (var dayOfMonth=1; dayOfMonth<=daysInMonth; dayOfMonth++) {
-          var dot = document.createElement('div'); // CHANGED: button -> div
+        for (var dayOfMonth = 1; dayOfMonth <= daysInMonth; dayOfMonth++) {
+          var dot = document.createElement('div');
           dot.className = 'dot';
-          dot.dataset.index = String(dayOfYearIndex);
-          dot.dataset.habitId = habit.id;
 
-          // Only render the visual state
-          if (habit.dots[dayOfYearIndex]) {
-            dot.setAttribute('aria-pressed', 'true'); // CSS styling hook
+          // Only set essential data attributes for read-only divs
+          dot.dataset.index = dayOfYearIndex;
+          dot.dataset.habitId = habitId;
+
+          // Set visual state using attributes (minimal DOM operations)
+          if (dots[dayOfYearIndex]) {
+            dot.setAttribute('aria-pressed', 'true');
           }
-          if (habit.offDays[dayOfYearIndex]) {
+          if (offDays[dayOfYearIndex]) {
             dot.dataset.off = 'true';
           }
-          if (habit.notes && habit.notes[dayOfYearIndex] && habit.notes[dayOfYearIndex].trim()) {
+          if (hasNotes && notes[dayOfYearIndex] && notes[dayOfYearIndex].trim()) {
             dot.dataset.note = 'true';
           }
-          if (habit.year === CURRENTYEAR && dayOfYearIndex === todayIndex) {
+          if (isCurrentYear && dayOfYearIndex === todayIndex) {
             dot.setAttribute('aria-current', 'date');
           }
 
