@@ -3375,16 +3375,6 @@ function hexToRgb(hex) {
         monthGridContainer.innerHTML = '';
         buildMonthViews(habit, monthGridContainer, todayIdx);
       }
-
-      // Reinitialize year wheel to ensure it's in sync with the new year
-      // This is important when switching years via the year wheel itself
-      requestAnimationFrame(function() {
-        // Clean up and reinitialize the year wheel
-        if (habitYearWheels[habit.id]) {
-          delete habitYearWheels[habit.id];
-        }
-        initHabitYearWheel(habit);
-      });
     }
 
     // Start the app
