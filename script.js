@@ -3090,30 +3090,33 @@ function hexToRgb(hex) {
     var yearWheelResizeObservers = {}; // Store resize observers for cleanup
 
     function centerSelectedYear(habitId, smooth) {
-      // 1. Find the relevant elements for this specific habit's year wheel.
-      var container = document.getElementById('year-wheel-' + habitId);
-      if (!container) return; // Exit if the card isn't in the DOM
+      // Batch reads and writes to prevent layout thrashing
+      requestAnimationFrame(function() {
+        // 1. Find the relevant elements for this specific habit's year wheel.
+        var container = document.getElementById('year-wheel-' + habitId);
+        if (!container) return; // Exit if the card isn't in the DOM
 
-      var scrollArea = container.querySelector('.year-wheel-scroll');
-      var selectedItem = container.querySelector('.year-item.selected');
+        var scrollArea = container.querySelector('.year-wheel-scroll');
+        var selectedItem = container.querySelector('.year-item.selected');
 
-      if (!scrollArea || !selectedItem) {
-        // If we can't find the necessary elements, we can't proceed.
-        return;
-      }
+        if (!scrollArea || !selectedItem) {
+          // If we can't find the necessary elements, we can't proceed.
+          return;
+        }
 
-      // 2. Calculate the target scroll position.
-      var scrollAreaWidth = scrollArea.offsetWidth;
-      var selectedItemOffsetLeft = selectedItem.offsetLeft;
-      var selectedItemWidth = selectedItem.offsetWidth;
+        // 2. Batch all DOM reads together (before any writes)
+        var scrollAreaWidth = scrollArea.offsetWidth;
+        var selectedItemOffsetLeft = selectedItem.offsetLeft;
+        var selectedItemWidth = selectedItem.offsetWidth;
 
-      // The goal is to position the center of the selected item at the center of the scroll area.
-      var scrollLeftTarget = selectedItemOffsetLeft - (scrollAreaWidth / 2) + (selectedItemWidth / 2);
+        // The goal is to position the center of the selected item at the center of the scroll area.
+        var scrollLeftTarget = selectedItemOffsetLeft - (scrollAreaWidth / 2) + (selectedItemWidth / 2);
 
-      // 3. Apply the scroll with a smooth animation.
-      scrollArea.scrollTo({
-        left: scrollLeftTarget,
-        behavior: smooth === false ? 'instant' : 'smooth'
+        // 3. Perform DOM write after all reads are complete
+        scrollArea.scrollTo({
+          left: scrollLeftTarget,
+          behavior: smooth === false ? 'instant' : 'smooth'
+        });
       });
     }
 
@@ -3148,9 +3151,7 @@ function hexToRgb(hex) {
 
           // Debounce the recentering
           resizeTimeout = setTimeout(function() {
-            requestAnimationFrame(function() {
-              centerSelectedYear(habitId, false);
-            });
+            centerSelectedYear(habitId, false);
           }, 50);
         }
       });
@@ -3303,9 +3304,7 @@ function hexToRgb(hex) {
             updateHabitCardContent(habit);
 
             // After all data is updated, center the selected year in the view
-            requestAnimationFrame(function() {
-              centerSelectedYear(habit.id, true);
-            });
+            centerSelectedYear(habit.id, true);
           },
           animationSpeed: 300,
           fadePercent: 20,
