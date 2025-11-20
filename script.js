@@ -538,6 +538,8 @@ function hexToRgb(hex) {
       }
 
       habit.offDays = newOff;
+      // Mark stats as dirty since offDays changed
+      habit._dirtyStats = true;
     }
 
     var HABITS = [];
@@ -1095,8 +1097,7 @@ function hexToRgb(hex) {
       if (key.includes('streak') || key.includes('total')) {
         statsCache = new Map();
         arr.forEach(function (habit) {
-          var todayIdx = dayIndexForYear(habit.year);
-          var stats = calcStats(habit.dots, habit.offDays, todayIdx);
+          var stats = getHabitStats(habit);
           statsCache.set(habit.id, stats);
         });
       }
@@ -1238,7 +1239,7 @@ function hexToRgb(hex) {
 
     function renderHabitCard(habit) {
       var todayIdx = dayIndexForYear(habit.year);
-      var stats = calcStats(habit.dots, habit.offDays, todayIdx);
+      var stats = getHabitStats(habit);
       var completionRate = getCompletionRate(habit, stats);
 
       var wrap = document.createElement('section');
@@ -1831,9 +1832,25 @@ function hexToRgb(hex) {
       return { total: total, longest: longest, current: current };
     }
 
-    function completionSortValue(habit) {
+    // Memoized stats calculator - only recalculates when data changes
+    function getHabitStats(habit) {
+      // Return cached stats if dirty flag isn't set
+      if (habit._statsCache && !habit._dirtyStats) {
+        return habit._statsCache;
+      }
+
+      // Perform calculation
       var todayIdx = dayIndexForYear(habit.year);
       var stats = calcStats(habit.dots, habit.offDays, todayIdx);
+
+      // Save to cache
+      habit._statsCache = stats;
+      habit._dirtyStats = false;
+      return stats;
+    }
+
+    function completionSortValue(habit) {
+      var stats = getHabitStats(habit);
       return getCompletionRate(habit, stats);
     }
 
@@ -1849,6 +1866,9 @@ function hexToRgb(hex) {
         if (shouldBeChecked && h.offDays[idx]) {
           h.offDays[idx] = false;
         }
+        // Mark stats as dirty so they recalculate next time
+        h._dirtyStats = true;
+
         dotEl.setAttribute('aria-pressed', String(shouldBeChecked));
         if (shouldBeChecked) {
           dotEl.classList.add('just-toggled');
@@ -1922,11 +1942,13 @@ function hexToRgb(hex) {
             habit.dots = history.dots.slice();
             habit.offDays = history.offDays.slice();
             habit.notes = history.notes.slice();
+            // Mark stats as dirty since dots/offDays changed
+            habit._dirtyStats = true;
           } else {
             habit.dots = new Array(habit.days).fill(false);
             habit.offDays = new Array(habit.days).fill(false);
             habit.notes = new Array(habit.days).fill('');
-            applyFrequencyToHabit(habit);
+            applyFrequencyToHabit(habit); // This will mark as dirty
           }
 
           // Step C: Perform the mark/unmark action for today's date
@@ -1940,6 +1962,8 @@ function hexToRgb(hex) {
             if (newState && habit.offDays[todayIdx]) {
               habit.offDays[todayIdx] = false;
             }
+            // Mark stats as dirty since we just toggled today's dot
+            habit._dirtyStats = true;
             announce("Switched to current year and " + (newState ? "marked today" : "unmarked today"));
           } else {
             announce("Switched to current year. Cannot mark today as it is before the habit's start date.");
@@ -1970,8 +1994,7 @@ function hexToRgb(hex) {
     function onHabitChanged(habit){
       var card = listEl.querySelector('.card[data-habit-id="' + habit.id + '"]');
       if (card) {
-        var dayIdx = dayIndexForYear(habit.year);
-        var stats = calcStats(habit.dots, habit.offDays, dayIdx);
+        var stats = getHabitStats(habit);
         var completionRate = getCompletionRate(habit, stats);
         function updateStat(sel, val, suffix){
           var el = card.querySelector(sel);
@@ -2098,8 +2121,7 @@ function hexToRgb(hex) {
       return new Date(2000, idx, 1).toLocaleString(undefined, { month: 'short' });
     }
     function openStatsOverlay(habit) {
-      var todayIdx = dayIndexForYear(habit.year);
-      var stats = calcStats(habit.dots, habit.offDays, todayIdx);
+      var stats = getHabitStats(habit);
       var completionRate = getCompletionRate(habit, stats);
 
       var body = document.getElementById('stats-body');
@@ -3285,6 +3307,8 @@ function hexToRgb(hex) {
               habit.dots = history.dots.slice();
               habit.offDays = history.offDays.slice();
               habit.notes = history.notes.slice();
+              // Mark stats as dirty since dots/offDays changed
+              habit._dirtyStats = true;
             } else {
               // No historical data, create fresh arrays for this year
               habit.dots = new Array(habit.days).fill(false);
@@ -3293,7 +3317,10 @@ function hexToRgb(hex) {
 
               // Apply the habit's frequency rules to the new, empty year
               if (habit.frequency) {
-                applyFrequencyToHabit(habit);
+                applyFrequencyToHabit(habit); // This will mark as dirty
+              } else {
+                // No frequency to apply, but still mark dirty since arrays were replaced
+                habit._dirtyStats = true;
               }
             }
 
@@ -3354,7 +3381,7 @@ function hexToRgb(hex) {
 
       // Update stats
       var todayIdx = dayIndexForYear(habit.year);
-      var stats = calcStats(habit.dots, habit.offDays, todayIdx);
+      var stats = getHabitStats(habit);
       var completionRate = getCompletionRate(habit, stats);
 
       // Update subtitle stats
