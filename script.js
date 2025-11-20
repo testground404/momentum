@@ -1490,21 +1490,46 @@ function hexToRgb(hex) {
 
       updateYearBanner();
 
+      // Logic for the FIRST load (transition from Skeleton to Real List)
       if (!hasHydratedList) {
         hasHydratedList = true;
 
         // IMPROVED: Wait for cards to be fully rendered before hiding skeleton
         requestAnimationFrame(function() {
           if (skeletonEl) skeletonEl.hidden = true;
+
+          // 1. Make list visible FIRST
           listEl.hidden = false;
 
+          // 2. Animate cards
           if (!hasAnimatedInitialLoad) {
             hasAnimatedInitialLoad = true;
             cardsToAnimate.forEach(function(card, index) {
               animateCard(card, index);
             });
           }
+
+          // 3. Initialize Year Wheels NOW that elements have width
+          // This ensures offsetWidth is > 0 so centering works
+          if (newCards.length > 0) {
+            requestAnimationFrame(function() {
+              newCards.forEach(function(habit) {
+                initHabitYearWheel(habit);
+              });
+            });
+          }
         });
+      }
+      // Logic for SUBSEQUENT renders (Sorting, Filtering, Adding New Habit)
+      else {
+        // The list is already visible, so we can init immediately
+        if (newCards.length > 0) {
+          requestAnimationFrame(function() {
+            newCards.forEach(function(habit) {
+              initHabitYearWheel(habit);
+            });
+          });
+        }
       }
 
       // NEW: run staggered wave on initial load
@@ -1539,16 +1564,6 @@ function hexToRgb(hex) {
               updateFades(); // run once
             }
           }
-        });
-      }
-
-      // Initialize year wheels for all visible habits after DOM is ready
-      // Only initialize for new cards to avoid re-initializing existing wheels
-      if (newCards.length > 0) {
-        requestAnimationFrame(function() {
-          newCards.forEach(function(habit) {
-            initHabitYearWheel(habit);
-          });
         });
       }
 
