@@ -552,8 +552,6 @@ function hexToRgb(hex) {
     measureLayer.style.zIndex = '-1';
     document.body.appendChild(measureLayer);
 
-    var POSCACHE = { year: new Map(), month: new Map() };
-
     var listEl = document.getElementById('list');
     var skeletonEl = document.getElementById('skeleton-list');
     var emptyEl = document.getElementById('empty');
@@ -1491,8 +1489,6 @@ function hexToRgb(hex) {
       listEl.appendChild(fragment);
 
       updateYearBanner();
-      buildPositionCacheForView('year');
-      buildPositionCacheForView('month');
 
       if (!hasHydratedList) {
         hasHydratedList = true;
@@ -1962,8 +1958,6 @@ function hexToRgb(hex) {
         updateStat('.frequency-pill', formatFrequency(habit.frequency));
       }
       saveHabits(HABITS);
-      buildPositionCacheForView('year');
-      buildPositionCacheForView('month');
     }
 
     /* overlays */
@@ -2775,47 +2769,6 @@ function hexToRgb(hex) {
           dot.style.removeProperty('animation-delay');
         }, { once: true });
       });
-    }
-
-    /* position caches */
-    function buildPositionCacheForView(viewType){
-      if (!measureLayer) return;
-      measureLayer.innerHTML = '';
-      measureLayer.style.visibility = 'visible';
-      measureLayer.style.position = 'fixed';
-      measureLayer.style.inset = '0';
-      measureLayer.style.zIndex = '-1';
-      measureLayer.style.overflow = 'hidden';
-
-      var temp = document.createElement('div');
-      temp.className = 'container';
-      temp.style.width = '95%';
-      temp.style.maxWidth = '1400px';
-      measureLayer.appendChild(temp);
-
-      var prevView = document.documentElement.dataset.view;
-      document.documentElement.dataset.view = viewType;
-
-      HABITS.forEach(function (h){
-        var card = renderHabitCard(h);
-        card.classList.add('no-transitions');
-        temp.appendChild(card);
-        var dots = card.querySelectorAll('.dot');
-        dots.forEach(function (dot){
-          var key = dot.dataset.habitId + '-' + dot.dataset.index;
-          var rect = dot.getBoundingClientRect();
-          POSCACHE[viewType].set(key, {
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-            height: rect.height
-          });
-        });
-      });
-
-      document.documentElement.dataset.view = prevView;
-      measureLayer.innerHTML = '';
-      measureLayer.style.visibility = 'hidden';
     }
 
     /* view toggle - simplified CSS-driven approach with smooth height animation */
