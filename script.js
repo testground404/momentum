@@ -1579,11 +1579,6 @@ function hexToRgb(hex) {
         });
       });
 
-      // Build dot position cache for optimized painting
-      requestAnimationFrame(function() {
-        buildDotPositionCache();
-      });
-
       // Enable drag-and-drop for manual sorting
       enableDragAndDrop();
     }
@@ -1695,39 +1690,40 @@ function hexToRgb(hex) {
     }
 
     function buildYearView(habit, container, todayIndex) {
-      var startIndex = getHabitStartIndex(habit);
+      // Create a document fragment to minimize reflows
+      var frag = document.createDocumentFragment();
+
       for (var i=0;i<habit.days;i++){
-        var d = new Date(habit.year,0,1+i);
-        var btn = document.createElement('button');
-        btn.className = 'dot';
-        btn.type = 'button';
-        btn.dataset.index = String(i);
-        btn.dataset.habitId = habit.id;
-        var label = fmt(d);
-        var isOff = !!habit.offDays[i];
-        var isToday = (habit.year === CURRENTYEAR && i === todayIndex);
-        var hasNote = !!(habit.notes && habit.notes[i] && habit.notes[i].trim());
-        btn.title = dotTitle(habit, i, label, isToday);
-        btn.setAttribute('aria-label', 'Day ' + (i+1) + ': ' + btn.title);
-        btn.setAttribute('aria-pressed', habit.dots[i] ? 'true' : 'false');
-        if (isOff) btn.dataset.off = 'true';
-        if (hasNote) btn.dataset.note = 'true';
-        if (isToday) btn.setAttribute('aria-current', 'date');
+        var dot = document.createElement('div'); // CHANGED: button -> div
+        dot.className = 'dot';
+        dot.dataset.index = String(i);
+        dot.dataset.habitId = habit.id;
 
-        // Disable dots in future dates of current year OR all dots in future years
-        var isFutureYear = habit.year > CURRENTYEAR;
-        var isFuture = habit.year === CURRENTYEAR && i > todayIndex;
-        var isBeforeStart = i < startIndex;
+        // Only render the visual state
+        if (habit.dots[i]) {
+          dot.setAttribute('aria-pressed', 'true'); // CSS styling hook
+        }
+        if (habit.offDays[i]) {
+          dot.dataset.off = 'true';
+        }
+        if (habit.notes && habit.notes[i] && habit.notes[i].trim()) {
+          dot.dataset.note = 'true';
+        }
 
-        if (isFutureYear || isFuture || isBeforeStart) btn.disabled = true;
-        container.appendChild(btn);
+        // OPTIONAL: Highlight today visually, but it's not a button
+        if (habit.year === CURRENTYEAR && i === todayIndex) {
+          dot.setAttribute('aria-current', 'date');
+        }
+
+        frag.appendChild(dot);
       }
+      container.appendChild(frag);
     }
 
     function buildMonthViews(habit, container, todayIndex) {
       var year = habit.year;
       var dayOfYearIndex = 0;
-      var startIndex = getHabitStartIndex(habit);
+
       for (var month=0; month<12; month++) {
         var monthContainer = document.createElement('div');
         monthContainer.className = 'month-container';
@@ -1738,38 +1734,38 @@ function hexToRgb(hex) {
         var startingDayOfWeek = firstDateOfMonth.getDay();
         var daysInMonth = new Date(year, month+1, 0).getDate();
 
+        // Add empty cells for alignment
         for (var i=0;i<startingDayOfWeek;i++){
           monthGrid.appendChild(document.createElement('div'));
         }
 
+        // Create a document fragment for this month's days
+        var frag = document.createDocumentFragment();
         for (var dayOfMonth=1; dayOfMonth<=daysInMonth; dayOfMonth++) {
-          var btn = document.createElement('button');
-          btn.className = 'dot';
-          btn.type = 'button';
-          btn.dataset.index = String(dayOfYearIndex);
-          btn.dataset.habitId = habit.id;
-          var d = new Date(year, month, dayOfMonth);
-          var label = fmt(d);
-          var isOff = !!habit.offDays[dayOfYearIndex];
-          var isToday = (habit.year === CURRENTYEAR && dayOfYearIndex === todayIndex);
-          var hasNote = !!(habit.notes && habit.notes[dayOfYearIndex] && habit.notes[dayOfYearIndex].trim());
-          btn.title = dotTitle(habit, dayOfYearIndex, label, isToday);
-          btn.setAttribute('aria-label', btn.title);
-          btn.setAttribute('aria-pressed', habit.dots[dayOfYearIndex] ? 'true' : 'false');
-          if (isOff) btn.dataset.off = 'true';
-          if (hasNote) btn.dataset.note = 'true';
-          if (isToday) btn.setAttribute('aria-current', 'date');
+          var dot = document.createElement('div'); // CHANGED: button -> div
+          dot.className = 'dot';
+          dot.dataset.index = String(dayOfYearIndex);
+          dot.dataset.habitId = habit.id;
 
-          // Disable dots in future dates of current year OR all dots in future years
-          var isFutureYear = habit.year > CURRENTYEAR;
-          var isFuture = habit.year === CURRENTYEAR && dayOfYearIndex > todayIndex;
-          var isBeforeStart = dayOfYearIndex < startIndex;
+          // Only render the visual state
+          if (habit.dots[dayOfYearIndex]) {
+            dot.setAttribute('aria-pressed', 'true'); // CSS styling hook
+          }
+          if (habit.offDays[dayOfYearIndex]) {
+            dot.dataset.off = 'true';
+          }
+          if (habit.notes && habit.notes[dayOfYearIndex] && habit.notes[dayOfYearIndex].trim()) {
+            dot.dataset.note = 'true';
+          }
+          if (habit.year === CURRENTYEAR && dayOfYearIndex === todayIndex) {
+            dot.setAttribute('aria-current', 'date');
+          }
 
-          if (isFutureYear || isFuture || isBeforeStart) btn.disabled = true;
-          monthGrid.appendChild(btn);
+          frag.appendChild(dot);
           dayOfYearIndex++;
         }
 
+        monthGrid.appendChild(frag);
         monthContainer.appendChild(monthGrid);
         container.appendChild(monthContainer);
       }
@@ -1809,16 +1805,9 @@ function hexToRgb(hex) {
       return getCompletionRate(habit, stats);
     }
 
-    /* ────────── painting ────────── */
-    var isPainting = false;
-    var paintAction = null;
-    var habitsToUpdate = new Set();
-    var HAS_RUN_INITIAL_WAVE = false; // <--- new flag
-    var dotPositionCache = [];
-    var lastHoveredDot = null;
-
+    /* ────────── Simplified dot state toggling (used by Mark Today button) ────────── */
     function setDotState(dotEl, shouldBeChecked){
-      if (!dotEl || dotEl.disabled) return;
+      if (!dotEl) return;
       var hid = dotEl.dataset.habitId;
       var idx = Number(dotEl.dataset.index);
       var h = HABITS.find(function (x){ return x.id === hid; });
@@ -1835,91 +1824,7 @@ function hexToRgb(hex) {
             dotEl.classList.remove('just-toggled');
           }, { once: true });
         }
-        habitsToUpdate.add(hid);
       }
-    }
-
-    function buildDotPositionCache() {
-      dotPositionCache = [];
-      var dots = listEl.querySelectorAll('.dot:not([disabled])');
-      dots.forEach(function(dot) {
-        var rect = dot.getBoundingClientRect();
-        dotPositionCache.push({
-          el: dot,
-          left: rect.left,
-          top: rect.top,
-          right: rect.right,
-          bottom: rect.bottom
-        });
-      });
-    }
-
-    function handlePointerMove(e){
-      if (!isPainting) return;
-      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      var clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-      var targetDot = null;
-
-      // Extremely fast lookup in the cached data
-      for (var i = 0; i < dotPositionCache.length; i++) {
-        var pos = dotPositionCache[i];
-        if (clientX >= pos.left && clientX <= pos.right && clientY >= pos.top && clientY <= pos.bottom) {
-          targetDot = pos.el;
-          break;
-        }
-      }
-
-      // Only call setDotState if the dot is different from the last one
-      if (targetDot !== lastHoveredDot) {
-        setDotState(targetDot, paintAction === 'check');
-        lastHoveredDot = targetDot;
-      }
-    }
-
-    function handlePointerUp(){
-      if (!isPainting) return;
-      isPainting = false;
-      lastHoveredDot = null;
-      habitsToUpdate.forEach(function (hid){
-        var h = HABITS.find(function (x){ return x.id === hid; });
-        if (h) onHabitChanged(h);
-      });
-      habitsToUpdate.clear();
-    }
-
-    listEl.addEventListener('mousedown', function (e){
-      var dot = e.target.closest('.dot');
-      if (!dot || dot.disabled) return;
-      if (e.button !== 0) return;
-      e.preventDefault();
-      isPainting = true;
-      habitsToUpdate.clear();
-      var h = HABITS.find(function (x){ return x.id === dot.dataset.habitId; });
-      paintAction = !h.dots[Number(dot.dataset.index)] ? 'check' : 'uncheck';
-      setDotState(dot, paintAction === 'check');
-    });
-    listEl.addEventListener('mouseover', handlePointerMove);
-    window.addEventListener('mouseup', function (){
-      if (isPainting) handlePointerUp();
-    });
-    // Disable drag-to-toggle on mobile (screens <= 750px)
-    if (window.innerWidth > 750) {
-      listEl.addEventListener('touchstart', function (e){
-        var dot = e.target.closest('.dot');
-        if (dot && !dot.disabled) {
-          e.preventDefault(); // Prevent emulated mouse events
-          isPainting = true;
-          habitsToUpdate.clear();
-          var h = HABITS.find(function (x){ return x.id === dot.dataset.habitId; });
-          paintAction = !h.dots[Number(dot.dataset.index)] ? 'check' : 'uncheck';
-          setDotState(dot, paintAction === 'check');
-        }
-      });
-      listEl.addEventListener('touchmove', handlePointerMove, { passive: true });
-      window.addEventListener('touchend', function (){
-        if (isPainting) handlePointerUp();
-      });
     }
 
     listEl.addEventListener('click', function (e){
@@ -1945,7 +1850,7 @@ function hexToRgb(hex) {
 
           var todayDot = activeContainer ? activeContainer.querySelector('.dot[data-index="' + todayIdx + '"]') : null;
 
-          if (todayDot && !todayDot.disabled) {
+          if (todayDot) {
             var currentState = habit.dots[todayIdx];
             var newState = !currentState;
             setDotState(todayDot, newState);
@@ -2118,7 +2023,6 @@ function hexToRgb(hex) {
     }
     var newHabitOverlay = createOverlayManager('new-habit-overlay');
     var editHabitOverlay = createOverlayManager('edit-habit-overlay');
-    var noteOverlay = createOverlayManager('note-overlay');
     var pickerOverlay = createOverlayManager('picker-overlay');
     var statsOverlayMgr = createOverlayManager('stats-overlay');
     var confirmOverlayElem = document.getElementById('confirm-overlay');
@@ -2588,248 +2492,6 @@ function hexToRgb(hex) {
       editHabitOverlay.close();
     });
 
-    /* context menu */
-    var dotMenu = document.createElement('div');
-    dotMenu.className = 'context-menu';
-    dotMenu.setAttribute('role', 'menu');
-    dotMenu.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(dotMenu);
-    var menuTarget = null;
-    var docClickHandler = null;
-    var docScrollHandler = null;
-    var docResizeHandler = null;
-    var docKeyHandler = null;
-    function closeDotMenu(){
-      dotMenu.setAttribute('aria-hidden', 'true');
-      menuTarget = null;
-      if (docClickHandler){
-        document.removeEventListener('click', docClickHandler, true);
-        docClickHandler = null;
-      }
-      if (docScrollHandler){
-        window.removeEventListener('scroll', docScrollHandler, true);
-        docScrollHandler = null;
-      }
-      if (docResizeHandler){
-        window.removeEventListener('resize', docResizeHandler, true);
-        docResizeHandler = null;
-      }
-      if (docKeyHandler){
-        document.removeEventListener('keydown', docKeyHandler, true);
-        docKeyHandler = null;
-      }
-    }
-    function openDotMenu(x, y, habit, idx, el){
-      closeDotMenu();
-      menuTarget = { habitId: habit.id, index: idx, element: el };
-      var isOff = !!habit.offDays[idx];
-      var hasNote = !!(habit.notes && habit.notes[idx] && habit.notes[idx].trim());
-      dotMenu.innerHTML = '';
-      var offBtn = document.createElement('button');
-      offBtn.type = 'button';
-      offBtn.textContent = isOff ? 'Remove off day' : 'Mark as off day';
-      offBtn.addEventListener('click', function (ev){
-        ev.stopPropagation();
-        toggleOffDay(habit, idx, !isOff);
-        closeDotMenu();
-      });
-      dotMenu.appendChild(offBtn);
-      var noteBtn = document.createElement('button');
-      noteBtn.type = 'button';
-      noteBtn.textContent = hasNote ? 'Edit note' : 'Add note';
-      noteBtn.addEventListener('click', function (ev){
-        ev.stopPropagation();
-        openNoteOverlay(habit, idx);
-        closeDotMenu();
-      });
-      dotMenu.appendChild(noteBtn);
-      var vw = Math.max(document.documentElement.clientWidth, window.innerWidth||0);
-      var vh = Math.max(document.documentElement.clientHeight, window.innerHeight||0);
-      dotMenu.style.left = Math.min(x, vw - 220) + 'px';
-      dotMenu.style.top = Math.min(y, vh - 90) + 'px';
-      dotMenu.setAttribute('aria-hidden', 'false');
-      docClickHandler = function (evt){
-        if (!dotMenu.contains(evt.target)) closeDotMenu();
-      };
-      document.addEventListener('click', docClickHandler, true);
-      docScrollHandler = function (){ closeDotMenu(); };
-      window.addEventListener('scroll', docScrollHandler, true);
-      docResizeHandler = function (){ closeDotMenu(); };
-      window.addEventListener('resize', docResizeHandler, true);
-      docKeyHandler = function (e){
-        if (e.key === 'Escape') closeDotMenu();
-      };
-      document.addEventListener('keydown', docKeyHandler, true);
-    }
-    listEl.addEventListener('contextmenu', function (e){
-      var dot = e.target.closest('.dot');
-      if (!dot) return;
-      e.preventDefault();
-      if (dot.disabled) return;
-      var hid = dot.dataset.habitId;
-      var idx = Number(dot.dataset.index);
-      var habit = HABITS.find(function (h){ return h.id === hid; });
-      if (!habit) return;
-      openDotMenu(e.clientX, e.clientY, habit, idx, dot);
-    });
-
-    /* ────────── Long Press Support (simulates right-click) ────────── */
-    var longPressTimer = null;
-    var longPressTarget = null;
-    var longPressStartPos = { x: 0, y: 0 };
-    var LONG_PRESS_DURATION = 500; // 500ms
-    var MOVE_THRESHOLD = 10; // 10px movement threshold
-
-    listEl.addEventListener('touchstart', function(e) {
-      var dot = e.target.closest('.dot');
-      if (!dot || dot.disabled) return;
-
-      longPressTarget = dot;
-      var touch = e.touches[0];
-      longPressStartPos = { x: touch.clientX, y: touch.clientY };
-
-      // Clear any existing timer
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-      }
-
-      // Add visual feedback class
-      dot.classList.add('long-pressing');
-
-      // Start long press timer
-      longPressTimer = setTimeout(function() {
-        if (longPressTarget) {
-          // Remove visual feedback
-          longPressTarget.classList.remove('long-pressing');
-
-          // Prevent the default tap behavior
-          e.preventDefault();
-
-          // Get habit and index
-          var hid = longPressTarget.dataset.habitId;
-          var idx = Number(longPressTarget.dataset.index);
-          var habit = HABITS.find(function(h) { return h.id === hid; });
-
-          if (habit) {
-            // Trigger haptic feedback if available
-            if (navigator.vibrate) {
-              navigator.vibrate(50);
-            }
-
-            // Open the context menu at touch position
-            openDotMenu(longPressStartPos.x, longPressStartPos.y, habit, idx, longPressTarget);
-          }
-
-          longPressTarget = null;
-        }
-      }, LONG_PRESS_DURATION);
-    }, { passive: false });
-
-    listEl.addEventListener('touchmove', function(e) {
-      if (!longPressTarget) return;
-
-      var touch = e.touches[0];
-      var deltaX = Math.abs(touch.clientX - longPressStartPos.x);
-      var deltaY = Math.abs(touch.clientY - longPressStartPos.y);
-
-      // If finger moved too much, cancel long press
-      if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-        // Remove visual feedback
-        if (longPressTarget) {
-          longPressTarget.classList.remove('long-pressing');
-        }
-        longPressTarget = null;
-      }
-    }, { passive: true });
-
-    listEl.addEventListener('touchend', function(e) {
-      // Clear long press timer
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-      // Remove visual feedback
-      if (longPressTarget) {
-        longPressTarget.classList.remove('long-pressing');
-      }
-      longPressTarget = null;
-    }, { passive: true });
-
-    listEl.addEventListener('touchcancel', function(e) {
-      // Clear long press timer
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-      // Remove visual feedback
-      if (longPressTarget) {
-        longPressTarget.classList.remove('long-pressing');
-      }
-      longPressTarget = null;
-    }, { passive: true });
-    function toggleOffDay(habit, index, makeOff){
-      habit.offDays[index] = !!makeOff;
-      var dot = listEl.querySelector('.dot[data-habit-id="' + habit.id + '"][data-index="' + index + '"]');
-      if (dot) {
-        var date = new Date(habit.year, 0, 1+index);
-        var label = fmt(date);
-        var isToday = dot.hasAttribute('aria-current');
-        dot.title = dotTitle(habit, index, label, isToday);
-        if (makeOff){
-          dot.dataset.off = 'true';
-        } else {
-          dot.removeAttribute('data-off');
-        }
-      }
-      onHabitChanged(habit);
-      announce(makeOff ? 'Marked off day' : 'Removed off day');
-    }
-
-    /* notes */
-    function openNoteOverlay(habit, index){
-      var d = new Date(habit.year, 0, 1+index);
-      var hasNote = !!(habit.notes && habit.notes[index] && habit.notes[index].trim());
-      document.getElementById('note-title').textContent = hasNote ? 'Edit note' : 'Add note';
-      document.getElementById('note-date').textContent = fmt(d);
-      document.getElementById('note-text').value = (habit.notes && habit.notes[index]) || '';
-      document.getElementById('note-habit-id').value = habit.id;
-      document.getElementById('note-index').value = String(index);
-      noteOverlay.open();
-    }
-    document.getElementById('note-close').addEventListener('click', function (){ noteOverlay.close(); });
-    document.getElementById('note-cancel').addEventListener('click', function (){ noteOverlay.close(); });
-    document.getElementById('note-form').addEventListener('submit', function (e){
-      e.preventDefault();
-      var hid = document.getElementById('note-habit-id').value;
-      var idx = Number(document.getElementById('note-index').value);
-      var text = document.getElementById('note-text').value ? document.getElementById('note-text').value.trim() : '';
-      var habit = HABITS.find(function (h){ return h.id === hid; });
-      if (!habit) return;
-      if (!Array.isArray(habit.notes)) habit.notes = new Array(habit.days).fill('');
-      habit.notes[idx] = text;
-      var dot = listEl.querySelector('.dot[data-habit-id="' + hid + '"][data-index="' + idx + '"]');
-      if (dot) {
-        var date = new Date(habit.year, 0, 1+idx);
-        var label = fmt(date);
-        var isToday = dot.hasAttribute('aria-current');
-        dot.title = dotTitle(habit, idx, label, isToday);
-        if (text) {
-          dot.dataset.note = 'true';
-        } else {
-          dot.removeAttribute('data-note');
-        }
-      }
-      saveHabits(HABITS);
-      announce('Note saved');
-      noteOverlay.close();
-      buildPositionCacheForView('year');
-      buildPositionCacheForView('month');
-    });
-
     /* picker */
     var ipLoaded = false;
     function loadIconsOnce(){
@@ -3193,7 +2855,6 @@ function hexToRgb(hex) {
           contentHeights.forEach(function(item) {
             item.content.style.height = '';
           });
-          buildDotPositionCache();
         }, 500);
       });
     });
@@ -3403,7 +3064,6 @@ function hexToRgb(hex) {
     if (typeof window !== 'undefined') {
       window.addEventListener('load', generateSkeletonDots);
       window.addEventListener('resize', debounce(generateSkeletonDots, 250));
-      window.addEventListener('resize', debounce(buildDotPositionCache, 250));
     }
 
     /* init */
@@ -3753,11 +3413,6 @@ function hexToRgb(hex) {
           delete habitYearWheels[habit.id];
         }
         initHabitYearWheel(habit);
-      });
-
-      // Rebuild dot position cache after updating
-      requestAnimationFrame(function() {
-        buildDotPositionCache();
       });
     }
 
