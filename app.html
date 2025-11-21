@@ -6,6 +6,19 @@
   <title>Habit Tracker - Multi Habit</title>
   <link rel="icon" type="image/png" href="icon.png">
 
+  <!-- Immediate theme check to prevent flash of light mode -->
+  <script>
+    (function() {
+      if (localStorage.getItem('themepreference') === 'dark' ||
+         (!('themepreference' in localStorage) &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+
   <!-- Inter font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -493,7 +506,12 @@
     <div class="sheet">
       <div class="sheet-header">
         <h2 class="sheet-title">Edit Habit</h2>
-        <button type="button" class="icon-x" id="edit-sheet-close" aria-label="Close">✕</button>
+        <div style="display:flex; gap:8px">
+          <button type="button" class="icon-x" id="edit-reset-btn" aria-label="Clear all history" title="Clear all history">
+            <i class="ti ti-refresh"></i>
+          </button>
+          <button type="button" class="icon-x" id="edit-sheet-close" aria-label="Close">✕</button>
+        </div>
       </div>
       <form id="edit-habit-form" class="sheet-body">
         <input type="hidden" id="edit-habit-id" name="id">
@@ -680,43 +698,33 @@
     </div>
   </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <!-- App logic (now loads Firebase SDK and all modules as ES modules) -->
+  <script type="module" src="script.js"></script>
 
-  <!-- Firebase Configuration -->
-  <script src="js/firebase-config.js"></script>
-
-  <!-- App modules -->
-  <script src="js/auth.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/year-wheel.js"></script>
-
-  <!-- Authentication check -->
-  <script>
-    // Check authentication status
-    if (Auth.useFirebase) {
-      // For Firebase, wait for auth state to be restored
-      Auth.onAuthStateChanged((user) => {
-        if (!user) {
-          console.log('User not authenticated, redirecting to login...');
-          window.location.href = 'index.html';
+  <!-- Authentication check (runs after script.js loads Auth) -->
+  <script type="module">
+    // Wait for script.js to load and expose Auth
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.Auth) {
+        if (window.Auth.useFirebase) {
+          // For Firebase, wait for auth state to be restored
+          window.Auth.onAuthStateChanged((user) => {
+            if (!user) {
+              console.log('User not authenticated, redirecting to login...');
+              window.location.href = 'index.html';
+            } else {
+              console.log('User authenticated:', user.uid || user.username);
+            }
+          });
         } else {
-          console.log('User authenticated:', user.uid);
+          // For localStorage, check synchronously
+          if (!window.Auth.isAuthenticated()) {
+            window.location.href = 'index.html';
+          }
         }
-      });
-    } else {
-      // For localStorage, check synchronously
-      if (!Auth.isAuthenticated()) {
-        window.location.href = 'index.html';
       }
-    }
+    });
   </script>
-
-  <!-- App logic -->
-  <script src="script.js"></script>
 
   <!-- Add this script before the closing </body> tag in app.html -->
 <script>

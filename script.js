@@ -1,60 +1,92 @@
-function hexToRgb(hex) {
-      try {
-        var h = String(hex).trim();
-        if (h.startsWith('#')) h = h.slice(1);
-        if (h.length === 3) {
-          h = h.split('').map(function (c) { return c + c; }).join('');
-        }
-        var num = parseInt(h, 16);
-        return ((num >> 16) & 255) + ', ' + ((num >> 8) & 255) + ', ' + (num & 255);
-      } catch (e) {
-        return '59,130,246';
-      }
-    }
+import { hexToRgb, hexToRgbObj, luminance, contrast, mix, clampColorToMode } from './js/utils/ColorUtils.js';
+import {
+  CURRENTYEAR,
+  daysInYear,
+  isLeap,
+  startOfYear,
+  dayIndexForYear,
+  fmt,
+  toDateInputValue,
+  parseDateValue,
+  clampDateToYearBounds,
+  sanitizeStartDateValue,
+  defaultStartDateForYear,
+  getHabitStartDate,
+  getHabitStartIndex,
+  formatStartDateLabel,
+  toDisplayDateValue,
+  parseDisplayDateValue,
+  convertDisplayToISO,
+  convertDisplayToISOUnclamped,
+  isoToDisplay,
+  isoToDisplayUnclamped
+} from './js/utils/DateUtils.js';
+import { debounce, uid } from './js/utils/GeneralUtils.js';
+import { showConfirm, showAlert } from './js/utils/ModalUtils.js';
+import { YearWheel } from './js/year-wheel.js';
+import {
+  defaultFrequency,
+  newHabit,
+  normalizeHabit,
+  rolloverIfNeeded,
+  applyFrequencyToHabit,
+  formatFrequency,
+  calcStats,
+  getHabitStats,
+  getCompletionRate,
+  completionSortValue
+} from './js/models/Habit.js';
+import {
+  register as authRegister,
+  login as authLogin,
+  loginGoogle,
+  isAuthenticated,
+  getCurrentUser,
+  getCurrentUserEmail,
+  logout as authLogout,
+  deleteAccount,
+  onAuthStateChanged,
+  useFirebase as authUseFirebase
+} from './js/services/Auth.js';
+import {
+  saveHabits as storageSaveHabits,
+  loadHabits as storageLoadHabits,
+  saveSettings,
+  loadSettings,
+  clearUserData,
+  exportData,
+  importData,
+  useFirebase as storageUseFirebase
+} from './js/services/Storage.js';
 
-    function hexToRgbObj(hex) {
-      var m = hex.replace('#','');
-      var int = parseInt(m, 16);
-      return { r: (int>>16)&255, g: (int>>8)&255, b: int&255 };
-    }
+// Create global Auth and Storage objects for backward compatibility with inline scripts
+const Auth = {
+  register: authRegister,
+  login: authLogin,
+  loginGoogle,
+  isAuthenticated,
+  getCurrentUser,
+  getCurrentUserEmail,
+  logout: authLogout,
+  deleteAccount,
+  onAuthStateChanged,
+  useFirebase: authUseFirebase
+};
 
-    function channel(v) {
-      v = v/255;
-      return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
-    }
-    function luminance(hex) {
-      var c = hexToRgbObj(hex);
-      return 0.2126*channel(c.r) + 0.7152*channel(c.g) + 0.0722*channel(c.b);
-    }
-    function contrast(a, b) {
-      var L1 = luminance(a), L2 = luminance(b);
-      var light = Math.max(L1, L2), dark = Math.min(L1, L2);
-      return (light+0.05)/(dark+0.05);
-    }
-    function mix(h1, h2, t) {
-      var c1 = hexToRgbObj(h1), c2 = hexToRgbObj(h2);
-      var r = Math.round(c1.r + (c2.r - c1.r)*t);
-      var g = Math.round(c1.g + (c2.g - c1.g)*t);
-      var b = Math.round(c1.b + (c2.b - c1.b)*t);
-      return '#' + [r, g, b].map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
-    }
-    function clampColorToMode(hex, isDark) {
-      var bg = isDark ? '#18181b' : '#ffffff';
-      var c = contrast(hex, bg);
-      if (c >= 3) return hex;
-      return isDark ? mix(hex, '#ffffff', 0.4) : mix(hex, '#000000', 0.4);
-    }
+const Storage = {
+  saveHabits: storageSaveHabits,
+  loadHabits: storageLoadHabits,
+  saveSettings,
+  loadSettings,
+  clearUserData,
+  exportData,
+  importData,
+  useFirebase: storageUseFirebase
+};
 
-    function debounce(fn, ms) {
-      var t;
-      return function () {
-        var args = arguments;
-        clearTimeout(t);
-        t = setTimeout(function () {
-          fn.apply(null, args);
-        }, ms);
-      }
-    }
+// Expose to window for inline scripts in HTML
+window.Auth = Auth;
+window.Storage = Storage;
 
     /* ────────── Picker State ────────── */
     var ipEls = {
@@ -145,155 +177,6 @@ function hexToRgb(hex) {
     }
     var EASEIO = getComputedStyle(document.documentElement).getPropertyValue('--ease-io').trim() || 'cubic-bezier(0.4,0,0.2,1)';
 
-    /* ────────── Date helpers ────────── */
-    var now = new Date();
-    var CURRENTYEAR = now.getFullYear();
-    function isLeap(y){return (y%4===0 && y%100!==0) || (y%400===0);}
-    function daysInYear(y){return isLeap(y) ? 366 : 365;}
-    function startOfYear(y){return new Date(y,0,1);}
-    function dayIndexForYear(y){
-      if (y !== CURRENTYEAR) return daysInYear(y)-1;
-      var todayNoTime = new Date(CURRENTYEAR, now.getMonth(), now.getDate());
-      return Math.floor((todayNoTime - startOfYear(CURRENTYEAR))/86400000);
-    }
-    function fmt(d){
-      return d.toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
-    }
-
-    function toDateInputValue(date) {
-      if (!(date instanceof Date) || isNaN(date)) return '';
-      var y = date.getFullYear();
-      var m = String(date.getMonth() + 1).padStart(2, '0');
-      var d = String(date.getDate()).padStart(2, '0');
-      return y + '-' + m + '-' + d;
-    }
-
-    function parseDateValue(value) {
-      if (!value) return null;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        var parts = value.split('-');
-        var parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-        return isNaN(parsed) ? null : parsed;
-      }
-      var dt = new Date(value);
-      return isNaN(dt) ? null : dt;
-    }
-
-    function clampDateToYearBounds(date, year) {
-      var safeYear = year || CURRENTYEAR;
-      if (!(date instanceof Date) || isNaN(date)) return new Date(safeYear, 0, 1);
-      if (date.getFullYear() < safeYear) return new Date(safeYear, 0, 1);
-      if (date.getFullYear() > safeYear) return new Date(safeYear, 11, 31);
-      return new Date(safeYear, date.getMonth(), date.getDate());
-    }
-
-    function sanitizeStartDateValue(value, year) {
-      var parsed = parseDateValue(value);
-      var clamped = clampDateToYearBounds(parsed || new Date(), year);
-      return toDateInputValue(clamped);
-    }
-
-    function defaultStartDateForYear(year) {
-      return sanitizeStartDateValue(toDateInputValue(new Date()), year);
-    }
-
-    function getHabitStartDate(habit) {
-      if (!habit) return null;
-      // Get the raw ISO string from the habit object
-      var raw = habit.startDate || habit.createdAt;
-      // Parse it into a true Date object
-      var parsed = parseDateValue(raw);
-
-      // If parsing fails for any reason, create a fallback date
-      if (!parsed || isNaN(parsed)) {
-          var creationYear = habit.createdAt ? new Date(habit.createdAt).getFullYear() : CURRENTYEAR;
-          return new Date(creationYear, 0, 1);
-      }
-
-      // Return the real, unclamped start date
-      return parsed;
-    }
-
-    function getHabitStartIndex(habit) {
-      if (!habit) return 0;
-      var viewYear = habit.year || CURRENTYEAR;
-      var trueStartDate = getHabitStartDate(habit);
-      if (!trueStartDate) return 0;
-      var startYear = trueStartDate.getFullYear();
-
-      // Case 1: Habit starts in future year (viewing past years)
-      if (startYear > viewYear) {
-        return daysInYear(viewYear);
-      }
-
-      // Case 2: Habit started in previous year (all dots available)
-      if (startYear < viewYear) {
-        return 0;
-      }
-
-      // Case 3: Same year - calculate specific day
-      var idx = Math.floor((trueStartDate - startOfYear(viewYear)) / 86400000);
-      return Math.max(0, idx);
-    }
-
-    function formatStartDateLabel(habit) {
-      var d = getHabitStartDate(habit);
-      if (!d) return 'N/A';
-      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    }
-
-    function toDisplayDateValue(date) {
-      if (!(date instanceof Date) || isNaN(date)) return '';
-      var dd = String(date.getDate()).padStart(2, '0');
-      var mm = String(date.getMonth() + 1).padStart(2, '0');
-      var yyyy = date.getFullYear();
-      return dd + '-' + mm + '-' + yyyy;
-    }
-
-    function parseDisplayDateValue(value, fallbackYear) {
-      if (!value) return null;
-      var parts = value.trim().split(/[-/]/);
-      if (parts.length !== 3) return null;
-      var day = Number(parts[0]);
-      var month = Number(parts[1]) - 1;
-      var year = Number(parts[2]);
-      if (!year || String(year).length !== 4) year = fallbackYear || CURRENTYEAR;
-      if (!day || !isFinite(day) || !month || !isFinite(month)) return null;
-      var parsed = new Date(year, month, day);
-      if (isNaN(parsed) || parsed.getDate() !== day || parsed.getMonth() !== month) return null;
-      return parsed;
-    }
-
-    function convertDisplayToISO(value, year) {
-      var parsed = parseDisplayDateValue(value, year) || new Date(year || CURRENTYEAR, 0, 1);
-      var clamped = clampDateToYearBounds(parsed, year);
-      return toDateInputValue(clamped);
-    }
-
-    // Unclamped version - preserves original date across years
-    function convertDisplayToISOUnclamped(value, fallbackYear) {
-      var parsed = parseDisplayDateValue(value, fallbackYear);
-      if (!parsed || isNaN(parsed)) {
-        return toDateInputValue(new Date(fallbackYear || CURRENTYEAR, 0, 1));
-      }
-      return toDateInputValue(parsed);
-    }
-
-    function isoToDisplay(value, year) {
-      var parsed = parseDateValue(value) || new Date(year || CURRENTYEAR, 0, 1);
-      var clamped = clampDateToYearBounds(parsed, year || CURRENTYEAR);
-      return toDisplayDateValue(clamped);
-    }
-
-    // Unclamped version - preserves original date across years
-    function isoToDisplayUnclamped(value, fallbackYear) {
-      var parsed = parseDateValue(value);
-      if (!parsed || isNaN(parsed)) {
-        return toDisplayDateValue(new Date(fallbackYear || CURRENTYEAR, 0, 1));
-      }
-      return toDisplayDateValue(parsed);
-    }
-
     /* ────────── Storage Model ────────── */
     var STORAGEKEY = 'habits';
     var habitCache = {
@@ -362,186 +245,6 @@ function hexToRgb(hex) {
         saveQueued = false;
       }
     }
-    function uid(){
-      return "h" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-    }
-
-    /* frequency helpers (NEW) */
-    function defaultFrequency() {
-      return {
-        type: 'daily',
-        daysOfWeek: [],
-        timesPerWeek: 3
-      };
-    }
-
-    /* create habit with frequency */
-    function newHabit(name, accent, value, startDateValue){
-      var year = CURRENTYEAR;
-      var days = daysInYear(year);
-      var startDate = sanitizeStartDateValue(startDateValue, year);
-      var h = {
-        id: uid(),
-        name: String(name).trim() || 'New Habit',
-        visualType: 'icon',
-        visualValue: value || 'target',
-        year: year,
-        days: days,
-        dots: new Array(days).fill(false),
-        offDays: new Array(days).fill(false),
-        notes: new Array(days).fill(''),
-        accent: accent || '#3d85c6',
-        startDate: startDate,
-        createdAt: new Date().toISOString(),
-        frequency: defaultFrequency()
-      };
-      applyFrequencyToHabit(h); // mark offs right away
-      return h;
-    }
-
-    /* normalize now also ensures frequency */
-    function normalizeHabit(h){
-      if (!h || typeof h !== 'object') return null;
-      var id = h.id;
-      var name = h.name;
-      var visualValue = h.visualValue;
-      var year = h.year;
-      var accent = h.accent;
-      var dots = h.dots;
-      var offDays = h.offDays;
-      var notes = h.notes;
-      var frequency = h.frequency;
-
-      if (!id) id = uid();
-      if (!name) name = 'Habit';
-      if (!visualValue || typeof visualValue !== 'string') visualValue = 'target';
-      if (!year) year = CURRENTYEAR;
-      var expected = daysInYear(year);
-      if (!accent || typeof accent !== 'string') accent = '#3d85c6';
-      if (!Array.isArray(dots) || dots.length !== expected) dots = new Array(expected).fill(false);
-      if (!Array.isArray(offDays) || offDays.length !== expected) offDays = new Array(expected).fill(false);
-      if (!Array.isArray(notes) || notes.length !== expected) notes = new Array(expected).fill('');
-      if (!frequency || typeof frequency !== 'object') frequency = defaultFrequency();
-
-      // Preserve original startDate without clamping to year
-      var startDate = h.startDate || h.createdAt || toDateInputValue(new Date(year,0,1));
-
-      // Initialize historical data storage if not present
-      var yearHistory = h.yearHistory || {};
-
-      var habit = {
-        id: id,
-        name: String(name),
-        visualType: 'icon',
-        visualValue: visualValue,
-        year: year,
-        days: expected,
-        dots: dots.map(Boolean),
-        offDays: offDays.map(Boolean),
-        notes: notes.map(function(v){ return typeof v === 'string' ? v : ''; }),
-        accent: accent,
-        startDate: startDate,
-        createdAt: h.createdAt || new Date().toISOString(),
-        frequency: frequency,
-        yearHistory: yearHistory  // Stores {year: {dots, offDays, notes}}
-      };
-
-      // ensure offdays match frequency
-      applyFrequencyToHabit(habit);
-
-      return habit;
-    }
-
-    /* when year rolls to new year, rebuild offDays from frequency */
-    function rolloverIfNeeded(h){
-      // Initialize yearHistory if not present
-      if (!h.yearHistory) h.yearHistory = {};
-
-      if (h.year !== CURRENTYEAR){
-        // PRESERVE historical data before rolling over
-        var oldYear = h.year;
-        h.yearHistory[oldYear] = {
-          dots: h.dots.slice(),      // Clone arrays
-          offDays: h.offDays.slice(),
-          notes: h.notes.slice()
-        };
-
-        // Now roll to current year
-        h.year = CURRENTYEAR;
-        h.days = daysInYear(CURRENTYEAR);
-        h.dots = new Array(h.days).fill(false);
-        h.offDays = new Array(h.days).fill(false);
-        h.notes = new Array(h.days).fill('');
-        // REMOVED: Don't modify startDate - it's the habit's creation date
-        if (!h.frequency) h.frequency = defaultFrequency();
-        applyFrequencyToHabit(h);
-      } else {
-        // same year but maybe no frequency
-        if (!h.frequency) h.frequency = defaultFrequency();
-        if (!h.startDate) {
-          h.startDate = defaultStartDateForYear(h.year);
-        }
-        // REMOVED: Don't sanitize existing startDate
-        applyFrequencyToHabit(h);
-      }
-      return h;
-    }
-
-    /* apply frequency rules to offDays (NEW) */
-    function applyFrequencyToHabit(habit) {
-      var year = habit.year;
-      var totalDays = habit.days;
-      var freq = habit.frequency || defaultFrequency();
-
-      var newOff = new Array(totalDays).fill(false);
-
-      if (freq.type === 'daily') {
-        // no extra offs
-      } else if (freq.type === 'weekdays') {
-        for (var i = 0; i < totalDays; i++) {
-          var d = new Date(year, 0, 1 + i);
-          var day = d.getDay();
-          if (day === 0 || day === 6) {
-            newOff[i] = true;
-          }
-        }
-      } else if (freq.type === 'daysOfWeek') {
-        var set = new Set(freq.daysOfWeek || []);
-        for (var i = 0; i < totalDays; i++) {
-          var d = new Date(year, 0, 1 + i);
-          var day = d.getDay();
-          if (!set.has(day)) {
-            newOff[i] = true;
-          }
-        }
-      } else if (freq.type === 'timesPerWeek') {
-        var target = freq.timesPerWeek || 3;
-        // simple heuristic: if target >=5, weekends off
-        if (target >= 5) {
-          for (var i = 0; i < totalDays; i++) {
-            var d = new Date(year, 0, 1 + i);
-            var day = d.getDay();
-            if (day === 0 || day === 6) {
-              newOff[i] = true;
-            }
-          }
-        } else {
-          // leave all days on; user can right-click to mark off
-        }
-      }
-
-      // don't hide days the user already completed
-      for (var j = 0; j < totalDays; j++) {
-        if (habit.dots[j]) {
-          newOff[j] = false;
-        }
-      }
-
-      habit.offDays = newOff;
-      // Mark stats as dirty since offDays changed
-      habit._dirtyStats = true;
-    }
-
     var HABITS = [];
 
     /* measure layer */
@@ -812,7 +515,7 @@ function hexToRgb(hex) {
     }
 
     async function handleLogoutAction() {
-      const confirmed = await Utils.showConfirm(
+      const confirmed = await showConfirm(
         'Confirm Logout',
         'Are you sure you want to log out?'
       );
@@ -824,7 +527,7 @@ function hexToRgb(hex) {
     }
 
     async function handleDeleteAccountAction() {
-      const confirmed = await Utils.showConfirm(
+      const confirmed = await showConfirm(
         'Delete Account',
         'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.'
       );
@@ -836,14 +539,14 @@ function hexToRgb(hex) {
           const deleted = await Auth.deleteAccount(username);
 
           if (cleared && deleted) {
-            await Utils.showAlert('Success', 'Your account has been deleted.');
+            await showAlert('Success', 'Your account has been deleted.');
             window.location.href = 'index.html';
           } else {
-            await Utils.showAlert('Error', 'Error deleting account. Please try again.');
+            await showAlert('Error', 'Error deleting account. Please try again.');
           }
         } catch (error) {
           console.error('Account deletion error:', error);
-          await Utils.showAlert('Error', 'Error deleting account. Please try again.');
+          await showAlert('Error', 'Error deleting account. Please try again.');
         }
       }
     }
@@ -1002,38 +705,6 @@ function hexToRgb(hex) {
       var note = habit.notes && habit.notes[index] ? habit.notes[index].trim() : '';
       if (note) parts.push('Note: ' + note);
       return parts.join(' • ');
-    }
-
-    /* frequency -> text for card (NEW) */
-    function formatFrequency(freq) {
-      if (!freq) return 'Daily';
-      if (freq.type === 'daily') return 'Daily';
-      if (freq.type === 'weekdays') return 'Weekdays';
-      if (freq.type === 'daysOfWeek') {
-        var names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-        var arr = (freq.daysOfWeek || []).map(function(i){ return names[i]; });
-        return arr.length ? arr.join(', ') : 'Specific days';
-      }
-      if (freq.type === 'timesPerWeek') return (freq.timesPerWeek || 3) + '×/week';
-      return 'Daily';
-    }
-
-    /* compute completion rate ignoring offdays (UPDATED) */
-    function getCompletionRate(habit, stats) {
-      var todayIdx = dayIndexForYear(habit.year);
-      var elapsed = (habit.year === CURRENTYEAR) ? (todayIdx + 1) : habit.days;
-      var startIndex = getHabitStartIndex(habit);
-      if (elapsed <= startIndex) return 0;
-      var eligible = 0;
-      var completed = 0;
-      for (var i = startIndex; i < elapsed; i++) {
-        if (!habit.offDays[i]) {
-          eligible++;
-          if (habit.dots[i]) completed++;
-        }
-      }
-      if (eligible === 0) return 0;
-      return Math.round((completed / eligible) * 100);
     }
 
     // Memoization cache for getVisibleHabits
@@ -1379,11 +1050,11 @@ function hexToRgb(hex) {
       // Add entering class immediately
       card.classList.add('card-entering');
 
-      // Stagger with 35ms delay between each card
+      // Stagger with 100ms delay between each card (Adjust this number to control speed)
       setTimeout(function() {
         card.classList.add('card-enter-active');
         card.classList.remove('card-entering');
-      }, index * 35);
+      }, index * 100);
     }
 
     // Lazy loading with Intersection Observer
@@ -1802,56 +1473,6 @@ function hexToRgb(hex) {
         monthContainer.appendChild(monthGrid);
         container.appendChild(monthContainer);
       }
-    }
-
-    function calcStats(dots, offDays, dayIdx) {
-      var total = dots.reduce(function (a,b){ return a + (b ? 1 : 0); }, 0);
-      var longest = 0, run = 0;
-      for (var i=0;i<dots.length;i++){
-        if (dots[i]) {
-          run++;
-        } else if (offDays[i]) {
-          // skip
-        } else {
-          if (run > longest) longest = run;
-          run = 0;
-        }
-      }
-      if (run > longest) longest = run;
-
-      var current = 0;
-      for (var j=Math.min(dayIdx, dots.length-1); j>=0; j--){
-        if (dots[j]) {
-          current++;
-        } else if (offDays[j]) {
-          // keep alive
-        } else {
-          break;
-        }
-      }
-      return { total: total, longest: longest, current: current };
-    }
-
-    // Memoized stats calculator - only recalculates when data changes
-    function getHabitStats(habit) {
-      // Return cached stats if dirty flag isn't set
-      if (habit._statsCache && !habit._dirtyStats) {
-        return habit._statsCache;
-      }
-
-      // Perform calculation
-      var todayIdx = dayIndexForYear(habit.year);
-      var stats = calcStats(habit.dots, habit.offDays, todayIdx);
-
-      // Save to cache
-      habit._statsCache = stats;
-      habit._dirtyStats = false;
-      return stats;
-    }
-
-    function completionSortValue(habit) {
-      var stats = getHabitStats(habit);
-      return getCompletionRate(habit, stats);
     }
 
     /* ────────── Simplified dot state toggling (used by Mark Today button) ────────── */
@@ -2378,6 +1999,57 @@ function hexToRgb(hex) {
     }
     document.getElementById('edit-sheet-close').addEventListener('click', function (){ editHabitOverlay.close(); });
     document.getElementById('edit-sheet-cancel').addEventListener('click', function (){ editHabitOverlay.close(); });
+
+    // Clear All / Reset History Button
+    var editResetBtn = document.getElementById('edit-reset-btn');
+    if (editResetBtn) {
+      editResetBtn.addEventListener('click', async function() {
+        console.log('Reset button clicked');
+        var id = document.getElementById('edit-habit-id').value;
+        console.log('Habit ID:', id);
+        var habit = HABITS.find(function(h) { return h.id === id; });
+        console.log('Found habit:', habit);
+        if (!habit) {
+          console.log('No habit found, returning');
+          return;
+        }
+
+        // 1. Confirm with the user
+        console.log('Showing confirmation dialog...');
+        var confirmed = await showConfirm(
+          'Clear History',
+          'Are you sure you want to uncheck all days for "' + habit.name + '"? This cannot be undone.'
+        );
+        console.log('Confirmation result:', confirmed);
+
+        if (confirmed) {
+          console.log('User confirmed, clearing history...');
+          console.log('Dots before:', habit.dots.filter(function(d) { return d; }).length, 'checked');
+
+          // 2. Reset all dots to false
+          habit.dots.fill(false);
+          console.log('Dots after fill:', habit.dots.filter(function(d) { return d; }).length, 'checked');
+
+          // 3. Re-apply frequency to ensure "off days" are restored
+          // (in case they were hidden by a completed task)
+          applyFrequencyToHabit(habit);
+          console.log('Applied frequency');
+
+          // 4. Save and Render
+          await saveHabits(HABITS);
+          console.log('Saved habits');
+          render();
+          console.log('Rendered');
+          announce('History cleared');
+
+          // Optional: Close the modal after clearing
+          editHabitOverlay.close();
+          console.log('Modal closed');
+        } else {
+          console.log('User cancelled');
+        }
+      });
+    }
     document.getElementById('edit-preview-btn').addEventListener('click', async function (){
       var res = await openIconColorPicker(editSelectedIcon, editSelectedAccent);
       if (res) {
@@ -2776,6 +2448,8 @@ function hexToRgb(hex) {
 
     /* wave styles — UPDATED to keep disabled dots faded */
     var WAVE_STYLE_ID = 'dot-wave-style';
+    var HAS_RUN_INITIAL_WAVE = false;
+
     function ensureWaveStyles() {
       if (document.getElementById(WAVE_STYLE_ID)) return;
       var s = document.createElement('style');
@@ -3054,21 +2728,6 @@ function hexToRgb(hex) {
       mobileGrids.forEach(function(grid) {
         generateDotsForGrid(grid, 'mobile');
       });
-    }
-
-    /* Debounce helper */
-    function debounce(func, wait) {
-      var timeout;
-      return function executedFunction() {
-        var context = this;
-        var args = arguments;
-        var later = function() {
-          timeout = null;
-          func.apply(context, args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-      };
     }
 
     // Call skeleton generation on load and resize
