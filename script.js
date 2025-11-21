@@ -22,6 +22,7 @@ import {
   isoToDisplayUnclamped
 } from './js/utils/DateUtils.js';
 import { debounce, uid } from './js/utils/GeneralUtils.js';
+import { showConfirm, showAlert } from './js/utils/ModalUtils.js';
 import { YearWheel } from './js/year-wheel.js';
 import {
   defaultFrequency,
@@ -514,7 +515,7 @@ window.Storage = Storage;
     }
 
     async function handleLogoutAction() {
-      const confirmed = await Utils.showConfirm(
+      const confirmed = await showConfirm(
         'Confirm Logout',
         'Are you sure you want to log out?'
       );
@@ -526,7 +527,7 @@ window.Storage = Storage;
     }
 
     async function handleDeleteAccountAction() {
-      const confirmed = await Utils.showConfirm(
+      const confirmed = await showConfirm(
         'Delete Account',
         'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.'
       );
@@ -538,14 +539,14 @@ window.Storage = Storage;
           const deleted = await Auth.deleteAccount(username);
 
           if (cleared && deleted) {
-            await Utils.showAlert('Success', 'Your account has been deleted.');
+            await showAlert('Success', 'Your account has been deleted.');
             window.location.href = 'index.html';
           } else {
-            await Utils.showAlert('Error', 'Error deleting account. Please try again.');
+            await showAlert('Error', 'Error deleting account. Please try again.');
           }
         } catch (error) {
           console.error('Account deletion error:', error);
-          await Utils.showAlert('Error', 'Error deleting account. Please try again.');
+          await showAlert('Error', 'Error deleting account. Please try again.');
         }
       }
     }

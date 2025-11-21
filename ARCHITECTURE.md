@@ -11,17 +11,20 @@ momentum/
 ├── js/
 │   ├── models/
 │   │   └── Habit.js           # Habit data model and business logic
+│   ├── services/
+│   │   ├── Auth.js            # Authentication service (ES module)
+│   │   └── Storage.js         # Data persistence service (ES module)
 │   ├── utils/
 │   │   ├── ColorUtils.js      # Color manipulation utilities
 │   │   ├── DateUtils.js       # Date formatting and parsing
-│   │   └── GeneralUtils.js    # General utility functions
+│   │   ├── GeneralUtils.js    # General utility functions
+│   │   └── ModalUtils.js      # Modal dialogs (confirm/alert)
 │   ├── year-wheel.js          # Year selector component
-│   ├── auth.js                # Authentication (IIFE - global module)
-│   ├── storage.js             # Data persistence (IIFE - global module)
-│   ├── utils.js               # Legacy utilities (IIFE - global module)
+│   ├── login.js               # Login page logic
 │   └── firebase-config.js     # Firebase configuration
 ├── script.js                  # Main application logic (ES module)
-└── app.html                   # Application entry point
+├── app.html                   # Application entry point
+└── index.html                 # Login page
 ```
 
 ## Modules
@@ -81,6 +84,13 @@ momentum/
 - `debounce()` - Debounce function calls
 - `uid()` - Generate unique identifiers
 
+### `js/utils/ModalUtils.js`
+**Purpose:** Custom modal dialogs for user confirmation and alerts
+
+**Exports:**
+- `showConfirm(title, message)` - Show confirmation dialog, returns Promise<boolean>
+- `showAlert(title, message)` - Show alert dialog, returns Promise<void>
+
 ### `js/year-wheel.js`
 **Purpose:** Year selector UI component
 
@@ -89,13 +99,16 @@ momentum/
 
 ### Service Modules (ES Modules)
 
-**`js/services/Auth.js`** and **`js/services/Storage.js`** - Now ES6 modules using Firebase Modular SDK
+**`js/services/Auth.js`** and **`js/services/Storage.js`** - ES6 modules using Firebase Modular SDK
 - Converted from IIFE pattern to ES modules
 - Use Firebase SDK v10 modular imports for tree-shaking
 - Export individual functions instead of global objects
 - Exposed via `window.Auth` and `window.Storage` in script.js for backward compatibility with inline HTML scripts
 
-**`js/utils.js`** - Legacy utilities (global utilities, not yet modularized)
+**`js/login.js`** - Login page module
+- Handles authentication UI for the login page
+- Imports Auth service functions
+- Manages login, signup, and Google authentication flows
 
 ## Loading Order
 
@@ -142,13 +155,16 @@ momentum/
 
 ### What Changed
 - `script.js` converted to ES module
-- Utility functions extracted to separate modules
+- Utility functions extracted to separate modules (ColorUtils, DateUtils, GeneralUtils, ModalUtils)
 - Habit logic extracted to dedicated model
+- Auth and Storage converted to ES modules in `js/services/`
+- Login logic extracted to `js/login.js` module
 - YearWheel converted to ES module export
+- Removed legacy files: `js/auth.js`, `js/storage.js`, `js/utils.js`
 - Reduced script.js from 3430 lines to ~3100 lines
 
 ### What Stayed the Same
-- Auth and Storage remain as global IIFE modules (Firebase compatibility)
+- Auth and Storage exposed as global objects on window for backward compatibility
 - All functionality preserved
 - UI and event handling logic unchanged
 - Backward compatible with existing data
