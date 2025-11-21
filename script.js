@@ -2585,7 +2585,7 @@ window.Storage = Storage;
           });
           // Remove transitioning class
           document.documentElement.classList.remove('view-transitioning');
-        }, 1200); // Extended to allow full animation including month cascades
+        }, 1500); // Animation completes in 1.5 seconds
       });
     });
 
