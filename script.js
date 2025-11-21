@@ -2397,6 +2397,8 @@ window.Storage = Storage;
 
     /* wave styles — UPDATED to keep disabled dots faded */
     var WAVE_STYLE_ID = 'dot-wave-style';
+    var HAS_RUN_INITIAL_WAVE = false;
+
     function ensureWaveStyles() {
       if (document.getElementById(WAVE_STYLE_ID)) return;
       var s = document.createElement('style');
