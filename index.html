@@ -61,10 +61,9 @@
         // Continue to show login page
       }
 
-      // User not authenticated, show the login page
-      document.addEventListener('DOMContentLoaded', function() {
-        document.body.classList.add('show-login');
-      });
+      // DON'T automatically show login page here
+      // Let login.js control visibility after proper auth check
+      // This prevents flash when Firebase auth is being verified
     })();
   </script>
 

@@ -212,6 +212,8 @@ export function initLogin() {
         window.location.href = 'app.html';
       } else {
         console.log('No Firebase user authenticated, showing login page');
+        // Show login page only after confirming no auth
+        document.body.classList.add('show-login');
       }
     });
   } else {
@@ -222,6 +224,8 @@ export function initLogin() {
       window.location.href = 'app.html';
     } else {
       console.log('No localStorage user authenticated, showing login page');
+      // Show login page only after confirming no auth
+      document.body.classList.add('show-login');
     }
   }
 
