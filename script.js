@@ -2560,35 +2560,38 @@ window.Storage = Storage;
       localStorage.setItem(VIEWKEY, targetView);
       updateViewToggleLabels(targetView);
 
-      // Step 4: Set animation delays BEFORE re-enabling animations
-      if (targetView === 'year') {
-        // For year view: cascade all dots left to right
-        var yearViewDots = document.querySelectorAll('.dots-grid-year-view .dot');
-        yearViewDots.forEach(function(dot, index) {
-          // Spread delays across 1.0 second for smooth cascade
-          var delay = Math.min(index * 0.003, 1.0); // 3ms per dot, max 1s
-          dot.style.animationDelay = delay + 's';
-        });
-      } else {
-        // For month view: cascade within each month
-        var monthContainers = document.querySelectorAll('.months-container-month-view .month-container');
-        monthContainers.forEach(function(container, monthIndex) {
-          var monthDots = container.querySelectorAll('.dot');
-          monthDots.forEach(function(dot, dotIndex) {
-            // Slight delay within each month
-            var delay = dotIndex * 0.01; // 10ms per dot
+      // Step 4: Wait for DOM update, then set delays and trigger animations
+      requestAnimationFrame(function() {
+        // Set animation delays BEFORE re-enabling animations
+        if (targetView === 'year') {
+          // For year view: cascade all dots left to right
+          var yearViewDots = document.querySelectorAll('.dots-grid-year-view .dot');
+          yearViewDots.forEach(function(dot, index) {
+            // Spread delays across 1.0 second for smooth cascade
+            var delay = Math.min(index * 0.003, 1.0); // 3ms per dot, max 1s
             dot.style.animationDelay = delay + 's';
           });
-        });
-      }
+        } else {
+          // For month view: cascade within each month
+          var monthContainers = document.querySelectorAll('.months-container-month-view .month-container');
+          monthContainers.forEach(function(container, monthIndex) {
+            var monthDots = container.querySelectorAll('.dot');
+            monthDots.forEach(function(dot, dotIndex) {
+              // Slight delay within each month
+              var delay = dotIndex * 0.01; // 10ms per dot
+              dot.style.animationDelay = delay + 's';
+            });
+          });
+        }
 
-      // Step 5: Now add transitioning class and re-enable animations
-      document.documentElement.classList.add('view-transitioning');
-      allDots.forEach(function(dot) {
-        dot.style.animation = '';
-      });
-      allMonthContainers.forEach(function(container) {
-        container.style.animation = '';
+        // Step 5: Now add transitioning class and re-enable animations
+        document.documentElement.classList.add('view-transitioning');
+        allDots.forEach(function(dot) {
+          dot.style.animation = '';
+        });
+        allMonthContainers.forEach(function(container) {
+          container.style.animation = '';
+        });
       });
 
       // Step 6: Measure new heights and animate
