@@ -1905,6 +1905,37 @@ html.view-transitioning[data-view="month"] .month-container:nth-child(9) { anima
 html.view-transitioning[data-view="month"] .month-container:nth-child(10) { animation-delay: 0.495s; }
 html.view-transitioning[data-view="month"] .month-container:nth-child(11) { animation-delay: 0.55s; }
 html.view-transitioning[data-view="month"] .month-container:nth-child(12) { animation-delay: 0.605s; }
+
+/* Exit animation for month containers when switching to year view */
+html.view-transitioning[data-view="year"] .months-container-month-view .month-container {
+  animation: month-container-exit 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Keyframe for month container exit */
+@keyframes month-container-exit {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px) scale(0.92);
+  }
+}
+
+/* Staggered delays for exit animation - reverse order for smooth effect */
+html.view-transitioning[data-view="year"] .month-container:nth-child(1) { animation-delay: 0.605s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(2) { animation-delay: 0.55s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(3) { animation-delay: 0.495s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(4) { animation-delay: 0.44s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(5) { animation-delay: 0.385s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(6) { animation-delay: 0.33s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(7) { animation-delay: 0.275s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(8) { animation-delay: 0.22s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(9) { animation-delay: 0.165s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(10) { animation-delay: 0.11s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(11) { animation-delay: 0.055s; }
+html.view-transitioning[data-view="year"] .month-container:nth-child(12) { animation-delay: 0s; }
 .month-grid {
   display: grid;
   grid-template-columns: repeat(7, var(--dot-outer));
