@@ -49,8 +49,8 @@ import {
   useFirebase as authUseFirebase
 } from './js/services/Auth.js';
 import {
-  saveHabits,
-  loadHabits,
+  saveHabits as storageSaveHabits,
+  loadHabits as storageLoadHabits,
   saveSettings,
   loadSettings,
   clearUserData,
@@ -74,8 +74,8 @@ const Auth = {
 };
 
 const Storage = {
-  saveHabits,
-  loadHabits,
+  saveHabits: storageSaveHabits,
+  loadHabits: storageLoadHabits,
   saveSettings,
   loadSettings,
   clearUserData,
