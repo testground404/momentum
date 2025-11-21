@@ -2,7 +2,7 @@
  * Year Wheel Selector Component
  * A smooth, animated year selector with scrolling functionality
  */
-class YearWheel {
+export class YearWheel {
   constructor(elementId, options = {}) {
     this.options = {
       startYear: options.startYear || 1990,
