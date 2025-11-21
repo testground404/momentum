@@ -2521,7 +2521,7 @@ window.Storage = Storage;
       });
     }
 
-    /* view toggle - simplified CSS-driven approach with smooth height animation */
+    /* view toggle - synchronized card and dot animations */
     viewToggle.addEventListener('click', function (){
       var currentView = document.documentElement.dataset.view || 'year';
       var targetView = currentView === 'year' ? 'month' : 'year';
@@ -2529,22 +2529,22 @@ window.Storage = Storage;
       var cards = listEl.querySelectorAll('.card');
       var contentHeights = [];
 
-      // Step 1: Capture current heights
+      // Step 1: Capture current heights and lock them
       cards.forEach(function(card) {
         var content = card.querySelector('.card-content');
         if (content) {
           var currentHeight = content.offsetHeight;
           contentHeights.push({ content: content, oldHeight: currentHeight });
-          // Set explicit height to current height
+          // Lock current height to prevent immediate change
           content.style.height = currentHeight + 'px';
         }
       });
 
-      // Step 2: Remove old animation state to allow re-triggering
+      // Step 2: Clear old animation states to allow re-triggering
       var allDots = document.querySelectorAll('.dot');
       allDots.forEach(function(dot) {
         dot.style.animation = 'none';
-        dot.style.animationDelay = ''; // Clear old delays
+        dot.style.animationDelay = '';
       });
 
       var allMonthContainers = document.querySelectorAll('.month-container');
@@ -2552,62 +2552,67 @@ window.Storage = Storage;
         container.style.animation = 'none';
       });
 
-      // Force reflow to restart animations
+      // Force reflow to reset animations
       void document.body.offsetHeight;
 
-      // Step 3: Toggle the view (CSS will hide/show the containers)
+      // Step 3: Toggle the view (this changes which containers are visible)
       document.documentElement.dataset.view = targetView;
       localStorage.setItem(VIEWKEY, targetView);
       updateViewToggleLabels(targetView);
 
-      // Step 4: Wait for DOM update, then trigger both card and dot animations in parallel
+      // Step 4: Wait for DOM to update, then prepare animations
       requestAnimationFrame(function() {
-        // Set animation delays BEFORE re-enabling animations
+        // Set animation delays for the dots
         if (targetView === 'year') {
-          // For year view: cascade all dots left to right
           var yearViewDots = document.querySelectorAll('.dots-grid-year-view .dot');
           yearViewDots.forEach(function(dot, index) {
-            // Spread delays across 1.0 second for smooth cascade
             var delay = Math.min(index * 0.003, 1.0); // 3ms per dot, max 1s
             dot.style.animationDelay = delay + 's';
           });
         } else {
-          // For month view: cascade within each month
           var monthContainers = document.querySelectorAll('.months-container-month-view .month-container');
           monthContainers.forEach(function(container, monthIndex) {
             var monthDots = container.querySelectorAll('.dot');
             monthDots.forEach(function(dot, dotIndex) {
-              // Slight delay within each month
               var delay = dotIndex * 0.01; // 10ms per dot
               dot.style.animationDelay = delay + 's';
             });
           });
         }
 
-        // Measure new heights for card animation
+        // Measure new heights (after view has changed)
         contentHeights.forEach(function(item) {
           var newHeight = item.content.scrollHeight;
-          // Animate to new height
-          item.content.style.height = newHeight + 'px';
+          item.newHeight = newHeight;
         });
 
-        // Step 5: Trigger both card and dot animations simultaneously
-        document.documentElement.classList.add('view-transitioning');
-        allDots.forEach(function(dot) {
-          dot.style.animation = '';
-        });
-        allMonthContainers.forEach(function(container) {
-          container.style.animation = '';
-        });
+        // Step 5: Force another reflow to ensure heights are measured
+        void document.body.offsetHeight;
 
-        // Step 6: Clean up after transition
-        setTimeout(function() {
+        // Step 6: Trigger BOTH animations at exactly the same instant
+        requestAnimationFrame(function() {
+          // Set new heights to trigger CSS transition
           contentHeights.forEach(function(item) {
-            item.content.style.height = '';
+            item.content.style.height = item.newHeight + 'px';
           });
-          // Remove transitioning class
-          document.documentElement.classList.remove('view-transitioning');
-        }, 1500); // Animation completes in 1.5 seconds
+
+          // Enable dot animations at the same instant
+          document.documentElement.classList.add('view-transitioning');
+          allDots.forEach(function(dot) {
+            dot.style.animation = '';
+          });
+          allMonthContainers.forEach(function(container) {
+            container.style.animation = '';
+          });
+
+          // Step 7: Clean up after all animations complete
+          setTimeout(function() {
+            contentHeights.forEach(function(item) {
+              item.content.style.height = '';
+            });
+            document.documentElement.classList.remove('view-transitioning');
+          }, 1500);
+        });
       });
     });
 
