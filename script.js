@@ -2023,30 +2023,146 @@ window.Storage = Storage;
         console.log('Confirmation result:', confirmed);
 
         if (confirmed) {
-          console.log('User confirmed, clearing history...');
-          console.log('Dots before:', habit.dots.filter(function(d) { return d; }).length, 'checked');
+          console.log('='.repeat(80));
+          console.log('CLEAR HISTORY - COMPREHENSIVE DEBUG OUTPUT');
+          console.log('='.repeat(80));
+
+          // === HABIT METADATA ===
+          console.log('\n📋 HABIT METADATA:');
+          console.log('  ID:', habit.id);
+          console.log('  Name:', habit.name);
+          console.log('  Year:', habit.year);
+          console.log('  Days in year:', habit.days);
+          console.log('  Start Date:', habit.startDate);
+          console.log('  Created At:', habit.createdAt);
+          console.log('  Accent Color:', habit.accent);
+          console.log('  Visual Type:', habit.visualType);
+          console.log('  Visual Value:', habit.visualValue);
+
+          // === FREQUENCY CONFIGURATION ===
+          console.log('\n📅 FREQUENCY CONFIGURATION:');
+          console.log('  Type:', habit.frequency ? habit.frequency.type : 'none');
+          if (habit.frequency) {
+            if (habit.frequency.type === 'daysOfWeek' && habit.frequency.daysOfWeek) {
+              var dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+              var selectedDays = habit.frequency.daysOfWeek.map(function(d) { return dayNames[d]; });
+              console.log('  Days of Week:', selectedDays.join(', '));
+            } else if (habit.frequency.type === 'timesPerWeek') {
+              console.log('  Times Per Week:', habit.frequency.timesPerWeek);
+            }
+          }
+
+          // === CHECKED DOTS (BEFORE CLEARING) ===
+          var checkedIndices = [];
+          habit.dots.forEach(function(dot, idx) {
+            if (dot) checkedIndices.push(idx);
+          });
+
+          console.log('\n✅ CHECKED DOTS BEING CLEARED:');
+          console.log('  Total checked:', checkedIndices.length, 'out of', habit.dots.length);
+
+          if (checkedIndices.length > 0) {
+            console.log('  Checked day indices:', checkedIndices.join(', '));
+
+            // Convert indices to dates
+            console.log('  Checked dates:');
+            checkedIndices.forEach(function(idx) {
+              var date = new Date(habit.year, 0, idx + 1);
+              var dateStr = date.toISOString().split('T')[0];
+              console.log('    Day', idx + 1, ':', dateStr);
+            });
+          } else {
+            console.log('  (No dots were checked)');
+          }
+
+          // === OFF DAYS ===
+          var offDayIndices = [];
+          if (habit.offDays) {
+            habit.offDays.forEach(function(off, idx) {
+              if (off) offDayIndices.push(idx);
+            });
+          }
+
+          console.log('\n🚫 OFF DAYS CONFIGURATION:');
+          console.log('  Total off days:', offDayIndices.length);
+          if (offDayIndices.length > 0) {
+            console.log('  Off day indices:', offDayIndices.join(', '));
+          } else {
+            console.log('  (No off days configured)');
+          }
+
+          // === NOTES ===
+          var notesWithContent = [];
+          if (habit.notes) {
+            habit.notes.forEach(function(note, idx) {
+              if (note && note.trim()) {
+                notesWithContent.push({ index: idx, note: note });
+              }
+            });
+          }
+
+          console.log('\n📝 NOTES:');
+          console.log('  Notes with content:', notesWithContent.length);
+          if (notesWithContent.length > 0) {
+            notesWithContent.forEach(function(item) {
+              console.log('    Day', item.index + 1, ':', item.note);
+            });
+          } else {
+            console.log('  (No notes recorded)');
+          }
+
+          // === YEAR HISTORY ===
+          console.log('\n📚 YEAR HISTORY:');
+          if (habit.yearHistory && Object.keys(habit.yearHistory).length > 0) {
+            console.log('  Historical years stored:', Object.keys(habit.yearHistory).join(', '));
+            Object.keys(habit.yearHistory).forEach(function(year) {
+              var history = habit.yearHistory[year];
+              var checkedCount = history.dots ? history.dots.filter(function(d) { return d; }).length : 0;
+              var offDaysCount = history.offDays ? history.offDays.filter(function(d) { return d; }).length : 0;
+              var notesCount = history.notes ? history.notes.filter(function(n) { return n && n.trim(); }).length : 0;
+              console.log('    Year', year, '- Checked:', checkedCount, ', Off days:', offDaysCount, ', Notes:', notesCount);
+            });
+          } else {
+            console.log('  (No historical year data)');
+          }
+
+          // === STATISTICS (BEFORE CLEARING) ===
+          console.log('\n📊 STATISTICS BEFORE CLEARING:');
+          var totalDots = habit.dots.length;
+          var checkedDots = habit.dots.filter(function(d) { return d; }).length;
+          var completionRate = totalDots > 0 ? ((checkedDots / totalDots) * 100).toFixed(2) : 0;
+          console.log('  Total days:', totalDots);
+          console.log('  Checked days:', checkedDots);
+          console.log('  Completion rate:', completionRate + '%');
+
+          console.log('\n' + '='.repeat(80));
+          console.log('STARTING CLEAR OPERATION...');
+          console.log('='.repeat(80));
 
           // 2. Reset all dots to false
           habit.dots.fill(false);
-          console.log('Dots after fill:', habit.dots.filter(function(d) { return d; }).length, 'checked');
+          console.log('✓ All dots reset to false');
 
           // 3. Re-apply frequency to ensure "off days" are restored
           // (in case they were hidden by a completed task)
           applyFrequencyToHabit(habit);
-          console.log('Applied frequency');
+          console.log('✓ Frequency rules re-applied');
 
           // 4. Save and Render
           await saveHabits(HABITS);
-          console.log('Saved habits');
+          console.log('✓ Habits saved to storage');
           render();
-          console.log('Rendered');
+          console.log('✓ UI rendered');
           announce('History cleared');
+
+          console.log('\n' + '='.repeat(80));
+          console.log('CLEAR OPERATION COMPLETED SUCCESSFULLY');
+          console.log('='.repeat(80) + '\n');
 
           // Optional: Close the modal after clearing
           editHabitOverlay.close();
-          console.log('Modal closed');
         } else {
-          console.log('User cancelled');
+          console.log('❌ User cancelled clear history operation');
         }
       });
     }
