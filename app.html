@@ -693,42 +693,33 @@
     </div>
   </div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
-  <!-- Firebase Configuration -->
-  <script src="js/firebase-config.js"></script>
-
-  <!-- App modules -->
-  <script src="js/auth.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/storage.js"></script>
-
-  <!-- Authentication check -->
-  <script>
-    // Check authentication status
-    if (Auth.useFirebase) {
-      // For Firebase, wait for auth state to be restored
-      Auth.onAuthStateChanged((user) => {
-        if (!user) {
-          console.log('User not authenticated, redirecting to login...');
-          window.location.href = 'index.html';
-        } else {
-          console.log('User authenticated:', user.uid);
-        }
-      });
-    } else {
-      // For localStorage, check synchronously
-      if (!Auth.isAuthenticated()) {
-        window.location.href = 'index.html';
-      }
-    }
-  </script>
-
-  <!-- App logic -->
+  <!-- App logic (now loads Firebase SDK and all modules as ES modules) -->
   <script type="module" src="script.js"></script>
+
+  <!-- Authentication check (runs after script.js loads Auth) -->
+  <script type="module">
+    // Wait for script.js to load and expose Auth
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.Auth) {
+        if (window.Auth.useFirebase) {
+          // For Firebase, wait for auth state to be restored
+          window.Auth.onAuthStateChanged((user) => {
+            if (!user) {
+              console.log('User not authenticated, redirecting to login...');
+              window.location.href = 'index.html';
+            } else {
+              console.log('User authenticated:', user.uid || user.username);
+            }
+          });
+        } else {
+          // For localStorage, check synchronously
+          if (!window.Auth.isAuthenticated()) {
+            window.location.href = 'index.html';
+          }
+        }
+      }
+    });
+  </script>
 
   <!-- Add this script before the closing </body> tag in app.html -->
 <script>

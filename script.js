@@ -35,6 +35,57 @@ import {
   getCompletionRate,
   completionSortValue
 } from './js/models/Habit.js';
+import {
+  register as authRegister,
+  login as authLogin,
+  loginGoogle,
+  isAuthenticated,
+  getCurrentUser,
+  getCurrentUserEmail,
+  logout as authLogout,
+  deleteAccount,
+  onAuthStateChanged,
+  useFirebase as authUseFirebase
+} from './js/services/Auth.js';
+import {
+  saveHabits,
+  loadHabits,
+  saveSettings,
+  loadSettings,
+  clearUserData,
+  exportData,
+  importData,
+  useFirebase as storageUseFirebase
+} from './js/services/Storage.js';
+
+// Create global Auth and Storage objects for backward compatibility with inline scripts
+const Auth = {
+  register: authRegister,
+  login: authLogin,
+  loginGoogle,
+  isAuthenticated,
+  getCurrentUser,
+  getCurrentUserEmail,
+  logout: authLogout,
+  deleteAccount,
+  onAuthStateChanged,
+  useFirebase: authUseFirebase
+};
+
+const Storage = {
+  saveHabits,
+  loadHabits,
+  saveSettings,
+  loadSettings,
+  clearUserData,
+  exportData,
+  importData,
+  useFirebase: storageUseFirebase
+};
+
+// Expose to window for inline scripts in HTML
+window.Auth = Auth;
+window.Storage = Storage;
 
     /* ────────── Picker State ────────── */
     var ipEls = {

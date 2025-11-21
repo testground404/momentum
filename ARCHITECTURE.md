@@ -87,23 +87,29 @@ momentum/
 **Exports:**
 - `YearWheel` - Year wheel selector class
 
-### Global Modules (IIFE Pattern)
+### Service Modules (ES Modules)
 
-The following modules use the IIFE (Immediately Invoked Function Expression) pattern and are loaded as global objects. They remain as traditional scripts due to Firebase dependencies:
+**`js/services/Auth.js`** and **`js/services/Storage.js`** - Now ES6 modules using Firebase Modular SDK
+- Converted from IIFE pattern to ES modules
+- Use Firebase SDK v10 modular imports for tree-shaking
+- Export individual functions instead of global objects
+- Exposed via `window.Auth` and `window.Storage` in script.js for backward compatibility with inline HTML scripts
 
-- **`js/auth.js`** - Authentication module (global `Auth` object)
-- **`js/storage.js`** - Storage module (global `Storage` object)
-- **`js/utils.js`** - Legacy utilities (global utilities)
+**`js/utils.js`** - Legacy utilities (global utilities, not yet modularized)
 
 ## Loading Order
 
-The modules are loaded in the following order in `app.html`:
+### app.html
+1. **script.js** (ES module) - Loads all dependencies via imports:
+   - Firebase SDK v10 (modular, from CDN)
+   - firebase-config.js
+   - Auth.js and Storage.js services
+   - All utility modules
+   - YearWheel and Habit models
+2. Authentication check (inline module script) - Waits for script.js to expose Auth
 
-1. Firebase SDK (compat mode)
-2. Firebase configuration
-3. Global modules (auth.js, utils.js, storage.js)
-4. Authentication check (inline script)
-5. Main application (script.js as ES module)
+### index.html
+1. **login.js** (ES module) - Imports Auth service and handles login page
 
 ## Benefits of Modularization
 
@@ -166,6 +172,56 @@ The modules are loaded in the following order in `app.html`:
 - `DateUtils.js` - All date creation and calculation functions
 - `Habit.js` - `applyFrequencyToHabit()` function for day-of-week calculations
 
+### Firebase SDK Upgrade (v9 Compat → v10 Modular)
+
+**Problem:** Using Firebase compat SDK (v9.22.0) which:
+- Includes all Firebase features in the bundle (no tree-shaking)
+- Results in larger bundle sizes (~300KB+ even if only using auth)
+- Uses outdated API patterns
+- Prevents optimal code splitting
+
+**Solution:** Migrated to Firebase Modular SDK v10.7.1:
+- **Tree-shaking enabled** - Only imports what you use
+- **Smaller bundle size** - Can reduce Firebase bundle by 60-80%
+- **Modern ES modules** - Better integration with build tools
+- **Future-proof** - Compat SDK will be deprecated
+
+**Changes Made:**
+
+1. **firebase-config.js** - Converted to ES module:
+   ```javascript
+   import { initializeApp } from 'firebase/app';
+   import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+   import { getFirestore } from 'firebase/firestore';
+   ```
+
+2. **Auth.js** - Modular SDK migration:
+   - `createUserWithEmailAndPassword(auth, email, password)` instead of `auth.createUserWithEmailAndPassword(email, password)`
+   - `signInWithEmailAndPassword(auth, email, password)`
+   - `signInWithPopup(auth, provider)`
+   - `signOut(auth)`
+   - `deleteUser(user)`
+   - `onAuthStateChanged(auth, callback)`
+
+3. **Storage.js** - Modular Firestore migration:
+   - `collection(db, 'users')` instead of `db.collection('users')`
+   - `doc(db, 'users', userId, 'habits', habitId)`
+   - `setDoc(docRef, data, { merge: true })`
+   - `getDoc(docRef)` / `getDocs(collectionRef)`
+   - `writeBatch(db)`
+
+4. **HTML Files** - Removed compat SDK scripts:
+   - No more `firebase-app-compat.js`, `firebase-auth-compat.js`, `firebase-firestore-compat.js`
+   - Firebase now loaded via ES module imports in JavaScript files
+   - CDN imports from `https://www.gstatic.com/firebasejs/10.7.1/`
+
+**Benefits:**
+- Reduced bundle size (only loads auth + firestore, not all Firebase services)
+- Faster page load times
+- Better code splitting with bundlers
+- More efficient tree-shaking
+- Modern JavaScript patterns
+
 ## Future Improvements
 
 ### Recommended Next Steps
@@ -175,10 +231,10 @@ The modules are loaded in the following order in `app.html`:
    - Or remove Tailwind entirely and use CSS variables
    - Eliminates runtime CSS generation overhead
 
-2. **Upgrade Firebase SDK** (High Priority)
-   - Migrate from compat to modular SDK
-   - Enable tree-shaking for smaller bundle
-   - Convert Auth and Storage to ES modules
+2. ~~**Upgrade Firebase SDK**~~ ✅ **COMPLETED**
+   - ~~Migrate from compat to modular SDK~~
+   - ~~Enable tree-shaking for smaller bundle~~
+   - ~~Convert Auth and Storage to ES modules~~
 
 3. **Extract UI Components** (Medium Priority)
    - Create CardRenderer.js for habit card rendering

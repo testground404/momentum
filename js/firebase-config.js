@@ -1,5 +1,5 @@
 /**
- * Firebase Configuration
+ * Firebase Configuration (Modular SDK v9+)
  *
  * To set up Firebase:
  * 1. Go to https://console.firebase.google.com/
@@ -17,7 +17,11 @@
  *    - Set up security rules (see below)
  */
 
-// TODO: Replace with your Firebase config from Firebase Console
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDtvqvDxljK2uNS2UfIkjCQusT2uuIvkEQ",
   authDomain: "momentum-cce49.firebaseapp.com",
@@ -30,31 +34,22 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let app, auth, db, googleProvider;
+let firebaseInitialized = false;
 
 try {
-  // Check if Firebase is loaded
-  if (typeof firebase === 'undefined') {
-    console.error('Firebase SDK not loaded. Make sure to include Firebase scripts in your HTML.');
-  } else {
-    // Initialize Firebase
-    app = firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db = firebase.firestore();
-    googleProvider = new firebase.auth.GoogleAuthProvider();
-
-    console.log('Firebase initialized successfully');
-  }
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  googleProvider = new GoogleAuthProvider();
+  firebaseInitialized = true;
+  console.log('Firebase initialized successfully (Modular SDK)');
 } catch (error) {
   console.error('Error initializing Firebase:', error);
+  console.log('Falling back to localStorage mode');
 }
 
-// Export for use in other modules
-if (typeof window !== 'undefined') {
-  window.FirebaseApp = app;
-  window.FirebaseAuth = auth;
-  window.FirebaseDB = db;
-  window.GoogleProvider = googleProvider;
-}
+// Export Firebase instances
+export { app, auth, db, googleProvider, firebaseInitialized };
 
 /**
  * Firestore Security Rules
