@@ -1,0 +1,19 @@
+# Backup files
+*.backup
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
