@@ -2570,6 +2570,31 @@ window.Storage = Storage;
       localStorage.setItem(VIEWKEY, targetView);
       updateViewToggleLabels(targetView);
 
+      // Step 3.5: Dynamically set animation delays for all dots
+      requestAnimationFrame(function() {
+        if (targetView === 'year') {
+          // For year view: cascade all dots left to right
+          var yearViewDots = document.querySelectorAll('.dots-grid-year-view .dot');
+          yearViewDots.forEach(function(dot, index) {
+            // Spread delays across 1.0 second for smooth cascade
+            var delay = Math.min(index * 0.003, 1.0); // 3ms per dot, max 1s
+            dot.style.animationDelay = delay + 's';
+          });
+        } else {
+          // For month view: cascade within each month (already handled by CSS)
+          // But we can enhance it by setting delays dynamically too
+          var monthContainers = document.querySelectorAll('.months-container-month-view .month-container');
+          monthContainers.forEach(function(container, monthIndex) {
+            var monthDots = container.querySelectorAll('.dot');
+            monthDots.forEach(function(dot, dotIndex) {
+              // Slight delay within each month
+              var delay = dotIndex * 0.01; // 10ms per dot
+              dot.style.animationDelay = delay + 's';
+            });
+          });
+        }
+      });
+
       // Step 4: Measure new heights and animate
       requestAnimationFrame(function() {
         contentHeights.forEach(function(item) {

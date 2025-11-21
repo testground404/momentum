@@ -1967,30 +1967,8 @@ html.view-transitioning[data-view="month"] .months-container-month-view .dot {
   }
 }
 
-/* Staggered animation delays for cascading wave effect (only during transitions) */
-/* Year view dots - rhythmic wave from left to right, completing in ~1.4s */
-html.view-transitioning[data-view="year"] .dots-grid-year-view .dot:nth-child(1) { animation-delay: 0s; }
-html.view-transitioning[data-view="year"] .dots-grid-year-view .dot:nth-child(2) { animation-delay: 0.11s; }
-html.view-transitioning[data-view="year"] .dots-grid-year-view .dot:nth-child(3) { animation-delay: 0.22s; }
-html.view-transitioning[data-view="year"] .dots-grid-year-view .dot:nth-child(4) { animation-delay: 0.33s; }
-html.view-transitioning[data-view="year"] .dots-grid-year-view .dot:nth-child(5) { animation-delay: 0.44s; }
-html.view-transitioning[data-view="year"] .dots-grid-year-view .dot:nth-child(6) { animation-delay: 0.55s; }
-html.view-transitioning[data-view="year"] .dots-grid-year-view .dot:nth-child(7) { animation-delay: 0.66s; }
-html.view-transitioning[data-view="year"] .dots-grid-year-view .dot:nth-child(8) { animation-delay: 0.77s; }
-html.view-transitioning[data-view="year"] .dots-grid-year-view .dot:nth-child(9) { animation-delay: 0.88s; }
-html.view-transitioning[data-view="year"] .dots-grid-year-view .dot:nth-child(10) { animation-delay: 0.99s; }
-
-/* Month view dots - left to right cascade within each month */
-html.view-transitioning[data-view="month"] .month-grid .dot:nth-child(1) { animation-delay: 0s; }
-html.view-transitioning[data-view="month"] .month-grid .dot:nth-child(2) { animation-delay: 0.01s; }
-html.view-transitioning[data-view="month"] .month-grid .dot:nth-child(3) { animation-delay: 0.02s; }
-html.view-transitioning[data-view="month"] .month-grid .dot:nth-child(4) { animation-delay: 0.03s; }
-html.view-transitioning[data-view="month"] .month-grid .dot:nth-child(5) { animation-delay: 0.04s; }
-html.view-transitioning[data-view="month"] .month-grid .dot:nth-child(6) { animation-delay: 0.05s; }
-html.view-transitioning[data-view="month"] .month-grid .dot:nth-child(7) { animation-delay: 0.06s; }
-html.view-transitioning[data-view="month"] .month-grid .dot:nth-child(8) { animation-delay: 0.07s; }
-html.view-transitioning[data-view="month"] .month-grid .dot:nth-child(9) { animation-delay: 0.08s; }
-html.view-transitioning[data-view="month"] .month-grid .dot:nth-child(10) { animation-delay: 0.09s; }
+/* Animation delays are now set dynamically via JavaScript for all dots */
+/* This ensures smooth cascading for all 365+ dots in year view and all dots in month view */
 
 /* Long press feedback */
 .dot.long-pressing {
