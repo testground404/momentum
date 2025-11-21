@@ -6,6 +6,19 @@
   <title>Login - Momentum Habit Tracker</title>
   <link rel="icon" type="image/png" href="icon.png">
 
+  <!-- Immediate theme check to prevent flash of light mode -->
+  <script>
+    (function() {
+      if (localStorage.getItem('themepreference') === 'dark' ||
+         (!('themepreference' in localStorage) &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+
   <!-- Inter font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -290,16 +303,12 @@
     const themeToggle = document.getElementById('theme-toggle-login');
     const html = document.documentElement;
 
-    // Load theme from localStorage
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-      html.classList.add('dark');
-    }
-
+    // Theme is already applied by the immediate script in <head>
+    // Just handle the toggle click
     themeToggle.addEventListener('click', function() {
       html.classList.toggle('dark');
       const isDark = html.classList.contains('dark');
-      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      localStorage.setItem('themepreference', isDark ? 'dark' : 'light');
     });
 
     // Login form handler
