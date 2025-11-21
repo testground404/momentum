@@ -1999,6 +1999,39 @@ window.Storage = Storage;
     }
     document.getElementById('edit-sheet-close').addEventListener('click', function (){ editHabitOverlay.close(); });
     document.getElementById('edit-sheet-cancel').addEventListener('click', function (){ editHabitOverlay.close(); });
+
+    // Clear All / Reset History Button
+    var editResetBtn = document.getElementById('edit-reset-btn');
+    if (editResetBtn) {
+      editResetBtn.addEventListener('click', async function() {
+        var id = document.getElementById('edit-habit-id').value;
+        var habit = HABITS.find(function(h) { return h.id === id; });
+        if (!habit) return;
+
+        // 1. Confirm with the user
+        var confirmed = await showConfirm(
+          'Clear History',
+          'Are you sure you want to uncheck all days for "' + habit.name + '"? This cannot be undone.'
+        );
+
+        if (confirmed) {
+          // 2. Reset all dots to false
+          habit.dots.fill(false);
+
+          // 3. Re-apply frequency to ensure "off days" are restored
+          // (in case they were hidden by a completed task)
+          applyFrequencyToHabit(habit);
+
+          // 4. Save and Render
+          saveHabits(HABITS);
+          render();
+          announce('History cleared');
+
+          // Optional: Close the modal after clearing
+          editHabitOverlay.close();
+        }
+      });
+    }
     document.getElementById('edit-preview-btn').addEventListener('click', async function (){
       var res = await openIconColorPicker(editSelectedIcon, editSelectedAccent);
       if (res) {

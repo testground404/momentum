@@ -506,7 +506,12 @@
     <div class="sheet">
       <div class="sheet-header">
         <h2 class="sheet-title">Edit Habit</h2>
-        <button type="button" class="icon-x" id="edit-sheet-close" aria-label="Close">✕</button>
+        <div style="display:flex; gap:8px">
+          <button type="button" class="icon-x" id="edit-reset-btn" aria-label="Clear all history" title="Clear all history">
+            <i class="ti ti-refresh"></i>
+          </button>
+          <button type="button" class="icon-x" id="edit-sheet-close" aria-label="Close">✕</button>
+        </div>
       </div>
       <form id="edit-habit-form" class="sheet-body">
         <input type="hidden" id="edit-habit-id" name="id">
