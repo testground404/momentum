@@ -1168,7 +1168,10 @@ window.Storage = Storage;
 
         // IMPROVED: Wait for cards to be fully rendered before hiding skeleton
         requestAnimationFrame(function() {
-          if (skeletonEl) skeletonEl.hidden = true;
+          if (skeletonEl) {
+            skeletonEl.hidden = true;
+            console.log('Hiding skeleton loader - app ready');
+          }
 
           // 1. Make list visible FIRST
           listEl.hidden = false;
@@ -2753,8 +2756,18 @@ window.Storage = Storage;
 
     /* init */
     async function initializeApp() {
+      // Ensure skeleton loader is visible during authentication and data loading
+      if (skeletonEl) {
+        skeletonEl.hidden = false;
+        console.log('Showing skeleton loader during initialization');
+      }
+      if (listEl) {
+        listEl.hidden = true;
+      }
+
       // For Firebase mode, wait for auth state to be ready
       if (typeof Auth !== 'undefined' && Auth.useFirebase) {
+        console.log('Checking Firebase authentication...');
         await new Promise(function(resolve) {
           var unsubscribe = Auth.onAuthStateChanged(function(user) {
             if (user) {
@@ -2764,22 +2777,29 @@ window.Storage = Storage;
             }
           });
         });
+        console.log('Firebase authentication confirmed');
+      } else {
+        console.log('Using localStorage authentication');
       }
 
       // Load habits from storage (Firebase or localStorage)
+      console.log('Loading habits data...');
       var loadedHabits = await loadHabits();
       HABITS = loadedHabits.map(rolloverIfNeeded);
+      console.log('Habits loaded:', HABITS.length);
 
       // Set initial view
       var initialView = getInitialView();
       document.documentElement.dataset.view = initialView;
       updateViewToggleLabels(initialView);
 
-      // Render the UI
+      // Render the UI (this will hide skeleton and show list)
+      console.log('Rendering UI...');
       render();
       ensureWaveStyles();
 
       initCustomSelects();
+      console.log('App initialization complete');
     }
 
     /* ────────── Year Wheel Centering Fix ────────── */
