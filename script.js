@@ -2017,32 +2017,47 @@ window.Storage = Storage;
         // 1. Confirm with the user
         console.log('Showing confirmation dialog...');
         var confirmed = await showConfirm(
-          'Clear History',
-          'Are you sure you want to uncheck all days for "' + habit.name + '"? This cannot be undone.'
+          'Reset Habit',
+          'Are you sure you want to reset "' + habit.name + '"? This will delete the habit and create a new one with the same settings. This cannot be undone.'
         );
         console.log('Confirmation result:', confirmed);
 
         if (confirmed) {
-          console.log('User confirmed, clearing history...');
-          console.log('Dots before:', habit.dots.filter(function(d) { return d; }).length, 'checked');
+          console.log('User confirmed, resetting habit...');
 
-          // 2. Reset all dots to false
-          habit.dots.fill(false);
-          console.log('Dots after fill:', habit.dots.filter(function(d) { return d; }).length, 'checked');
+          // 2. Store habit properties before deletion
+          var habitName = habit.name;
+          var habitAccent = habit.accent;
+          var habitIcon = habit.visualValue;
+          var habitStartDate = habit.startDate;
+          var habitFrequency = habit.frequency;
+          var habitIndex = HABITS.findIndex(function(h) { return h.id === id; });
+          console.log('Stored habit properties:', { name: habitName, icon: habitIcon, startDate: habitStartDate });
 
-          // 3. Re-apply frequency to ensure "off days" are restored
-          // (in case they were hidden by a completed task)
-          applyFrequencyToHabit(habit);
-          console.log('Applied frequency');
+          // 3. Remove old habit
+          if (habitIndex !== -1) {
+            HABITS.splice(habitIndex, 1);
+            console.log('Deleted old habit at index:', habitIndex);
+          }
 
-          // 4. Save and Render
+          // 4. Create new habit with same properties
+          var newHabitObj = newHabit(habitName, habitAccent, habitIcon, habitStartDate);
+          newHabitObj.frequency = habitFrequency;
+          applyFrequencyToHabit(newHabitObj);
+          console.log('Created new habit:', newHabitObj);
+
+          // 5. Insert at the same position or at the top
+          HABITS.splice(habitIndex, 0, newHabitObj);
+          console.log('Inserted new habit at index:', habitIndex);
+
+          // 6. Save and Render
           await saveHabits(HABITS);
           console.log('Saved habits');
           render();
           console.log('Rendered');
-          announce('History cleared');
+          announce('Habit reset');
 
-          // Optional: Close the modal after clearing
+          // Optional: Close the modal after resetting
           editHabitOverlay.close();
           console.log('Modal closed');
         } else {
