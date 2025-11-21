@@ -2540,12 +2540,37 @@ window.Storage = Storage;
         }
       });
 
-      // Step 2: Toggle the view (CSS will hide/show the containers)
+      // Step 2: Trigger animation by adding transitioning class
+      document.documentElement.classList.add('view-transitioning');
+
+      // Remove old animation state to allow re-triggering
+      var allDots = document.querySelectorAll('.dot');
+      allDots.forEach(function(dot) {
+        dot.style.animation = 'none';
+      });
+
+      var allMonthContainers = document.querySelectorAll('.month-container');
+      allMonthContainers.forEach(function(container) {
+        container.style.animation = 'none';
+      });
+
+      // Force reflow to restart animations
+      void document.body.offsetHeight;
+
+      // Re-enable animations
+      allDots.forEach(function(dot) {
+        dot.style.animation = '';
+      });
+      allMonthContainers.forEach(function(container) {
+        container.style.animation = '';
+      });
+
+      // Step 3: Toggle the view (CSS will hide/show the containers)
       document.documentElement.dataset.view = targetView;
       localStorage.setItem(VIEWKEY, targetView);
       updateViewToggleLabels(targetView);
 
-      // Step 3: Measure new heights and animate
+      // Step 4: Measure new heights and animate
       requestAnimationFrame(function() {
         contentHeights.forEach(function(item) {
           var newHeight = item.content.scrollHeight;
@@ -2553,12 +2578,14 @@ window.Storage = Storage;
           item.content.style.height = newHeight + 'px';
         });
 
-        // Step 4: Clean up after transition
+        // Step 5: Clean up after transition
         setTimeout(function() {
           contentHeights.forEach(function(item) {
             item.content.style.height = '';
           });
-        }, 500);
+          // Remove transitioning class
+          document.documentElement.classList.remove('view-transitioning');
+        }, 1200); // Extended to allow full animation including month cascades
       });
     });
 
