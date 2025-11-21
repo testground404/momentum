@@ -2000,6 +2000,20 @@ window.Storage = Storage;
     document.getElementById('edit-sheet-close').addEventListener('click', function (){ editHabitOverlay.close(); });
     document.getElementById('edit-sheet-cancel').addEventListener('click', function (){ editHabitOverlay.close(); });
 
+    // Add explicit handler for Save button in edit modal (button is outside form, so form attribute might not work)
+    var editSaveBtn = document.querySelector('#edit-habit-overlay .sheet-footer button[type="submit"]');
+    if (editSaveBtn) {
+      editSaveBtn.addEventListener('click', function(e) {
+        console.log('Edit Save button clicked');
+        e.preventDefault();
+        var form = document.getElementById('edit-habit-form');
+        if (form) {
+          console.log('Manually triggering form submit event');
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }
+      });
+    }
+
     // Clear All / Reset History Button
     var editResetBtn = document.getElementById('edit-reset-btn');
     if (editResetBtn) {
@@ -2059,10 +2073,16 @@ window.Storage = Storage;
       }
     });
     document.getElementById('edit-habit-form').addEventListener('submit', function (e){
+      console.log('Edit form submit event triggered');
       e.preventDefault();
       var id = document.getElementById('edit-habit-id').value;
+      console.log('Editing habit with ID:', id);
       var habit = HABITS.find(function (h){ return h.id === id; });
-      if (!habit) return;
+      if (!habit) {
+        console.error('Habit not found with ID:', id);
+        return;
+      }
+      console.log('Found habit:', habit.name);
       var nameEl = document.getElementById('edit-habit-name');
       var name = nameEl.value.trim();
       if (!name){
@@ -2189,8 +2209,11 @@ window.Storage = Storage;
       habit.frequency = freqObj;
       applyFrequencyToHabit(habit);
 
+      console.log('Saving habit changes...');
       saveHabits(HABITS);
+      console.log('Rendering updated habits...');
       render();
+      console.log('Habit saved successfully');
       announce('Habit saved');
       editHabitOverlay.close();
     });
