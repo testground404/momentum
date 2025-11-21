@@ -19,6 +19,30 @@
     })();
   </script>
 
+  <!-- Immediate auth check to prevent login page flash for authenticated users -->
+  <script>
+    (function() {
+      // Check localStorage for session
+      var session = localStorage.getItem('momentum_session');
+      if (session) {
+        try {
+          var sessionData = JSON.parse(session);
+          // If user is authenticated, redirect immediately (before page renders)
+          if (sessionData && sessionData.username) {
+            window.location.replace('app.html');
+            return;
+          }
+        } catch (e) {
+          // Invalid session data, continue to login page
+        }
+      }
+      // User not authenticated, show the login page
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.classList.add('show-login');
+      });
+    })();
+  </script>
+
   <!-- Inter font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,6 +58,16 @@
   <link rel="stylesheet" href="styles.css">
 
   <style>
+    /* Hide login page by default to prevent flash before redirect */
+    body {
+      opacity: 0;
+      transition: opacity 0.15s ease-in;
+    }
+
+    body.show-login {
+      opacity: 1;
+    }
+
     .login-container {
       min-height: 100vh;
       display: flex;
