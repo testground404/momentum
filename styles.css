@@ -1449,16 +1449,18 @@ html.dark .btn.danger:hover {
 .card:hover {
   border-color: rgba(255,159,28,0.28);
 }
-/* Card stagger load animation - 180-220ms with 30-40ms delay */
+/* Card stagger load animation - Enhanced fade up effect */
 .card.card-entering {
   opacity: 0;
-  transform: translateY(10px);
+  /* Increase distance to make the "up" movement obvious */
+  transform: translateY(40px);
 }
 .card.card-enter-active {
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Increase duration to 0.5s so the fade is smoother */
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .habit-visual {
   transition: all .3s ease;

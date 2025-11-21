@@ -1050,11 +1050,11 @@ window.Storage = Storage;
       // Add entering class immediately
       card.classList.add('card-entering');
 
-      // Stagger with 35ms delay between each card
+      // Stagger with 100ms delay between each card (Adjust this number to control speed)
       setTimeout(function() {
         card.classList.add('card-enter-active');
         card.classList.remove('card-entering');
-      }, index * 35);
+      }, index * 100);
     }
 
     // Lazy loading with Intersection Observer
