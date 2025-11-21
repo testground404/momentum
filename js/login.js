@@ -201,19 +201,27 @@ export function initLogin() {
     }, 4000);
   }
 
-  // Check if already logged in
+  // Check if already logged in (secondary check after module loads)
   // For Firebase, we need to wait for auth state to be restored
   if (useFirebase) {
+    console.log('Checking Firebase authentication state...');
     onAuthStateChanged((user) => {
       if (user) {
-        console.log('User already logged in, redirecting to app...');
+        console.log('User already logged in (Firebase):', user.uid || user.email);
+        console.log('Redirecting to app...');
         window.location.href = 'app.html';
+      } else {
+        console.log('No Firebase user authenticated, showing login page');
       }
     });
   } else {
     // For localStorage, we can check synchronously
+    console.log('Checking localStorage authentication...');
     if (isAuthenticated()) {
+      console.log('User already logged in (localStorage), redirecting to app...');
       window.location.href = 'app.html';
+    } else {
+      console.log('No localStorage user authenticated, showing login page');
     }
   }
 
