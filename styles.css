@@ -1787,16 +1787,16 @@ html.dark .card-subtitle .stat-item {
 /* Hide month view by default (when in year view) */
 html[data-view="year"] .months-container-month-view {
   opacity: 0;
-  transform: translateY(20px) scale(0.98);
+  transform: translateY(40px) scale(0.95);
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-              visibility 0s linear 0.45s;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0.5s;
 }
 
 html[data-view="year"] .dots-grid-year-view {
@@ -1804,24 +1804,24 @@ html[data-view="year"] .dots-grid-year-view {
   transform: translateY(0) scale(1);
   position: relative;
   visibility: visible;
-  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
               visibility 0s linear 0s;
 }
 
 /* Hide year view when month is active */
 html[data-view="month"] .dots-grid-year-view {
   opacity: 0;
-  transform: translateY(-20px) scale(0.98);
+  transform: translateY(-40px) scale(0.95);
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-              visibility 0s linear 0.45s;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0.5s;
 }
 
 html[data-view="month"] .months-container-month-view {
@@ -1829,13 +1829,41 @@ html[data-view="month"] .months-container-month-view {
   transform: translateY(0) scale(1);
   position: relative;
   visibility: visible;
-  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
               visibility 0s linear 0s;
 }
 .month-container {
   flex-shrink: 0;
+  /* Staggered appearance for each month during view toggle */
+  animation: month-container-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+
+/* Keyframe for month container appearance */
+@keyframes month-container-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Staggered delays for month containers */
+html[data-view="month"] .month-container:nth-child(1) { animation-delay: 0s; }
+html[data-view="month"] .month-container:nth-child(2) { animation-delay: 0.05s; }
+html[data-view="month"] .month-container:nth-child(3) { animation-delay: 0.1s; }
+html[data-view="month"] .month-container:nth-child(4) { animation-delay: 0.15s; }
+html[data-view="month"] .month-container:nth-child(5) { animation-delay: 0.2s; }
+html[data-view="month"] .month-container:nth-child(6) { animation-delay: 0.25s; }
+html[data-view="month"] .month-container:nth-child(7) { animation-delay: 0.3s; }
+html[data-view="month"] .month-container:nth-child(8) { animation-delay: 0.35s; }
+html[data-view="month"] .month-container:nth-child(9) { animation-delay: 0.4s; }
+html[data-view="month"] .month-container:nth-child(10) { animation-delay: 0.45s; }
+html[data-view="month"] .month-container:nth-child(11) { animation-delay: 0.5s; }
+html[data-view="month"] .month-container:nth-child(12) { animation-delay: 0.55s; }
 .month-grid {
   display: grid;
   grid-template-columns: repeat(7, var(--dot-outer));
@@ -1859,31 +1887,69 @@ html[data-view="month"] .months-container-month-view {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
-  /* Add smooth transitions for view morphing */
-  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Enhanced smooth transitions for rhythmic morphing */
+  transition: opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Staggered animation delays for cascading morphing effect */
-/* Year view dots - cascade from left to right */
-html[data-view="year"] .dots-grid-year-view .dot:nth-child(1) { transition-delay: 0s; }
-html[data-view="year"] .dots-grid-year-view .dot:nth-child(2) { transition-delay: 0.01s; }
-html[data-view="year"] .dots-grid-year-view .dot:nth-child(3) { transition-delay: 0.02s; }
-html[data-view="year"] .dots-grid-year-view .dot:nth-child(4) { transition-delay: 0.03s; }
-html[data-view="year"] .dots-grid-year-view .dot:nth-child(5) { transition-delay: 0.04s; }
-html[data-view="year"] .dots-grid-year-view .dot:nth-child(n+6) {
-  transition-delay: calc(0.01s * (var(--nth, 0) - 5));
+/* Wave-like rhythmic motion - Year view appearing */
+html[data-view="year"] .dots-grid-year-view .dot {
+  animation: dot-enter-year 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-/* Month view dots - subtle cascade per month */
-html[data-view="month"] .month-grid .dot:nth-child(1) { transition-delay: 0s; }
-html[data-view="month"] .month-grid .dot:nth-child(2) { transition-delay: 0.008s; }
-html[data-view="month"] .month-grid .dot:nth-child(3) { transition-delay: 0.016s; }
-html[data-view="month"] .month-grid .dot:nth-child(4) { transition-delay: 0.024s; }
-html[data-view="month"] .month-grid .dot:nth-child(5) { transition-delay: 0.032s; }
-html[data-view="month"] .month-grid .dot:nth-child(n+6) {
-  transition-delay: calc(0.008s * (var(--nth, 0) - 5));
+/* Wave-like rhythmic motion - Month view appearing */
+html[data-view="month"] .months-container-month-view .dot {
+  animation: dot-enter-month 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+
+/* Keyframes for year view dots entering */
+@keyframes dot-enter-year {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.7) rotate(-5deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+/* Keyframes for month view dots entering */
+@keyframes dot-enter-month {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.7) rotate(5deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+/* Staggered animation delays for cascading wave effect */
+/* Year view dots - rhythmic wave from left to right */
+html[data-view="year"] .dots-grid-year-view .dot:nth-child(1) { animation-delay: 0s; }
+html[data-view="year"] .dots-grid-year-view .dot:nth-child(2) { animation-delay: 0.015s; }
+html[data-view="year"] .dots-grid-year-view .dot:nth-child(3) { animation-delay: 0.03s; }
+html[data-view="year"] .dots-grid-year-view .dot:nth-child(4) { animation-delay: 0.045s; }
+html[data-view="year"] .dots-grid-year-view .dot:nth-child(5) { animation-delay: 0.06s; }
+html[data-view="year"] .dots-grid-year-view .dot:nth-child(6) { animation-delay: 0.075s; }
+html[data-view="year"] .dots-grid-year-view .dot:nth-child(7) { animation-delay: 0.09s; }
+html[data-view="year"] .dots-grid-year-view .dot:nth-child(8) { animation-delay: 0.105s; }
+html[data-view="year"] .dots-grid-year-view .dot:nth-child(9) { animation-delay: 0.12s; }
+html[data-view="year"] .dots-grid-year-view .dot:nth-child(10) { animation-delay: 0.135s; }
+
+/* Month view dots - rhythmic cascade per month grid */
+html[data-view="month"] .month-grid .dot:nth-child(1) { animation-delay: 0s; }
+html[data-view="month"] .month-grid .dot:nth-child(2) { animation-delay: 0.012s; }
+html[data-view="month"] .month-grid .dot:nth-child(3) { animation-delay: 0.024s; }
+html[data-view="month"] .month-grid .dot:nth-child(4) { animation-delay: 0.036s; }
+html[data-view="month"] .month-grid .dot:nth-child(5) { animation-delay: 0.048s; }
+html[data-view="month"] .month-grid .dot:nth-child(6) { animation-delay: 0.06s; }
+html[data-view="month"] .month-grid .dot:nth-child(7) { animation-delay: 0.072s; }
+html[data-view="month"] .month-grid .dot:nth-child(8) { animation-delay: 0.084s; }
+html[data-view="month"] .month-grid .dot:nth-child(9) { animation-delay: 0.096s; }
+html[data-view="month"] .month-grid .dot:nth-child(10) { animation-delay: 0.108s; }
 
 /* Long press feedback */
 .dot.long-pressing {
