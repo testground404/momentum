@@ -190,6 +190,44 @@ body.scroll-lock {
   letter-spacing:-0.02em;
   flex:1;
   min-width:0;
+  position: relative;
+  cursor: help;
+  transition: color 0.2s ease;
+}
+
+/* Version tooltip */
+.title::after {
+  content: attr(data-version);
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: var(--card);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(5px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.title:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0s;
+}
+
+.title:hover {
+  color: var(--primary);
 }
 .header-toolbar {
   display: flex;
