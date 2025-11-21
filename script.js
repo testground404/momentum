@@ -2540,13 +2540,11 @@ window.Storage = Storage;
         }
       });
 
-      // Step 2: Trigger animation by adding transitioning class
-      document.documentElement.classList.add('view-transitioning');
-
-      // Remove old animation state to allow re-triggering
+      // Step 2: Remove old animation state to allow re-triggering
       var allDots = document.querySelectorAll('.dot');
       allDots.forEach(function(dot) {
         dot.style.animation = 'none';
+        dot.style.animationDelay = ''; // Clear old delays
       });
 
       var allMonthContainers = document.querySelectorAll('.month-container');
@@ -2557,7 +2555,35 @@ window.Storage = Storage;
       // Force reflow to restart animations
       void document.body.offsetHeight;
 
-      // Re-enable animations
+      // Step 3: Toggle the view (CSS will hide/show the containers)
+      document.documentElement.dataset.view = targetView;
+      localStorage.setItem(VIEWKEY, targetView);
+      updateViewToggleLabels(targetView);
+
+      // Step 4: Set animation delays BEFORE re-enabling animations
+      if (targetView === 'year') {
+        // For year view: cascade all dots left to right
+        var yearViewDots = document.querySelectorAll('.dots-grid-year-view .dot');
+        yearViewDots.forEach(function(dot, index) {
+          // Spread delays across 1.0 second for smooth cascade
+          var delay = Math.min(index * 0.003, 1.0); // 3ms per dot, max 1s
+          dot.style.animationDelay = delay + 's';
+        });
+      } else {
+        // For month view: cascade within each month
+        var monthContainers = document.querySelectorAll('.months-container-month-view .month-container');
+        monthContainers.forEach(function(container, monthIndex) {
+          var monthDots = container.querySelectorAll('.dot');
+          monthDots.forEach(function(dot, dotIndex) {
+            // Slight delay within each month
+            var delay = dotIndex * 0.01; // 10ms per dot
+            dot.style.animationDelay = delay + 's';
+          });
+        });
+      }
+
+      // Step 5: Now add transitioning class and re-enable animations
+      document.documentElement.classList.add('view-transitioning');
       allDots.forEach(function(dot) {
         dot.style.animation = '';
       });
@@ -2565,37 +2591,7 @@ window.Storage = Storage;
         container.style.animation = '';
       });
 
-      // Step 3: Toggle the view (CSS will hide/show the containers)
-      document.documentElement.dataset.view = targetView;
-      localStorage.setItem(VIEWKEY, targetView);
-      updateViewToggleLabels(targetView);
-
-      // Step 3.5: Dynamically set animation delays for all dots
-      requestAnimationFrame(function() {
-        if (targetView === 'year') {
-          // For year view: cascade all dots left to right
-          var yearViewDots = document.querySelectorAll('.dots-grid-year-view .dot');
-          yearViewDots.forEach(function(dot, index) {
-            // Spread delays across 1.0 second for smooth cascade
-            var delay = Math.min(index * 0.003, 1.0); // 3ms per dot, max 1s
-            dot.style.animationDelay = delay + 's';
-          });
-        } else {
-          // For month view: cascade within each month (already handled by CSS)
-          // But we can enhance it by setting delays dynamically too
-          var monthContainers = document.querySelectorAll('.months-container-month-view .month-container');
-          monthContainers.forEach(function(container, monthIndex) {
-            var monthDots = container.querySelectorAll('.dot');
-            monthDots.forEach(function(dot, dotIndex) {
-              // Slight delay within each month
-              var delay = dotIndex * 0.01; // 10ms per dot
-              dot.style.animationDelay = delay + 's';
-            });
-          });
-        }
-      });
-
-      // Step 4: Measure new heights and animate
+      // Step 6: Measure new heights and animate
       requestAnimationFrame(function() {
         contentHeights.forEach(function(item) {
           var newHeight = item.content.scrollHeight;
@@ -2603,7 +2599,7 @@ window.Storage = Storage;
           item.content.style.height = newHeight + 'px';
         });
 
-        // Step 5: Clean up after transition
+        // Step 7: Clean up after transition
         setTimeout(function() {
           contentHeights.forEach(function(item) {
             item.content.style.height = '';
