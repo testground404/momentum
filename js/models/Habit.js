@@ -135,6 +135,7 @@ export function rolloverIfNeeded(h) {
 
 /**
  * Apply frequency rules to offDays
+ * Uses UTC dates to avoid timezone-related bugs where day-of-week differs by timezone
  */
 export function applyFrequencyToHabit(habit) {
   const year = habit.year;
@@ -147,8 +148,9 @@ export function applyFrequencyToHabit(habit) {
     // no extra offs
   } else if (freq.type === 'weekdays') {
     for (let i = 0; i < totalDays; i++) {
-      const d = new Date(year, 0, 1 + i);
-      const day = d.getDay();
+      // Use UTC to avoid timezone bugs - Jan 1 should be same day-of-week for all users
+      const d = new Date(Date.UTC(year, 0, 1 + i));
+      const day = d.getUTCDay();
       if (day === 0 || day === 6) {
         newOff[i] = true;
       }
@@ -156,8 +158,9 @@ export function applyFrequencyToHabit(habit) {
   } else if (freq.type === 'daysOfWeek') {
     const set = new Set(freq.daysOfWeek || []);
     for (let i = 0; i < totalDays; i++) {
-      const d = new Date(year, 0, 1 + i);
-      const day = d.getDay();
+      // Use UTC to avoid timezone bugs
+      const d = new Date(Date.UTC(year, 0, 1 + i));
+      const day = d.getUTCDay();
       if (!set.has(day)) {
         newOff[i] = true;
       }
@@ -167,8 +170,9 @@ export function applyFrequencyToHabit(habit) {
     // simple heuristic: if target >=5, weekends off
     if (target >= 5) {
       for (let i = 0; i < totalDays; i++) {
-        const d = new Date(year, 0, 1 + i);
-        const day = d.getDay();
+        // Use UTC to avoid timezone bugs
+        const d = new Date(Date.UTC(year, 0, 1 + i));
+        const day = d.getUTCDay();
         if (day === 0 || day === 6) {
           newOff[i] = true;
         }

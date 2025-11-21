@@ -55,20 +55,22 @@ momentum/
 ### `js/utils/DateUtils.js`
 **Purpose:** Date formatting, parsing, and calculations
 
+**Important:** All date calculations use UTC to avoid timezone-related bugs. This ensures that dates like "January 1st" represent the same calendar day for all users regardless of their timezone.
+
 **Exports:**
 - `CURRENTYEAR` - Current year constant
 - `isLeap()` - Check if year is leap year
 - `daysInYear()` - Get number of days in year
-- `startOfYear()` - Get start date of year
-- `dayIndexForYear()` - Get current day index
+- `startOfYear()` - Get start date of year (UTC)
+- `dayIndexForYear()` - Get current day index (UTC calculations)
 - `fmt()` - Format date for display
-- `toDateInputValue()` - Convert Date to ISO string
-- `parseDateValue()` - Parse date from string
-- `clampDateToYearBounds()` - Clamp date to year boundaries
+- `toDateInputValue()` - Convert Date to ISO string (UTC)
+- `parseDateValue()` - Parse date from string (creates UTC dates)
+- `clampDateToYearBounds()` - Clamp date to year boundaries (UTC)
 - `sanitizeStartDateValue()` - Validate and sanitize start dates
 - `defaultStartDateForYear()` - Get default start date
-- `getHabitStartDate()` - Get habit's start date
-- `getHabitStartIndex()` - Get habit's starting day index
+- `getHabitStartDate()` - Get habit's start date (UTC)
+- `getHabitStartIndex()` - Get habit's starting day index (UTC)
 - `formatStartDateLabel()` - Format start date label
 - Date conversion utilities (toDisplayDateValue, parseDisplayDateValue, etc.)
 
@@ -144,6 +146,25 @@ The modules are loaded in the following order in `app.html`:
 - All functionality preserved
 - UI and event handling logic unchanged
 - Backward compatible with existing data
+
+## Important Implementation Details
+
+### Timezone Handling
+
+**Problem:** JavaScript's `Date` constructor uses local timezone, which causes bugs where:
+- Users in different timezones see different "today" dots
+- Day-of-week calculations vary by timezone (January 1st could be Sunday in one timezone, Saturday in another)
+- Traveling users see data inconsistencies
+
+**Solution:** All date operations use UTC to ensure consistency:
+- Internal dates are created with `Date.UTC()` instead of `new Date(year, month, day)`
+- Date component extraction uses UTC methods (`getUTCFullYear()`, `getUTCMonth()`, `getUTCDate()`)
+- Only display/formatting functions use local timezone for user-friendly output
+- This ensures January 1st represents the same calendar day for all users worldwide
+
+**Affected Modules:**
+- `DateUtils.js` - All date creation and calculation functions
+- `Habit.js` - `applyFrequencyToHabit()` function for day-of-week calculations
 
 ## Future Improvements
 
