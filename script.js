@@ -2560,7 +2560,7 @@ window.Storage = Storage;
       localStorage.setItem(VIEWKEY, targetView);
       updateViewToggleLabels(targetView);
 
-      // Step 4: Wait for DOM update, then set delays and trigger animations
+      // Step 4: Wait for DOM update, then trigger both card and dot animations in parallel
       requestAnimationFrame(function() {
         // Set animation delays BEFORE re-enabling animations
         if (targetView === 'year') {
@@ -2584,7 +2584,14 @@ window.Storage = Storage;
           });
         }
 
-        // Step 5: Now add transitioning class and re-enable animations
+        // Measure new heights for card animation
+        contentHeights.forEach(function(item) {
+          var newHeight = item.content.scrollHeight;
+          // Animate to new height
+          item.content.style.height = newHeight + 'px';
+        });
+
+        // Step 5: Trigger both card and dot animations simultaneously
         document.documentElement.classList.add('view-transitioning');
         allDots.forEach(function(dot) {
           dot.style.animation = '';
@@ -2592,17 +2599,8 @@ window.Storage = Storage;
         allMonthContainers.forEach(function(container) {
           container.style.animation = '';
         });
-      });
 
-      // Step 6: Measure new heights and animate
-      requestAnimationFrame(function() {
-        contentHeights.forEach(function(item) {
-          var newHeight = item.content.scrollHeight;
-          // Animate to new height
-          item.content.style.height = newHeight + 'px';
-        });
-
-        // Step 7: Clean up after transition
+        // Step 6: Clean up after transition
         setTimeout(function() {
           contentHeights.forEach(function(item) {
             item.content.style.height = '';
