@@ -2004,31 +2004,49 @@ window.Storage = Storage;
     var editResetBtn = document.getElementById('edit-reset-btn');
     if (editResetBtn) {
       editResetBtn.addEventListener('click', async function() {
+        console.log('Reset button clicked');
         var id = document.getElementById('edit-habit-id').value;
+        console.log('Habit ID:', id);
         var habit = HABITS.find(function(h) { return h.id === id; });
-        if (!habit) return;
+        console.log('Found habit:', habit);
+        if (!habit) {
+          console.log('No habit found, returning');
+          return;
+        }
 
         // 1. Confirm with the user
+        console.log('Showing confirmation dialog...');
         var confirmed = await showConfirm(
           'Clear History',
           'Are you sure you want to uncheck all days for "' + habit.name + '"? This cannot be undone.'
         );
+        console.log('Confirmation result:', confirmed);
 
         if (confirmed) {
+          console.log('User confirmed, clearing history...');
+          console.log('Dots before:', habit.dots.filter(function(d) { return d; }).length, 'checked');
+
           // 2. Reset all dots to false
           habit.dots.fill(false);
+          console.log('Dots after fill:', habit.dots.filter(function(d) { return d; }).length, 'checked');
 
           // 3. Re-apply frequency to ensure "off days" are restored
           // (in case they were hidden by a completed task)
           applyFrequencyToHabit(habit);
+          console.log('Applied frequency');
 
           // 4. Save and Render
-          saveHabits(HABITS);
+          await saveHabits(HABITS);
+          console.log('Saved habits');
           render();
+          console.log('Rendered');
           announce('History cleared');
 
           // Optional: Close the modal after clearing
           editHabitOverlay.close();
+          console.log('Modal closed');
+        } else {
+          console.log('User cancelled');
         }
       });
     }
