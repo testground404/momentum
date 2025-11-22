@@ -15,9 +15,9 @@
   --chip-bg: rgba(15, 23, 42, 0.04);
   --chip-fg: #374151;
 
-  --dot-outer: 20px;
+  --dot-outer: 15px;
   --dot-inner: 10px;
-  --dot-active: 16px;
+  --dot-active: 13px;
   --radius: 22px;
   --gap: 4px;
   --transition-speed: .2s;
@@ -79,9 +79,9 @@ html.dark {
 
 @media (max-width: 768px) {
   :root {
-    --dot-outer: 20px;
+    --dot-outer: 15px;
     --dot-inner: 10px;
-    --dot-active: 16px;
+    --dot-active: 13px;
     --gap: 4px;
   }
 }
