@@ -3585,7 +3585,7 @@ html.dark .card.draggable-card::after {
 /* Wide card mode - DESKTOP ONLY (button is hidden on mobile anyway) */
 @media (min-width: 901px) {
   html[data-card-width="wide"] .app-header {
-    width: calc(100% - 40px) !important;
+    width: 95vw !important;
     max-width: 95vw !important;
   }
 
@@ -3593,12 +3593,12 @@ html.dark .card.draggable-card::after {
   html[data-card-width="wide"] .skeleton-card,
   html[data-card-width="wide"] #list > .card,
   html[data-card-width="wide"] #list > .skeleton-card {
-    width: calc(100% - 40px) !important;
+    width: 95vw !important;
     max-width: 95vw !important;
   }
 
   html[data-card-width="wide"] .card.card-hydrating {
-    width: calc(100% - 40px) !important;
+    width: 95vw !important;
     max-width: 95vw !important;
   }
 }
