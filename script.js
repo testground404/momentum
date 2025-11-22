@@ -213,22 +213,22 @@ window.Storage = Storage;
         console.log('Skeleton Cards found: ' + skeletonCards.length);
         for (var i = 0; i < skeletonCards.length; i++) {
           var skeletonRect = skeletonCards[i].getBoundingClientRect();
-          console.log('Skeleton Card #' + i + ' position:');
-          console.log('  top: ' + skeletonRect.top + 'px');
-          console.log('  left: ' + skeletonRect.left + 'px');
-          console.log('  right: ' + skeletonRect.right + 'px');
-          console.log('  bottom: ' + skeletonRect.bottom + 'px');
+          var skeletonStyles = window.getComputedStyle(skeletonCards[i]);
+          var skeletonType = skeletonCards[i].classList.contains('skeleton-desktop') ? 'desktop' :
+                             skeletonCards[i].classList.contains('skeleton-tablet') ? 'tablet' : 'mobile';
+          console.log('Skeleton Card #' + i + ' (' + skeletonType + '):');
+          console.log('  display: ' + skeletonStyles.display);
+          console.log('  position: top=' + skeletonRect.top + 'px, left=' + skeletonRect.left + 'px, right=' + skeletonRect.right + 'px, bottom=' + skeletonRect.bottom + 'px');
         }
         console.log('');
 
         console.log('Habit Cards found: ' + cards.length);
         for (var j = 0; j < cards.length; j++) {
           var cardRect = cards[j].getBoundingClientRect();
-          console.log('Habit Card #' + j + ' position:');
-          console.log('  top: ' + cardRect.top + 'px');
-          console.log('  left: ' + cardRect.left + 'px');
-          console.log('  right: ' + cardRect.right + 'px');
-          console.log('  bottom: ' + cardRect.bottom + 'px');
+          var cardStyles = window.getComputedStyle(cards[j]);
+          console.log('Habit Card #' + j + ':');
+          console.log('  display: ' + cardStyles.display);
+          console.log('  position: top=' + cardRect.top + 'px, left=' + cardRect.left + 'px, right=' + cardRect.right + 'px, bottom=' + cardRect.bottom + 'px');
         }
 
         console.log('========================================');
