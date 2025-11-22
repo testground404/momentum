@@ -983,12 +983,6 @@ window.Storage = Storage;
       fullCard.style.opacity = '0';
       fullCard.classList.add('card-hydrating');
 
-      // Ensure proper positioning during crossfade in mobile
-      if (window.innerWidth <= 900) {
-        fullCard.style.left = '50%';
-        fullCard.style.transform = 'translateX(-50%)';
-      }
-
       // Insert full card before placeholder
       placeholderCard.parentNode.insertBefore(fullCard, placeholderCard);
 
@@ -1009,12 +1003,6 @@ window.Storage = Storage;
           fullCard.classList.remove('card-hydrating');
           fullCard.style.transition = '';
           fullCard.style.opacity = '';
-          // Clean up inline styles - let CSS take over
-          if (window.innerWidth <= 900) {
-            fullCard.style.position = '';
-            fullCard.style.left = '';
-            fullCard.style.transform = '';
-          }
 
           // Initialize year wheel for the hydrated card
           requestAnimationFrame(function() {
@@ -1868,19 +1856,11 @@ window.Storage = Storage;
             onHabitChanged(habit);
             announce(newState ? "Marked today" : "Unmarked today");
 
-            // Add visual feedback for double-tap - preserve mobile centering transform
-            var isMobileCentered = window.innerWidth <= 900;
-            if (isMobileCentered) {
-              card.style.transform = 'translateX(-50%) scale(0.98)';
-              setTimeout(function() {
-                card.style.transform = 'translateX(-50%)';
-              }, 100);
-            } else {
-              card.style.transform = 'scale(0.98)';
-              setTimeout(function() {
-                card.style.transform = '';
-              }, 100);
-            }
+            // Add visual feedback for double-tap using scale property (no transform conflicts)
+            card.style.scale = '0.98';
+            setTimeout(function() {
+              card.style.scale = '';
+            }, 100);
           }
         } else {
           // If viewing a different year, switch to current year first
