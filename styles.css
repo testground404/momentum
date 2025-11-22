@@ -2921,25 +2921,6 @@ html[data-card-width="wide"] .icon-width-normal {
   opacity: 0;
 }
 
-/* Wide card mode - DESKTOP ONLY (button is hidden on mobile anyway) */
-@media (min-width: 901px) {
-  html[data-card-width="wide"] .app-header {
-    width: calc(100% - 40px) !important;
-    max-width: 95vw !important;
-  }
-
-  html[data-card-width="wide"] .card,
-  html[data-card-width="wide"] .skeleton-card,
-  html[data-card-width="wide"] #list > .card,
-  html[data-card-width="wide"] #list > .skeleton-card {
-    max-width: 95vw !important;
-  }
-
-  html[data-card-width="wide"] .card.card-hydrating {
-    max-width: 95vw !important;
-  }
-}
-
 /* theme-toggle icon swap */
 .theme-toggle .icon-moon {
   transform: translate(-50%, -50%) rotate(0deg) scale(1);
@@ -3592,4 +3573,27 @@ html.dark .card.drag-over {
 
 html.dark .card.draggable-card::after {
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WIDE CARD MODE - MUST BE AT END OF FILE FOR HIGHEST CASCADE PRIORITY
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Wide card mode - DESKTOP ONLY (button is hidden on mobile anyway) */
+@media (min-width: 901px) {
+  html[data-card-width="wide"] .app-header {
+    width: calc(100% - 40px) !important;
+    max-width: 95vw !important;
+  }
+
+  html[data-card-width="wide"] .card,
+  html[data-card-width="wide"] .skeleton-card,
+  html[data-card-width="wide"] #list > .card,
+  html[data-card-width="wide"] #list > .skeleton-card {
+    max-width: 95vw !important;
+  }
+
+  html[data-card-width="wide"] .card.card-hydrating {
+    max-width: 95vw !important;
+  }
 }
