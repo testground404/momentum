@@ -1382,6 +1382,59 @@ window.Storage = Storage;
       });
     }
 
+    /**
+     * Update aria-disabled state on existing dots when start date changes
+     * Also updates visual state to ensure disabled dots appear correctly
+     */
+    function updateDotsDisabledState(habit) {
+      var card = listEl.querySelector('[data-habit-id="' + habit.id + '"]');
+      if (!card) return;
+
+      var isCurrentYear = habit.year === CURRENTYEAR;
+      var todayIndex = dayIndexForYear(CURRENTYEAR);
+      var startIndex = getHabitStartIndex(habit);
+
+      // Get the start date year to properly handle dots in the start year
+      var startDate = getHabitStartDate(habit);
+      var startYear = startDate ? startDate.getFullYear() : habit.year;
+
+      var allDots = card.querySelectorAll('.dot');
+      allDots.forEach(function(dot) {
+        var index = Number(dot.dataset.index);
+        var isFuture = isCurrentYear && index > todayIndex;
+
+        // For the start year, check against the actual start index
+        // For years before start year, all dots are disabled
+        // For years after start year, only future dates are disabled
+        var isBeforeStart = false;
+        if (habit.year === startYear) {
+          isBeforeStart = index < startIndex;
+        } else if (habit.year < startYear) {
+          isBeforeStart = true; // Entire year is before start
+        }
+
+        if (isFuture || isBeforeStart) {
+          dot.setAttribute('aria-disabled', 'true');
+          // Remove checked state from dots that are now disabled
+          if (isBeforeStart && habit.dots && habit.dots[index]) {
+            habit.dots[index] = false;
+            dot.removeAttribute('aria-pressed');
+          }
+        } else {
+          dot.removeAttribute('aria-disabled');
+          // Update visual state to match data
+          if (habit.dots && habit.dots[index]) {
+            dot.setAttribute('aria-pressed', 'true');
+          } else {
+            dot.removeAttribute('aria-pressed');
+          }
+        }
+      });
+
+      // Mark stats as dirty since we may have changed dot states
+      habit._dirtyStats = true;
+    }
+
     function buildYearView(habit, container, todayIndex) {
       // Create a document fragment to minimize reflows
       var frag = document.createDocumentFragment();
@@ -2229,6 +2282,10 @@ window.Storage = Storage;
       }
       habit.frequency = freqObj;
       applyFrequencyToHabit(habit);
+
+      // Update disabled state of dots if start date changed
+      // This may clear some dot states, so do it before saving
+      updateDotsDisabledState(habit);
 
       saveHabits(HABITS);
       render();
