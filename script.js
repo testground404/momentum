@@ -1166,17 +1166,12 @@ window.Storage = Storage;
       if (!hasHydratedList) {
         hasHydratedList = true;
 
-        // IMPROVED: Wait for cards to be fully rendered before hiding skeleton
+        // IMPROVED: Smooth crossfade from skeleton to cards
         requestAnimationFrame(function() {
-          if (skeletonEl) {
-            skeletonEl.hidden = true;
-            console.log('Hiding skeleton loader - app ready');
-          }
-
-          // 1. Make list visible FIRST
+          // 1. Make list visible FIRST (cards still have opacity: 0 from card-entering)
           listEl.hidden = false;
 
-          // 2. Animate cards
+          // 2. Start card animations immediately
           if (!hasAnimatedInitialLoad) {
             hasAnimatedInitialLoad = true;
             cardsToAnimate.forEach(function(card, index) {
@@ -1184,7 +1179,19 @@ window.Storage = Storage;
             });
           }
 
-          // 3. Initialize Year Wheels NOW that elements have width
+          // 3. Trigger skeleton fade-out by adding class
+          if (skeletonEl) {
+            skeletonEl.classList.add('fading-out');
+            console.log('Starting skeleton fade-out');
+
+            // 4. After fade-out completes (250ms), actually hide it
+            setTimeout(function() {
+              skeletonEl.hidden = true;
+              console.log('Skeleton hidden - app ready');
+            }, 250);
+          }
+
+          // 5. Initialize Year Wheels NOW that elements have width
           // This ensures offsetWidth is > 0 so centering works
           if (newCards.length > 0) {
             requestAnimationFrame(function() {
