@@ -1821,6 +1821,121 @@ window.Storage = Storage;
       }
     });
 
+    /* ────────── Mobile Double-Tap to Toggle Today ────────── */
+    // Double-tap on card body in mobile mode to toggle today's date
+    var lastTapTime = 0;
+    var lastTapTarget = null;
+    var DOUBLE_TAP_DELAY = 300; // milliseconds
+
+    listEl.addEventListener('touchend', function(e) {
+      // Only on mobile screens
+      if (window.innerWidth > 900) return;
+
+      var currentTime = new Date().getTime();
+      var tapTimeDiff = currentTime - lastTapTime;
+
+      // Check if tap is on card body (not on buttons, inputs, or interactive elements)
+      var card = e.target.closest('.card');
+      var isInteractiveElement = e.target.closest('button, input, select, textarea, a, .dot, .control-btn, .habit-title-btn');
+
+      if (card && !isInteractiveElement && tapTimeDiff < DOUBLE_TAP_DELAY && tapTimeDiff > 0 && lastTapTarget === card) {
+        // Double tap detected on card body!
+        e.preventDefault(); // Prevent zoom or other default behavior
+
+        var habitId = card.dataset.habitId;
+        var habit = HABITS.find(function(h) { return h.id === habitId; });
+
+        if (!habit) return;
+
+        // Same logic as mark-today button
+        if (habit.year === CURRENTYEAR) {
+          var todayIdx = dayIndexForYear(CURRENTYEAR);
+
+          // Find the dot in the currently active view
+          var currentView = document.documentElement.dataset.view || 'year';
+          var activeContainer = currentView === 'year'
+            ? card.querySelector('.dots-grid-year-view')
+            : card.querySelector('.months-container-month-view');
+
+          var todayDot = activeContainer ? activeContainer.querySelector('.dot[data-index="' + todayIdx + '"]') : null;
+
+          if (todayDot) {
+            var currentState = habit.dots[todayIdx];
+            var newState = !currentState;
+            setDotState(todayDot, newState);
+
+            // Update mark-today button visual state
+            var markTodayBtn = card.querySelector('.mark-today-btn');
+            if (markTodayBtn) {
+              markTodayBtn.classList.toggle('marked', newState);
+              markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
+              markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
+            }
+
+            onHabitChanged(habit);
+            announce(newState ? "Marked today" : "Unmarked today");
+
+            // Add visual feedback for double-tap
+            card.style.transform = 'scale(0.98)';
+            setTimeout(function() {
+              card.style.transform = '';
+            }, 100);
+          }
+        } else {
+          // If viewing a different year, switch to current year first
+          var yearToSave = habit.year;
+          var habitStartDate = getHabitStartDate(habit);
+          var startYear = habitStartDate ? habitStartDate.getFullYear() : CURRENTYEAR;
+
+          if (yearToSave >= startYear && yearToSave <= CURRENTYEAR) {
+            if (!habit.yearHistory) habit.yearHistory = {};
+            habit.yearHistory[yearToSave] = {
+              dots: habit.dots.slice(),
+              offDays: habit.offDays.slice(),
+              notes: habit.notes.slice()
+            };
+          }
+
+          habit.year = CURRENTYEAR;
+          habit.days = daysInYear(CURRENTYEAR);
+
+          if (habit.yearHistory && habit.yearHistory[CURRENTYEAR]) {
+            var history = habit.yearHistory[CURRENTYEAR];
+            habit.dots = history.dots.slice();
+            habit.offDays = history.offDays.slice();
+            habit.notes = history.notes.slice();
+            habit._dirtyStats = true;
+          } else {
+            habit.dots = new Array(habit.days).fill(false);
+            habit.offDays = new Array(habit.days).fill(false);
+            habit.notes = new Array(habit.days).fill('');
+            applyFrequencyToHabit(habit);
+          }
+
+          var todayIdx = dayIndexForYear(CURRENTYEAR);
+          var todayIsBeforeStartDate = todayIdx < getHabitStartIndex(habit);
+
+          if (!todayIsBeforeStartDate) {
+            var newState = !habit.dots[todayIdx];
+            habit.dots[todayIdx] = newState;
+            if (newState) habit.offDays[todayIdx] = false;
+            habit._dirtyStats = true;
+          }
+
+          saveHabits(HABITS);
+          render();
+        }
+
+        // Reset tap tracking
+        lastTapTime = 0;
+        lastTapTarget = null;
+      } else {
+        // Record this tap
+        lastTapTime = currentTime;
+        lastTapTarget = card;
+      }
+    });
+
     function onHabitChanged(habit){
       var card = listEl.querySelector('.card[data-habit-id="' + habit.id + '"]');
       if (card) {
