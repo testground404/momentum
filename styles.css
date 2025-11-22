@@ -2067,6 +2067,8 @@ html.dark .dot:not(.just-toggled):hover::before {
 }
 .dot:disabled {
   cursor: not-allowed;
+}
+.dot:disabled::before {
   opacity: 0.5;
 }
 .dot:disabled:hover::before {
