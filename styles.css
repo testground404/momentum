@@ -2921,14 +2921,54 @@ html[data-card-width="wide"] .icon-width-normal {
   opacity: 0;
 }
 
-/* Wide card mode - only for desktop */
+/* Wide card mode - applies to header and cards on desktop */
 @media (min-width: 901px) {
+  html[data-card-width="wide"] .app-header {
+    max-width: 95vw !important;
+    width: calc(100% - 40px);
+  }
+
   html[data-card-width="wide"] .card,
   html[data-card-width="wide"] .skeleton-card,
   html[data-card-width="wide"] #list > .card,
   html[data-card-width="wide"] #list > .skeleton-card {
     max-width: 95vw !important;
     width: calc(100% - 40px);
+  }
+
+  html[data-card-width="wide"] .card.card-hydrating {
+    max-width: 95vw !important;
+  }
+}
+
+/* Also apply on larger screens to ensure it works on all PC screens */
+@media (min-width: 1024px) {
+  html[data-card-width="wide"] .app-header {
+    max-width: 95vw !important;
+  }
+
+  html[data-card-width="wide"] .card,
+  html[data-card-width="wide"] .skeleton-card,
+  html[data-card-width="wide"] #list > .card,
+  html[data-card-width="wide"] #list > .skeleton-card {
+    max-width: 95vw !important;
+  }
+
+  html[data-card-width="wide"] .card.card-hydrating {
+    max-width: 95vw !important;
+  }
+}
+
+@media (min-width: 1440px) {
+  html[data-card-width="wide"] .app-header {
+    max-width: 95vw !important;
+  }
+
+  html[data-card-width="wide"] .card,
+  html[data-card-width="wide"] .skeleton-card,
+  html[data-card-width="wide"] #list > .card,
+  html[data-card-width="wide"] #list > .skeleton-card {
+    max-width: 95vw !important;
   }
 
   html[data-card-width="wide"] .card.card-hydrating {
