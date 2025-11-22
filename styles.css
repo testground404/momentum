@@ -2028,12 +2028,12 @@ html.view-transitioning[data-view="month"] .months-container-month-view .dot {
   will-change: transform;
 }
 /* Disable hover effect during toggle animation for consistent experience */
-.dot:not(.just-toggled):hover::before {
+.dot:not(.just-toggled):not(:disabled):hover::before {
   transform:scale(1.2);
   background: radial-gradient(circle, rgba(255,255,255,0.65) 10%, var(--accent-base, var(--muted)) 70%);
   box-shadow: inset 0 0 6px rgba(255,255,255,0.35), 0 0 2px rgba(0,0,0,0.08);
 }
-html.dark .dot:not(.just-toggled):hover::before {
+html.dark .dot:not(.just-toggled):not(:disabled):hover::before {
   background: radial-gradient(circle, rgba(255,255,255,0.35) 15%, var(--accent-base, rgba(226,232,240,.6)) 70%);
   box-shadow: inset 0 0 6px rgba(0,0,0,0.4), 0 0 2px rgba(0,0,0,0.3);
 }
@@ -2070,10 +2070,6 @@ html.dark .dot:not(.just-toggled):hover::before {
 }
 .dot:disabled::before {
   opacity: 0.5;
-}
-.dot:disabled:hover::before {
-  transform: none;
-  background: var(--accent-tint, #EFF4FF);
 }
 @keyframes ripple {
   0% {
@@ -2759,7 +2755,7 @@ html.dark #scroll-blur-overlay {
 }
 
 /* painting mode highlight */
-html.painting .dot:hover::before {
+html.painting .dot:not(:disabled):hover::before {
   transform: scale(1.25);
 }
 
