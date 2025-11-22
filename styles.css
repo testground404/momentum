@@ -1539,10 +1539,6 @@ html.dark .btn.danger:hover {
     margin-left: 0;
     margin-right: 0;
   }
-
-  .skeleton-card {
-    width: 100%;
-  }
 }
 
 @media (max-width: 640px) {
