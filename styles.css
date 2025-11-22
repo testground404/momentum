@@ -827,7 +827,13 @@ html.dark .bottom-nav {
     margin-left: auto;
     margin-right: auto;
   }
-  #list > .card {
+
+  /* ALL cards strictly centered at 50% with translateX */
+  .card,
+  .skeleton-card,
+  #list > .card,
+  #list > .skeleton-card,
+  .card-placeholder {
     width: 95vw;
     max-width: 95vw;
     position: relative;
@@ -836,17 +842,37 @@ html.dark .bottom-nav {
     margin-left: 0;
     margin-right: 0;
   }
-  /* Fix entrance animation - use translate property for vertical animation only */
-  #list > .card.card-entering {
+
+  /* Animation states preserve horizontal centering */
+  #list > .card.card-entering,
+  .card.card-entering,
+  .skeleton-card.card-entering {
     translate: 0 40px;
     opacity: 0;
+    /* Keep horizontal centering via transform */
+    transform: translateX(-50%);
   }
-  #list > .card.card-enter-active {
+
+  #list > .card.card-enter-active,
+  .card.card-enter-active,
+  .skeleton-card.card-enter-active {
     translate: 0 0;
     opacity: 1;
+    /* Keep horizontal centering via transform */
+    transform: translateX(-50%);
     transition: translate 0.5s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  /* Hydrating cards maintain absolute centering */
+  .card.card-hydrating {
+    position: absolute;
+    width: 95vw;
+    max-width: 95vw;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
   .header-toolbar {
     column-gap: 14px;
   }
@@ -892,14 +918,24 @@ html.dark .bottom-nav {
   .app-header::before {
     content: none;
   }
-  .card {
+
+  /* Card spacing */
+  .card,
+  .skeleton-card {
     margin-top: 20px;
     border-radius: 20px;
   }
-  .card:first-of-type {
+  .card:first-of-type,
+  .skeleton-card:first-of-type {
     margin-top: 0;
   }
-  #list > .card {
+
+  /* ALL cards and skeletons strictly centered */
+  .card,
+  .skeleton-card,
+  #list > .card,
+  #list > .skeleton-card,
+  .card-placeholder {
     width: 95vw;
     max-width: 95vw;
     position: relative;
@@ -908,16 +944,33 @@ html.dark .bottom-nav {
     margin-left: 0;
     margin-right: 0;
   }
-  /* Fix entrance animation - use translate property for vertical animation only */
-  #list > .card.card-entering {
+
+  /* Animation states preserve horizontal centering */
+  #list > .card.card-entering,
+  .card.card-entering,
+  .skeleton-card.card-entering {
     translate: 0 40px;
     opacity: 0;
+    transform: translateX(-50%);
   }
-  #list > .card.card-enter-active {
+
+  #list > .card.card-enter-active,
+  .card.card-enter-active,
+  .skeleton-card.card-enter-active {
     translate: 0 0;
     opacity: 1;
+    transform: translateX(-50%);
     transition: translate 0.5s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Hydrating cards maintain absolute centering */
+  .card.card-hydrating {
+    position: absolute;
+    width: 95vw;
+    max-width: 95vw;
+    left: 50%;
+    transform: translateX(-50%);
   }
   .header-toolbar {
     display: flex;
@@ -1633,6 +1686,8 @@ html.dark .btn.danger:hover {
   transform-origin: top center;
   user-select: none;
   max-width: min(80vw, 1500px); /* Updated for responsive width */
+  /* Ensure centering in desktop by default */
+  display: block;
 }
 .card::before {
   content: none;
@@ -1640,27 +1695,52 @@ html.dark .btn.danger:hover {
 .card:hover {
   border-color: rgba(255,159,28,0.28);
 }
-/* Card stagger load animation - Enhanced fade up effect */
+/* Card stagger load animation - Desktop default uses translate property */
 .card.card-entering {
   opacity: 0;
-  /* Increase distance to make the "up" movement obvious */
-  transform: translateY(40px);
+  translate: 0 40px;
 }
 .card.card-enter-active {
   opacity: 1;
-  transform: translateY(0);
-  /* Increase duration to 0.5s so the fade is smoother */
+  translate: 0 0;
   transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+              translate 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Override for desktop to ensure no horizontal movement */
+/* Override for desktop to ensure proper centering and vertical-only animation */
 @media (min-width: 901px) {
-  #list > .card.card-entering {
-    transform: translateY(40px) !important;
+  .card,
+  .skeleton-card,
+  #list > .card,
+  #list > .skeleton-card {
+    margin-left: auto;
+    margin-right: auto;
+    left: auto;
+    right: auto;
+    transform: none;
   }
-  #list > .card.card-enter-active {
-    transform: translateY(0) !important;
+
+  /* Animation states use translate property to avoid transform conflicts */
+  #list > .card.card-entering,
+  .card.card-entering {
+    translate: 0 40px;
+    opacity: 0;
+  }
+  #list > .card.card-enter-active,
+  .card.card-enter-active {
+    translate: 0 0;
+    opacity: 1;
+    transition: translate 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Hydrating cards maintain centering */
+  .card.card-hydrating {
+    position: absolute;
+    width: 100%;
+    max-width: min(80vw, 1500px);
+    left: 50%;
+    transform: translateX(-50%);
   }
 }
 .habit-visual {

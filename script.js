@@ -851,8 +851,10 @@ window.Storage = Storage;
         wrap.style.borderColor = 'rgba(' + rgb + ',0.1)';
       } catch (e){}
 
-      // Ensure centering is applied immediately in mobile (prevent flash from right)
+      // Ensure centering is applied immediately for all viewports (prevent flash)
       if (window.innerWidth <= 900) {
+        wrap.style.position = 'relative';
+        wrap.style.left = '50%';
         wrap.style.transform = 'translateX(-50%)';
       }
 
@@ -981,6 +983,12 @@ window.Storage = Storage;
           fullCard.classList.remove('card-hydrating');
           fullCard.style.transition = '';
           fullCard.style.opacity = '';
+          // Clean up inline styles - let CSS take over
+          if (window.innerWidth <= 900) {
+            fullCard.style.position = '';
+            fullCard.style.left = '';
+            fullCard.style.transform = '';
+          }
 
           // Initialize year wheel for the hydrated card
           requestAnimationFrame(function() {
@@ -999,8 +1007,10 @@ window.Storage = Storage;
       wrap.className = 'card';
       wrap.dataset.habitId = habit.id;
 
-      // Ensure centering is applied immediately in mobile (prevent flash from right)
+      // Ensure centering is applied immediately for all viewports (prevent flash)
       if (window.innerWidth <= 900) {
+        wrap.style.position = 'relative';
+        wrap.style.left = '50%';
         wrap.style.transform = 'translateX(-50%)';
       }
 
