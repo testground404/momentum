@@ -2893,6 +2893,47 @@ html[data-view="month"] .icon-year-view {
   opacity: 0;
 }
 
+/* width-toggle button - hide on mobile */
+#width-toggle {
+  display: none;
+}
+
+@media (min-width: 901px) {
+  #width-toggle {
+    display: flex;
+  }
+}
+
+/* width-toggle icon swap */
+.width-toggle .icon-width-normal,
+.width-toggle .icon-width-wide {
+  position: absolute;
+  transition: opacity 0.2s ease;
+}
+
+html:not([data-card-width="wide"]) .icon-width-normal,
+html[data-card-width="wide"] .icon-width-wide {
+  opacity: 1;
+}
+
+html:not([data-card-width="wide"]) .icon-width-wide,
+html[data-card-width="wide"] .icon-width-normal {
+  opacity: 0;
+}
+
+/* Wide card mode - only for desktop */
+@media (min-width: 901px) {
+  html[data-card-width="wide"] .card,
+  html[data-card-width="wide"] .skeleton-card {
+    max-width: 95vw;
+    width: calc(100% - 40px);
+  }
+
+  html[data-card-width="wide"] .card.card-hydrating {
+    max-width: 95vw;
+  }
+}
+
 /* theme-toggle icon swap */
 .theme-toggle .icon-moon {
   transform: translate(-50%, -50%) rotate(0deg) scale(1);

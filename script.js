@@ -177,6 +177,37 @@ window.Storage = Storage;
     }
     var EASEIO = getComputedStyle(document.documentElement).getPropertyValue('--ease-io').trim() || 'cubic-bezier(0.4,0,0.2,1)';
 
+    /* ────────── Width Controls ────────── */
+    var widthToggle = document.getElementById('width-toggle');
+    var WIDTHKEY = 'cardwidthpreference';
+    function getInitialWidth() {
+      return localStorage.getItem(WIDTHKEY) || 'normal';
+    }
+    function applyCardWidth(width) {
+      if (width === 'wide') {
+        document.documentElement.setAttribute('data-card-width', 'wide');
+        if (widthToggle) {
+          widthToggle.setAttribute('aria-label', 'Toggle to normal width');
+          widthToggle.setAttribute('title', 'Toggle to normal width');
+        }
+      } else {
+        document.documentElement.removeAttribute('data-card-width');
+        if (widthToggle) {
+          widthToggle.setAttribute('aria-label', 'Toggle to wide width');
+          widthToggle.setAttribute('title', 'Toggle to wide width');
+        }
+      }
+      localStorage.setItem(WIDTHKEY, width);
+    }
+    if (widthToggle) {
+      widthToggle.addEventListener('click', function () {
+        var current = document.documentElement.getAttribute('data-card-width') === 'wide' ? 'wide' : 'normal';
+        var next = current === 'wide' ? 'normal' : 'wide';
+        applyCardWidth(next);
+      });
+    }
+    applyCardWidth(getInitialWidth());
+
     /* ────────── Storage Model ────────── */
     var STORAGEKEY = 'habits';
     var habitCache = {
