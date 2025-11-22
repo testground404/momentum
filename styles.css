@@ -830,9 +830,7 @@ html.dark .bottom-nav {
 
   /* ALL cards strictly centered at 50% with translateX */
   .card,
-  .skeleton-card,
   #list > .card,
-  #list > .skeleton-card,
   .card-placeholder {
     width: 95vw;
     max-width: 95vw;
@@ -843,10 +841,17 @@ html.dark .bottom-nav {
     margin-right: 0;
   }
 
+  /* Skeleton cards inside skeleton-list don't need positioning - parent is centered */
+  #skeleton-list .skeleton-card {
+    width: 100%;
+    position: static;
+    left: auto;
+    transform: none;
+  }
+
   /* Animation states preserve horizontal centering */
   #list > .card.card-entering,
-  .card.card-entering,
-  .skeleton-card.card-entering {
+  .card.card-entering {
     translate: 0 40px;
     opacity: 0;
     /* Keep horizontal centering via transform */
@@ -854,8 +859,7 @@ html.dark .bottom-nav {
   }
 
   #list > .card.card-enter-active,
-  .card.card-enter-active,
-  .skeleton-card.card-enter-active {
+  .card.card-enter-active {
     translate: 0 0;
     opacity: 1;
     /* Keep horizontal centering via transform */
@@ -932,9 +936,7 @@ html.dark .bottom-nav {
 
   /* ALL cards and skeletons strictly centered */
   .card,
-  .skeleton-card,
   #list > .card,
-  #list > .skeleton-card,
   .card-placeholder {
     width: 95vw;
     max-width: 95vw;
@@ -945,18 +947,24 @@ html.dark .bottom-nav {
     margin-right: 0;
   }
 
+  /* Skeleton cards inside skeleton-list don't need positioning - parent is centered */
+  #skeleton-list .skeleton-card {
+    width: 100%;
+    position: static;
+    left: auto;
+    transform: none;
+  }
+
   /* Animation states preserve horizontal centering */
   #list > .card.card-entering,
-  .card.card-entering,
-  .skeleton-card.card-entering {
+  .card.card-entering {
     translate: 0 40px;
     opacity: 0;
     transform: translateX(-50%);
   }
 
   #list > .card.card-enter-active,
-  .card.card-enter-active,
-  .skeleton-card.card-enter-active {
+  .card.card-enter-active {
     translate: 0 0;
     opacity: 1;
     transform: translateX(-50%);
