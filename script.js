@@ -2491,7 +2491,7 @@ window.Storage = Storage;
       s.textContent = [
         '.dot-wave{animation:dotWave .42s cubic-bezier(0.4,0,0.2,1) both;}',
         '.dot-wave-active::before,.dot-wave[aria-pressed="true"]::before{animation:dotWaveInner .42s cubic-bezier(0.4,0,0.2,1) both;}',
-        '.dot[aria-disabled="true"].dot-wave,.dot[aria-disabled="true"].dot-wave::before{opacity:.5!important;}',
+        '.dot[aria-disabled="true"].dot-wave,.dot[aria-disabled="true"].dot-wave::before{opacity:.3!important;}',
         '@keyframes dotWave{0%{transform:scale(.4);opacity:0;}100%{transform:scale(1);opacity:1;}}',
         '@keyframes dotWaveInner{0%{transform:scale(.4);opacity:0;}100%{transform:scale(1);opacity:1;}}'
       ].join('');
