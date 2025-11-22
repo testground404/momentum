@@ -22,13 +22,14 @@
   <!-- Immediate auth check to prevent login page flash for authenticated users -->
   <script>
     (function() {
-      // Check localStorage for session
+      // Check localStorage for session (localStorage mode)
       var session = localStorage.getItem('momentum_session');
       if (session) {
         try {
           var sessionData = JSON.parse(session);
           // If user is authenticated, redirect immediately (before page renders)
           if (sessionData && sessionData.username) {
+            console.log('Immediate redirect: localStorage session found');
             window.location.replace('app.html');
             return;
           }
@@ -36,10 +37,33 @@
           // Invalid session data, continue to login page
         }
       }
-      // User not authenticated, show the login page
-      document.addEventListener('DOMContentLoaded', function() {
-        document.body.classList.add('show-login');
-      });
+
+      // Check Firebase authentication persistence
+      // Firebase stores auth state in indexedDB or localStorage with keys starting with 'firebase:authUser:'
+      // This is a quick synchronous check that works before Firebase SDK loads
+      try {
+        var hasFirebaseAuth = false;
+        // Check for Firebase auth persistence in localStorage
+        for (var i = 0; i < localStorage.length; i++) {
+          var key = localStorage.key(i);
+          if (key && key.startsWith('firebase:authUser:')) {
+            var authData = localStorage.getItem(key);
+            if (authData && authData !== 'null') {
+              console.log('Immediate redirect: Firebase auth persistence found');
+              hasFirebaseAuth = true;
+              window.location.replace('app.html');
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.log('Firebase auth check failed:', e);
+        // Continue to show login page
+      }
+
+      // DON'T automatically show login page here
+      // Let login.js control visibility after proper auth check
+      // This prevents flash when Firebase auth is being verified
     })();
   </script>
 

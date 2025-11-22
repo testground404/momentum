@@ -177,6 +177,39 @@ window.Storage = Storage;
     }
     var EASEIO = getComputedStyle(document.documentElement).getPropertyValue('--ease-io').trim() || 'cubic-bezier(0.4,0,0.2,1)';
 
+    /* ────────── Width Controls ────────── */
+    var widthToggle = document.getElementById('width-toggle');
+    var WIDTHKEY = 'cardwidthpreference';
+    function getInitialWidth() {
+      return localStorage.getItem(WIDTHKEY) || 'normal';
+    }
+    function applyCardWidth(width) {
+      if (width === 'wide') {
+        document.documentElement.setAttribute('data-card-width', 'wide');
+        console.log('Card width set to WIDE');
+        if (widthToggle) {
+          widthToggle.setAttribute('aria-label', 'Toggle to normal width');
+          widthToggle.setAttribute('title', 'Toggle to normal width');
+        }
+      } else {
+        document.documentElement.removeAttribute('data-card-width');
+        console.log('Card width set to NORMAL');
+        if (widthToggle) {
+          widthToggle.setAttribute('aria-label', 'Toggle to wide width');
+          widthToggle.setAttribute('title', 'Toggle to wide width');
+        }
+      }
+      localStorage.setItem(WIDTHKEY, width);
+    }
+    if (widthToggle) {
+      widthToggle.addEventListener('click', function () {
+        var current = document.documentElement.getAttribute('data-card-width') === 'wide' ? 'wide' : 'normal';
+        var next = current === 'wide' ? 'normal' : 'wide';
+        applyCardWidth(next);
+      });
+    }
+    applyCardWidth(getInitialWidth());
+
     /* ────────── Storage Model ────────── */
     var STORAGEKEY = 'habits';
     var habitCache = {
@@ -835,14 +868,14 @@ window.Storage = Storage;
     }
 
     /**
-     * Render a lightweight placeholder card for lazy loading
+     * Render a skeleton card for lazy loading
      */
     function renderPlaceholderCard(habit) {
       var wrap = document.createElement('section');
-      wrap.className = 'card card-placeholder';
+      wrap.className = 'card skeleton-card card-placeholder';
       wrap.dataset.habitId = habit.id;
-      wrap.style.minHeight = '400px'; // Reserve space to prevent layout shift
 
+      // Apply accent color to skeleton
       var acc = habit.accent || '#3d85c6';
       try {
         var rgb = hexToRgb(acc);
@@ -851,43 +884,93 @@ window.Storage = Storage;
         wrap.style.borderColor = 'rgba(' + rgb + ',0.1)';
       } catch (e){}
 
-      // Create minimal header with just the title
+      // Create skeleton header
       var header = document.createElement('div');
       header.className = 'card-header';
 
-      var title = document.createElement('h2');
-      title.className = 'card-title';
-      title.style.opacity = '0.5';
+      var headerTopRow = document.createElement('div');
+      headerTopRow.className = 'header-top-row';
 
-      var visualEl = document.createElement('span');
-      visualEl.className = 'habit-visual';
+      var left = document.createElement('div');
+      left.className = 'left';
 
-      var icon = document.createElement('i');
-      icon.className = 'ti ti-' + (habit.visualValue || 'target');
-      icon.style.color = acc;
-      visualEl.appendChild(icon);
+      var skCircle = document.createElement('div');
+      skCircle.className = 'sk-circle skeleton-shimmer';
+      left.appendChild(skCircle);
 
-      var nameSpan = document.createElement('span');
-      nameSpan.className = 'habit-name';
-      nameSpan.textContent = habit.name;
+      var skLine = document.createElement('div');
+      skLine.className = 'sk-line sk-line-lg skeleton-shimmer';
+      left.appendChild(skLine);
 
-      title.appendChild(visualEl);
-      title.appendChild(nameSpan);
-      header.appendChild(title);
+      headerTopRow.appendChild(left);
+
+      var buttons = document.createElement('div');
+      buttons.className = 'card-header-buttons';
+
+      var btn1 = document.createElement('div');
+      btn1.className = 'sk-button sk-button-small skeleton-shimmer';
+      buttons.appendChild(btn1);
+
+      var btn2 = document.createElement('div');
+      btn2.className = 'sk-button sk-button-small skeleton-shimmer';
+      buttons.appendChild(btn2);
+
+      headerTopRow.appendChild(buttons);
+      header.appendChild(headerTopRow);
+
+      // Pills wrapper
+      var pillsWrapper = document.createElement('div');
+      pillsWrapper.className = 'card-pills-wrapper';
+
+      var subtitleWrap = document.createElement('div');
+      subtitleWrap.className = 'card-subtitle-wrap';
+
+      var subtitle = document.createElement('div');
+      subtitle.className = 'card-subtitle';
+
+      for (var i = 0; i < 4; i++) {
+        var pill = document.createElement('div');
+        pill.className = 'sk-pill skeleton-shimmer';
+        subtitle.appendChild(pill);
+      }
+
+      for (var j = 0; j < 2; j++) {
+        var widePill = document.createElement('div');
+        widePill.className = 'sk-pill sk-pill-wide skeleton-shimmer';
+        subtitle.appendChild(widePill);
+      }
+
+      subtitleWrap.appendChild(subtitle);
+      pillsWrapper.appendChild(subtitleWrap);
+      header.appendChild(pillsWrapper);
+
+      // Divider with year wheel skeleton
+      var divider = document.createElement('div');
+      divider.className = 'divider';
+
+      var yearWheel = document.createElement('div');
+      yearWheel.className = 'sk-year-wheel skeleton-shimmer';
+      divider.appendChild(yearWheel);
+
+      header.appendChild(divider);
       wrap.appendChild(header);
 
-      // Add loading indicator
-      var loadingDiv = document.createElement('div');
-      loadingDiv.className = 'card-loading';
-      loadingDiv.style.cssText = 'padding: 2rem; text-align: center; opacity: 0.3;';
-      loadingDiv.textContent = 'Loading...';
-      wrap.appendChild(loadingDiv);
+      // Card content with skeleton dots
+      var content = document.createElement('div');
+      content.className = 'card-content';
+
+      var dotsGrid = document.createElement('div');
+      dotsGrid.className = 'dots-grid sk-dots-desktop';
+      content.appendChild(dotsGrid);
+
+      wrap.appendChild(content);
 
       return wrap;
     }
 
     /**
      * Hydrate a placeholder card with full content
+     * Creates smooth fade transition from skeleton to real card
      */
     function hydrateCard(placeholderCard, habitId) {
       var habit = HABITS.find(function(h) { return h.id === habitId; });
@@ -896,15 +979,48 @@ window.Storage = Storage;
       // Render full card
       var fullCard = renderHabitCard(habit);
 
-      // Copy over the placeholder's position in DOM
-      placeholderCard.parentNode.replaceChild(fullCard, placeholderCard);
+      // Start with card invisible
+      fullCard.style.opacity = '0';
+      fullCard.classList.add('card-hydrating');
 
-      // Remove placeholder class
-      fullCard.classList.remove('card-placeholder');
+      // Ensure proper positioning during crossfade in mobile
+      if (window.innerWidth <= 900) {
+        fullCard.style.left = '50%';
+        fullCard.style.transform = 'translateX(-50%)';
+      }
 
-      // Initialize year wheel for the hydrated card
+      // Insert full card before placeholder
+      placeholderCard.parentNode.insertBefore(fullCard, placeholderCard);
+
+      // Fade out skeleton and fade in real card simultaneously
       requestAnimationFrame(function() {
-        initHabitYearWheel(habit);
+        // Start fade out of skeleton
+        placeholderCard.classList.add('skeleton-fading-out');
+
+        // Start fade in of real card
+        fullCard.style.transition = 'opacity 0.3s ease-in';
+        fullCard.style.opacity = '1';
+
+        // After transition completes, remove skeleton and cleanup
+        setTimeout(function() {
+          if (placeholderCard.parentNode) {
+            placeholderCard.parentNode.removeChild(placeholderCard);
+          }
+          fullCard.classList.remove('card-hydrating');
+          fullCard.style.transition = '';
+          fullCard.style.opacity = '';
+          // Clean up inline styles - let CSS take over
+          if (window.innerWidth <= 900) {
+            fullCard.style.position = '';
+            fullCard.style.left = '';
+            fullCard.style.transform = '';
+          }
+
+          // Initialize year wheel for the hydrated card
+          requestAnimationFrame(function() {
+            initHabitYearWheel(habit);
+          });
+        }, 300);
       });
     }
 
@@ -916,6 +1032,13 @@ window.Storage = Storage;
       var wrap = document.createElement('section');
       wrap.className = 'card';
       wrap.dataset.habitId = habit.id;
+
+      // Ensure centering is applied immediately for all viewports (prevent flash)
+      if (window.innerWidth <= 900) {
+        wrap.style.position = 'relative';
+        wrap.style.left = '50%';
+        wrap.style.transform = 'translateX(-50%)';
+      }
 
       var acc = habit.accent || '#3d85c6';
       try {
@@ -1166,14 +1289,12 @@ window.Storage = Storage;
       if (!hasHydratedList) {
         hasHydratedList = true;
 
-        // IMPROVED: Wait for cards to be fully rendered before hiding skeleton
+        // IMPROVED: Smooth crossfade from skeleton to cards
         requestAnimationFrame(function() {
-          if (skeletonEl) skeletonEl.hidden = true;
-
-          // 1. Make list visible FIRST
+          // 1. Make list visible FIRST (cards still have opacity: 0 from card-entering)
           listEl.hidden = false;
 
-          // 2. Animate cards
+          // 2. Start card animations immediately
           if (!hasAnimatedInitialLoad) {
             hasAnimatedInitialLoad = true;
             cardsToAnimate.forEach(function(card, index) {
@@ -1181,7 +1302,19 @@ window.Storage = Storage;
             });
           }
 
-          // 3. Initialize Year Wheels NOW that elements have width
+          // 3. Trigger skeleton fade-out by adding class
+          if (skeletonEl) {
+            skeletonEl.classList.add('fading-out');
+            console.log('Starting skeleton fade-out');
+
+            // 4. After fade-out completes (250ms), actually hide it
+            setTimeout(function() {
+              skeletonEl.hidden = true;
+              console.log('Skeleton hidden - app ready');
+            }, 250);
+          }
+
+          // 5. Initialize Year Wheels NOW that elements have width
           // This ensures offsetWidth is > 0 so centering works
           if (newCards.length > 0) {
             requestAnimationFrame(function() {
@@ -1372,6 +1505,59 @@ window.Storage = Storage;
       });
     }
 
+    /**
+     * Update aria-disabled state on existing dots when start date changes
+     * Also updates visual state to ensure disabled dots appear correctly
+     */
+    function updateDotsDisabledState(habit) {
+      var card = listEl.querySelector('[data-habit-id="' + habit.id + '"]');
+      if (!card) return;
+
+      var isCurrentYear = habit.year === CURRENTYEAR;
+      var todayIndex = dayIndexForYear(CURRENTYEAR);
+      var startIndex = getHabitStartIndex(habit);
+
+      // Get the start date year to properly handle dots in the start year
+      var startDate = getHabitStartDate(habit);
+      var startYear = startDate ? startDate.getFullYear() : habit.year;
+
+      var allDots = card.querySelectorAll('.dot');
+      allDots.forEach(function(dot) {
+        var index = Number(dot.dataset.index);
+        var isFuture = isCurrentYear && index > todayIndex;
+
+        // For the start year, check against the actual start index
+        // For years before start year, all dots are disabled
+        // For years after start year, only future dates are disabled
+        var isBeforeStart = false;
+        if (habit.year === startYear) {
+          isBeforeStart = index < startIndex;
+        } else if (habit.year < startYear) {
+          isBeforeStart = true; // Entire year is before start
+        }
+
+        if (isFuture || isBeforeStart) {
+          dot.setAttribute('aria-disabled', 'true');
+          // Remove checked state from dots that are now disabled
+          if (isBeforeStart && habit.dots && habit.dots[index]) {
+            habit.dots[index] = false;
+            dot.removeAttribute('aria-pressed');
+          }
+        } else {
+          dot.removeAttribute('aria-disabled');
+          // Update visual state to match data
+          if (habit.dots && habit.dots[index]) {
+            dot.setAttribute('aria-pressed', 'true');
+          } else {
+            dot.removeAttribute('aria-pressed');
+          }
+        }
+      });
+
+      // Mark stats as dirty since we may have changed dot states
+      habit._dirtyStats = true;
+    }
+
     function buildYearView(habit, container, todayIndex) {
       // Create a document fragment to minimize reflows
       var frag = document.createDocumentFragment();
@@ -1384,6 +1570,7 @@ window.Storage = Storage;
       var dots = habit.dots;
       var offDays = habit.offDays;
       var notes = habit.notes;
+      var startIndex = getHabitStartIndex(habit);
 
       for (var i = 0; i < days; i++) {
         var dot = document.createElement('div');
@@ -1407,6 +1594,13 @@ window.Storage = Storage;
           dot.setAttribute('aria-current', 'date');
         }
 
+        // Mark future dates and dates before start as disabled
+        var isFuture = isCurrentYear && i > todayIndex;
+        var isBeforeStart = i < startIndex;
+        if (isFuture || isBeforeStart) {
+          dot.setAttribute('aria-disabled', 'true');
+        }
+
         frag.appendChild(dot);
       }
 
@@ -1424,6 +1618,7 @@ window.Storage = Storage;
       var dots = habit.dots;
       var offDays = habit.offDays;
       var notes = habit.notes;
+      var startIndex = getHabitStartIndex(habit);
 
       for (var month = 0; month < 12; month++) {
         var monthContainer = document.createElement('div');
@@ -1463,6 +1658,13 @@ window.Storage = Storage;
           }
           if (isCurrentYear && dayOfYearIndex === todayIndex) {
             dot.setAttribute('aria-current', 'date');
+          }
+
+          // Mark future dates and dates before start as disabled
+          var isFuture = isCurrentYear && dayOfYearIndex > todayIndex;
+          var isBeforeStart = dayOfYearIndex < startIndex;
+          if (isFuture || isBeforeStart) {
+            dot.setAttribute('aria-disabled', 'true');
           }
 
           frag.appendChild(dot);
@@ -1609,6 +1811,129 @@ window.Storage = Storage;
         var hid = titleBtn.dataset.habitId;
         var habit = HABITS.find(function (h){ return h.id === hid; });
         if (habit) openStatsOverlay(habit);
+      }
+    });
+
+    /* ────────── Mobile Double-Tap to Toggle Today ────────── */
+    // Double-tap on card body in mobile mode to toggle today's date
+    var lastTapTime = 0;
+    var lastTapTarget = null;
+    var DOUBLE_TAP_DELAY = 300; // milliseconds
+
+    listEl.addEventListener('touchend', function(e) {
+      // Only on mobile screens
+      if (window.innerWidth > 900) return;
+
+      var currentTime = new Date().getTime();
+      var tapTimeDiff = currentTime - lastTapTime;
+
+      // Check if tap is on card body (not on buttons, inputs, or interactive elements)
+      var card = e.target.closest('.card');
+      var isInteractiveElement = e.target.closest('button, input, select, textarea, a, .dot, .control-btn, .habit-title-btn');
+
+      if (card && !isInteractiveElement && tapTimeDiff < DOUBLE_TAP_DELAY && tapTimeDiff > 0 && lastTapTarget === card) {
+        // Double tap detected on card body!
+        e.preventDefault(); // Prevent zoom or other default behavior
+
+        var habitId = card.dataset.habitId;
+        var habit = HABITS.find(function(h) { return h.id === habitId; });
+
+        if (!habit) return;
+
+        // Same logic as mark-today button
+        if (habit.year === CURRENTYEAR) {
+          var todayIdx = dayIndexForYear(CURRENTYEAR);
+
+          // Find the dot in the currently active view
+          var currentView = document.documentElement.dataset.view || 'year';
+          var activeContainer = currentView === 'year'
+            ? card.querySelector('.dots-grid-year-view')
+            : card.querySelector('.months-container-month-view');
+
+          var todayDot = activeContainer ? activeContainer.querySelector('.dot[data-index="' + todayIdx + '"]') : null;
+
+          if (todayDot) {
+            var currentState = habit.dots[todayIdx];
+            var newState = !currentState;
+            setDotState(todayDot, newState);
+
+            // Update mark-today button visual state
+            var markTodayBtn = card.querySelector('.mark-today-btn');
+            if (markTodayBtn) {
+              markTodayBtn.classList.toggle('marked', newState);
+              markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
+              markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
+            }
+
+            onHabitChanged(habit);
+            announce(newState ? "Marked today" : "Unmarked today");
+
+            // Add visual feedback for double-tap - preserve mobile centering transform
+            var isMobileCentered = window.innerWidth <= 900;
+            if (isMobileCentered) {
+              card.style.transform = 'translateX(-50%) scale(0.98)';
+              setTimeout(function() {
+                card.style.transform = 'translateX(-50%)';
+              }, 100);
+            } else {
+              card.style.transform = 'scale(0.98)';
+              setTimeout(function() {
+                card.style.transform = '';
+              }, 100);
+            }
+          }
+        } else {
+          // If viewing a different year, switch to current year first
+          var yearToSave = habit.year;
+          var habitStartDate = getHabitStartDate(habit);
+          var startYear = habitStartDate ? habitStartDate.getFullYear() : CURRENTYEAR;
+
+          if (yearToSave >= startYear && yearToSave <= CURRENTYEAR) {
+            if (!habit.yearHistory) habit.yearHistory = {};
+            habit.yearHistory[yearToSave] = {
+              dots: habit.dots.slice(),
+              offDays: habit.offDays.slice(),
+              notes: habit.notes.slice()
+            };
+          }
+
+          habit.year = CURRENTYEAR;
+          habit.days = daysInYear(CURRENTYEAR);
+
+          if (habit.yearHistory && habit.yearHistory[CURRENTYEAR]) {
+            var history = habit.yearHistory[CURRENTYEAR];
+            habit.dots = history.dots.slice();
+            habit.offDays = history.offDays.slice();
+            habit.notes = history.notes.slice();
+            habit._dirtyStats = true;
+          } else {
+            habit.dots = new Array(habit.days).fill(false);
+            habit.offDays = new Array(habit.days).fill(false);
+            habit.notes = new Array(habit.days).fill('');
+            applyFrequencyToHabit(habit);
+          }
+
+          var todayIdx = dayIndexForYear(CURRENTYEAR);
+          var todayIsBeforeStartDate = todayIdx < getHabitStartIndex(habit);
+
+          if (!todayIsBeforeStartDate) {
+            var newState = !habit.dots[todayIdx];
+            habit.dots[todayIdx] = newState;
+            if (newState) habit.offDays[todayIdx] = false;
+            habit._dirtyStats = true;
+          }
+
+          saveHabits(HABITS);
+          render();
+        }
+
+        // Reset tap tracking
+        lastTapTime = 0;
+        lastTapTarget = null;
+      } else {
+        // Record this tap
+        lastTapTime = currentTime;
+        lastTapTarget = card;
       }
     });
 
@@ -2017,32 +2342,47 @@ window.Storage = Storage;
         // 1. Confirm with the user
         console.log('Showing confirmation dialog...');
         var confirmed = await showConfirm(
-          'Clear History',
-          'Are you sure you want to uncheck all days for "' + habit.name + '"? This cannot be undone.'
+          'Reset Habit',
+          'Are you sure you want to reset "' + habit.name + '"? This will delete the habit and create a new one with the same settings. This cannot be undone.'
         );
         console.log('Confirmation result:', confirmed);
 
         if (confirmed) {
-          console.log('User confirmed, clearing history...');
-          console.log('Dots before:', habit.dots.filter(function(d) { return d; }).length, 'checked');
+          console.log('User confirmed, resetting habit...');
 
-          // 2. Reset all dots to false
-          habit.dots.fill(false);
-          console.log('Dots after fill:', habit.dots.filter(function(d) { return d; }).length, 'checked');
+          // 2. Store habit properties before deletion
+          var habitName = habit.name;
+          var habitAccent = habit.accent;
+          var habitIcon = habit.visualValue;
+          var habitStartDate = habit.startDate;
+          var habitFrequency = habit.frequency;
+          var habitIndex = HABITS.findIndex(function(h) { return h.id === id; });
+          console.log('Stored habit properties:', { name: habitName, icon: habitIcon, startDate: habitStartDate });
 
-          // 3. Re-apply frequency to ensure "off days" are restored
-          // (in case they were hidden by a completed task)
-          applyFrequencyToHabit(habit);
-          console.log('Applied frequency');
+          // 3. Remove old habit
+          if (habitIndex !== -1) {
+            HABITS.splice(habitIndex, 1);
+            console.log('Deleted old habit at index:', habitIndex);
+          }
 
-          // 4. Save and Render
+          // 4. Create new habit with same properties
+          var newHabitObj = newHabit(habitName, habitAccent, habitIcon, habitStartDate);
+          newHabitObj.frequency = habitFrequency;
+          applyFrequencyToHabit(newHabitObj);
+          console.log('Created new habit:', newHabitObj);
+
+          // 5. Insert at the same position or at the top
+          HABITS.splice(habitIndex, 0, newHabitObj);
+          console.log('Inserted new habit at index:', habitIndex);
+
+          // 6. Save and Render
           await saveHabits(HABITS);
           console.log('Saved habits');
           render();
           console.log('Rendered');
-          announce('History cleared');
+          announce('Habit reset');
 
-          // Optional: Close the modal after clearing
+          // Optional: Close the modal after resetting
           editHabitOverlay.close();
           console.log('Modal closed');
         } else {
@@ -2188,6 +2528,10 @@ window.Storage = Storage;
       }
       habit.frequency = freqObj;
       applyFrequencyToHabit(habit);
+
+      // Update disabled state of dots if start date changed
+      // This may clear some dot states, so do it before saving
+      updateDotsDisabledState(habit);
 
       saveHabits(HABITS);
       render();
@@ -2457,7 +2801,7 @@ window.Storage = Storage;
       s.textContent = [
         '.dot-wave{animation:dotWave .42s cubic-bezier(0.4,0,0.2,1) both;}',
         '.dot-wave-active::before,.dot-wave[aria-pressed="true"]::before{animation:dotWaveInner .42s cubic-bezier(0.4,0,0.2,1) both;}',
-        '.dot:disabled.dot-wave,.dot:disabled.dot-wave::before{opacity:.35!important;}',
+        '.dot[aria-disabled="true"].dot-wave,.dot[aria-disabled="true"].dot-wave::before{opacity:.3!important;}',
         '@keyframes dotWave{0%{transform:scale(.4);opacity:0;}100%{transform:scale(1);opacity:1;}}',
         '@keyframes dotWaveInner{0%{transform:scale(.4);opacity:0;}100%{transform:scale(1);opacity:1;}}'
       ].join('');
@@ -2468,7 +2812,12 @@ window.Storage = Storage;
     function applyWave(dotsNodeList) {
       if (!dotsNodeList || !dotsNodeList.length) return;
 
-      var dots = Array.prototype.slice.call(dotsNodeList).map(function (dot, idx) {
+      // Filter out disabled dots - they should not animate
+      var enabledDots = Array.prototype.slice.call(dotsNodeList).filter(function(dot) {
+        return !dot.getAttribute('aria-disabled');
+      });
+
+      var dots = enabledDots.map(function (dot, idx) {
         var rect = dot.getBoundingClientRect();
         return {
           el: dot,
@@ -2503,7 +2852,7 @@ window.Storage = Storage;
       });
     }
 
-    /* view toggle - simplified CSS-driven approach with smooth height animation */
+    /* view toggle - synchronized card and dot animations */
     viewToggle.addEventListener('click', function (){
       var currentView = document.documentElement.dataset.view || 'year';
       var targetView = currentView === 'year' ? 'month' : 'year';
@@ -2511,36 +2860,90 @@ window.Storage = Storage;
       var cards = listEl.querySelectorAll('.card');
       var contentHeights = [];
 
-      // Step 1: Capture current heights
+      // Step 1: Capture current heights and lock them
       cards.forEach(function(card) {
         var content = card.querySelector('.card-content');
         if (content) {
           var currentHeight = content.offsetHeight;
           contentHeights.push({ content: content, oldHeight: currentHeight });
-          // Set explicit height to current height
+          // Lock current height to prevent immediate change
           content.style.height = currentHeight + 'px';
         }
       });
 
-      // Step 2: Toggle the view (CSS will hide/show the containers)
+      // Step 2: Clear old animation states to allow re-triggering
+      var allDots = document.querySelectorAll('.dot');
+      allDots.forEach(function(dot) {
+        dot.style.animation = 'none';
+        dot.style.animationDelay = '';
+      });
+
+      var allMonthContainers = document.querySelectorAll('.month-container');
+      allMonthContainers.forEach(function(container) {
+        container.style.animation = 'none';
+      });
+
+      // Force reflow to reset animations
+      void document.body.offsetHeight;
+
+      // Step 3: Toggle the view (this changes which containers are visible)
       document.documentElement.dataset.view = targetView;
       localStorage.setItem(VIEWKEY, targetView);
       updateViewToggleLabels(targetView);
 
-      // Step 3: Measure new heights and animate
+      // Step 4: Wait for DOM to update, then prepare animations
       requestAnimationFrame(function() {
+        // Set animation delays for the dots
+        if (targetView === 'year') {
+          var yearViewDots = document.querySelectorAll('.dots-grid-year-view .dot');
+          yearViewDots.forEach(function(dot, index) {
+            var delay = Math.min(index * 0.003, 1.0); // 3ms per dot, max 1s
+            dot.style.animationDelay = delay + 's';
+          });
+        } else {
+          var monthContainers = document.querySelectorAll('.months-container-month-view .month-container');
+          monthContainers.forEach(function(container, monthIndex) {
+            var monthDots = container.querySelectorAll('.dot');
+            monthDots.forEach(function(dot, dotIndex) {
+              var delay = dotIndex * 0.01; // 10ms per dot
+              dot.style.animationDelay = delay + 's';
+            });
+          });
+        }
+
+        // Measure new heights (after view has changed)
         contentHeights.forEach(function(item) {
           var newHeight = item.content.scrollHeight;
-          // Animate to new height
-          item.content.style.height = newHeight + 'px';
+          item.newHeight = newHeight;
         });
 
-        // Step 4: Clean up after transition
-        setTimeout(function() {
+        // Step 5: Force another reflow to ensure heights are measured
+        void document.body.offsetHeight;
+
+        // Step 6: Trigger BOTH animations at exactly the same instant
+        requestAnimationFrame(function() {
+          // Set new heights to trigger CSS transition
           contentHeights.forEach(function(item) {
-            item.content.style.height = '';
+            item.content.style.height = item.newHeight + 'px';
           });
-        }, 500);
+
+          // Enable dot animations at the same instant
+          document.documentElement.classList.add('view-transitioning');
+          allDots.forEach(function(dot) {
+            dot.style.animation = '';
+          });
+          allMonthContainers.forEach(function(container) {
+            container.style.animation = '';
+          });
+
+          // Step 7: Clean up after all animations complete
+          setTimeout(function() {
+            contentHeights.forEach(function(item) {
+              item.content.style.height = '';
+            });
+            document.documentElement.classList.remove('view-transitioning');
+          }, 1500);
+        });
       });
     });
 
@@ -2738,8 +3141,18 @@ window.Storage = Storage;
 
     /* init */
     async function initializeApp() {
+      // Ensure skeleton loader is visible during authentication and data loading
+      if (skeletonEl) {
+        skeletonEl.hidden = false;
+        console.log('Showing skeleton loader during initialization');
+      }
+      if (listEl) {
+        listEl.hidden = true;
+      }
+
       // For Firebase mode, wait for auth state to be ready
       if (typeof Auth !== 'undefined' && Auth.useFirebase) {
+        console.log('Checking Firebase authentication...');
         await new Promise(function(resolve) {
           var unsubscribe = Auth.onAuthStateChanged(function(user) {
             if (user) {
@@ -2749,22 +3162,29 @@ window.Storage = Storage;
             }
           });
         });
+        console.log('Firebase authentication confirmed');
+      } else {
+        console.log('Using localStorage authentication');
       }
 
       // Load habits from storage (Firebase or localStorage)
+      console.log('Loading habits data...');
       var loadedHabits = await loadHabits();
       HABITS = loadedHabits.map(rolloverIfNeeded);
+      console.log('Habits loaded:', HABITS.length);
 
       // Set initial view
       var initialView = getInitialView();
       document.documentElement.dataset.view = initialView;
       updateViewToggleLabels(initialView);
 
-      // Render the UI
+      // Render the UI (this will hide skeleton and show list)
+      console.log('Rendering UI...');
       render();
       ensureWaveStyles();
 
       initCustomSelects();
+      console.log('App initialization complete');
     }
 
     /* ────────── Year Wheel Centering Fix ────────── */

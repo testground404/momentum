@@ -79,10 +79,10 @@ html.dark {
 
 @media (max-width: 768px) {
   :root {
-    --dot-outer: 12px;
-    --dot-inner: 6px;
-    --dot-active: 9px;
-    --gap: 3px;
+    --dot-outer: 14px;
+    --dot-inner: 7px;
+    --dot-active: 11px;
+    --gap: 4px;
   }
 }
 
@@ -97,7 +97,6 @@ html,body {
   background:var(--bg);
   color:var(--text);
   font-family:'Inter', -apple-system,BlinkMacSystemFont,'Segoe UI','Inter','Roboto',system-ui,sans-serif;
-  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
   overflow-x: hidden;
 }
 body.app-shell {
@@ -190,6 +189,44 @@ body.scroll-lock {
   letter-spacing:-0.02em;
   flex:1;
   min-width:0;
+  position: relative;
+  cursor: help;
+  transition: color 0.2s ease;
+}
+
+/* Version tooltip */
+.title::after {
+  content: attr(data-version);
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: var(--card);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(5px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.title:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0s;
+}
+
+.title:hover {
+  color: var(--primary);
 }
 .header-toolbar {
   display: flex;
@@ -785,20 +822,61 @@ html.dark .bottom-nav {
     top: 10px; /* Changed from 5px to 10px */
     left: 50%;
     transform: translateX(-50%);
-    width: 96vw;
-    max-width: 96vw;
+    width: 95vw;
+    max-width: 95vw;
     margin-left: auto;
     margin-right: auto;
   }
-  #list > .card {
-    width: 96vw;
-    max-width: 96vw;
+
+  /* ALL cards strictly centered at 50% with translateX */
+  .card,
+  #list > .card,
+  .card-placeholder {
+    width: 95vw;
+    max-width: 95vw;
     position: relative;
     left: 50%;
     transform: translateX(-50%);
     margin-left: 0;
     margin-right: 0;
   }
+
+  /* Skeleton cards inside skeleton-list don't need positioning - parent is centered */
+  #skeleton-list .skeleton-card {
+    width: 100%;
+    position: static;
+    left: auto;
+    transform: none;
+  }
+
+  /* Animation states preserve horizontal centering */
+  #list > .card.card-entering,
+  .card.card-entering {
+    translate: 0 40px;
+    opacity: 0;
+    /* Keep horizontal centering via transform */
+    transform: translateX(-50%);
+  }
+
+  #list > .card.card-enter-active,
+  .card.card-enter-active {
+    translate: 0 0;
+    opacity: 1;
+    /* Keep horizontal centering via transform */
+    transform: translateX(-50%);
+    transition: translate 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Hydrating cards maintain absolute centering */
+  .card.card-hydrating {
+    position: absolute;
+    width: 95vw;
+    max-width: 95vw;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
   .header-toolbar {
     column-gap: 14px;
   }
@@ -824,7 +902,7 @@ html.dark .bottom-nav {
     padding: 16px 0 80px; /* Removed left and right padding */
     padding-top: 160px; /* Space for fixed header */
   }
-  /* Both header and cards use 96vw for perfect width alignment */
+  /* Both header and cards use 95vw for perfect width alignment */
   .app-header {
     padding-left: 0;
     padding-right: 0;
@@ -832,8 +910,8 @@ html.dark .bottom-nav {
     top: 10px; /* Changed from 5px to 10px */
     left: 50%;
     transform: translateX(-50%);
-    width: 96vw;
-    max-width: 96vw;
+    width: 95vw;
+    max-width: 95vw;
     margin-left: auto;
     margin-right: auto;
     margin-top: 0;
@@ -844,21 +922,63 @@ html.dark .bottom-nav {
   .app-header::before {
     content: none;
   }
-  .card {
+
+  /* Card spacing */
+  .card,
+  .skeleton-card {
     margin-top: 20px;
     border-radius: 20px;
   }
-  .card:first-of-type {
+  .card:first-of-type,
+  .skeleton-card:first-of-type {
     margin-top: 0;
   }
-  #list > .card {
-    width: 96vw;
-    max-width: 96vw;
+
+  /* ALL cards and skeletons strictly centered */
+  .card,
+  #list > .card,
+  .card-placeholder {
+    width: 95vw;
+    max-width: 95vw;
     position: relative;
     left: 50%;
     transform: translateX(-50%);
     margin-left: 0;
     margin-right: 0;
+  }
+
+  /* Skeleton cards inside skeleton-list don't need positioning - parent is centered */
+  #skeleton-list .skeleton-card {
+    width: 100%;
+    position: static;
+    left: auto;
+    transform: none;
+  }
+
+  /* Animation states preserve horizontal centering */
+  #list > .card.card-entering,
+  .card.card-entering {
+    translate: 0 40px;
+    opacity: 0;
+    transform: translateX(-50%);
+  }
+
+  #list > .card.card-enter-active,
+  .card.card-enter-active {
+    translate: 0 0;
+    opacity: 1;
+    transform: translateX(-50%);
+    transition: translate 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Hydrating cards maintain absolute centering */
+  .card.card-hydrating {
+    position: absolute;
+    width: 95vw;
+    max-width: 95vw;
+    left: 50%;
+    transform: translateX(-50%);
   }
   .header-toolbar {
     display: flex;
@@ -991,16 +1111,30 @@ html.dark .bottom-nav {
 
   /* --- COPIED 480px RULES --- */
   :root {
-    --dot-outer: 20px;
-    --dot-inner: 10px;
-    --dot-active: 16px;
-    --gap: 4px;
+    --dot-outer: 12px;
+    --dot-inner: 5px;
+    --dot-active: 10px;
+    --gap: 3px;
   }
   .app-header {
     padding: 18px 20px;
   }
   .title {
     font-size: 24px;
+  }
+
+  /* Reduce spacing around year wheel in mobile */
+  .card-header {
+    padding: 16px 20px 0;
+  }
+  .divider {
+    margin: 12px 20px;
+  }
+  .habit-year-wheel .year-wheel-container {
+    padding: 0.25rem 0;
+  }
+  .habit-year-wheel .year-wheel-scroll {
+    padding: 0.25rem 1rem;
   }
 }
 
@@ -1164,7 +1298,55 @@ html.dark .btn.danger:hover {
   border: 1px solid var(--surface-muted);
   background: var(--card);
   box-shadow: var(--shadow-card);
+  /* Fade-in animation */
+  opacity: 0;
+  animation: skeleton-fade-in 0.4s ease-out forwards;
+  transition: opacity 0.3s ease-out;
+}
+
+/* Skeleton fade-out during lazy load hydration */
+.skeleton-card.skeleton-fading-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Card being hydrated from skeleton */
+.card.card-hydrating {
+  position: absolute;
   width: 100%;
+}
+
+/* Staggered delays for skeleton cards */
+.skeleton-card:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.skeleton-card:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.skeleton-card:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.skeleton-card:nth-child(4) {
+  animation-delay: 0.24s;
+}
+
+.skeleton-card:nth-child(5) {
+  animation-delay: 0.32s;
+}
+
+/* Keyframes for skeleton fade-in */
+@keyframes skeleton-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Match actual card structure */
@@ -1311,17 +1493,21 @@ html.dark .btn.danger:hover {
 /* Smooth transition from skeleton to content */
 #skeleton-list {
   opacity: 1;
-  transition: opacity 0.3s ease-out;
+  transition: opacity 0.25s ease-out;
 }
 
-#skeleton-list[hidden] {
+#skeleton-list.fading-out {
   opacity: 0;
   pointer-events: none;
 }
 
+#skeleton-list[hidden] {
+  display: none;
+}
+
 #list {
   opacity: 0;
-  transition: opacity 0.3s ease-in;
+  transition: opacity 0.25s ease-in;
 }
 
 #list:not([hidden]) {
@@ -1352,17 +1538,13 @@ html.dark .btn.danger:hover {
   }
 
   .skeleton-list {
-    width: 96vw;
-    max-width: 96vw;
+    width: 95vw;
+    max-width: 95vw;
     position: relative;
     left: 50%;
     transform: translateX(-50%);
     margin-left: 0;
     margin-right: 0;
-  }
-
-  .skeleton-card {
-    width: 100%;
   }
 }
 
@@ -1377,6 +1559,12 @@ html.dark .btn.danger:hover {
 }
 
 @media (max-width: 750px) {
+  :root {
+    --dot-outer: 12px;
+    --dot-inner: 5px;
+    --dot-active: 10px;
+    --gap: 3px;
+  }
   .skeleton-card {
     padding: 20px;
     border-radius: 20px;
@@ -1402,14 +1590,40 @@ html.dark .btn.danger:hover {
 }
 
 @media (max-width: 640px) {
+  :root {
+    --dot-outer: 12px;
+    --dot-inner: 5px;
+    --dot-active: 10px;
+    --gap: 3px;
+  }
   .skeleton-card {
     padding: 20px;
   }
   .sk-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  /* Reduce spacing around year wheel in mobile */
+  .card-header {
+    padding: 16px 20px 0;
+  }
+  .divider {
+    margin: 12px 20px;
+  }
+  .habit-year-wheel .year-wheel-container {
+    padding: 0.25rem 0;
+  }
+  .habit-year-wheel .year-wheel-scroll {
+    padding: 0.25rem 1rem;
+  }
 }
 @media (max-width: 480px) {
+  :root {
+    --dot-outer: 10px;
+    --dot-inner: 3px;
+    --dot-active: 8px;
+    --gap: 2px;
+  }
   .skeleton-card {
     padding: 18px;
   }
@@ -1417,10 +1631,44 @@ html.dark .btn.danger:hover {
   .sk-line-lg {
     width: 100px;
   }
+
+  /* Reduce spacing around year wheel in mobile */
+  .card-header {
+    padding: 14px 18px 0;
+  }
+  .divider {
+    margin: 10px 18px;
+  }
+  .habit-year-wheel .year-wheel-container {
+    padding: 0.25rem 0;
+  }
+  .habit-year-wheel .year-wheel-scroll {
+    padding: 0.25rem 0.75rem;
+  }
 }
 @media (max-width: 420px) {
+  :root {
+    --dot-outer: 10px;
+    --dot-inner: 3px;
+    --dot-active: 8px;
+    --gap: 2px;
+  }
   .sk-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Reduce spacing around year wheel in mobile */
+  .card-header {
+    padding: 14px 18px 0;
+  }
+  .divider {
+    margin: 10px 18px;
+  }
+  .habit-year-wheel .year-wheel-container {
+    padding: 0.25rem 0;
+  }
+  .habit-year-wheel .year-wheel-scroll {
+    padding: 0.25rem 0.75rem;
   }
 }
 
@@ -1435,13 +1683,14 @@ html.dark .btn.danger:hover {
   margin-left: auto;
   margin-right: auto;
   width: calc(100% - 40px);
-  transition: border-color .3s ease, opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color .3s ease, opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s ease;
   position:relative;
   z-index: 1;
   transform-origin: top center;
-  cursor: pointer;
   user-select: none;
   max-width: min(80vw, 1500px); /* Updated for responsive width */
+  /* Ensure centering in desktop by default */
+  display: block;
 }
 .card::before {
   content: none;
@@ -1449,18 +1698,53 @@ html.dark .btn.danger:hover {
 .card:hover {
   border-color: rgba(255,159,28,0.28);
 }
-/* Card stagger load animation - Enhanced fade up effect */
+/* Card stagger load animation - Desktop default uses translate property */
 .card.card-entering {
   opacity: 0;
-  /* Increase distance to make the "up" movement obvious */
-  transform: translateY(40px);
+  translate: 0 40px;
 }
 .card.card-enter-active {
   opacity: 1;
-  transform: translateY(0);
-  /* Increase duration to 0.5s so the fade is smoother */
+  translate: 0 0;
   transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+              translate 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Override for desktop to ensure proper centering and vertical-only animation */
+@media (min-width: 901px) {
+  .card,
+  .skeleton-card,
+  #list > .card,
+  #list > .skeleton-card {
+    margin-left: auto;
+    margin-right: auto;
+    left: auto;
+    right: auto;
+    transform: none;
+  }
+
+  /* Animation states use translate property to avoid transform conflicts */
+  #list > .card.card-entering,
+  .card.card-entering {
+    translate: 0 40px;
+    opacity: 0;
+  }
+  #list > .card.card-enter-active,
+  .card.card-enter-active {
+    translate: 0 0;
+    opacity: 1;
+    transition: translate 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Hydrating cards maintain centering */
+  .card.card-hydrating {
+    position: absolute;
+    width: 100%;
+    max-width: min(80vw, 1500px);
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 .habit-visual {
   transition: all .3s ease;
@@ -1602,7 +1886,12 @@ html.dark .btn.danger:hover {
 }
 
 @media (max-width: 580px) {
-
+  :root {
+    --dot-outer: 10px;
+    --dot-inner: 3px;
+    --dot-active: 8px;
+    --gap: 2px;
+  }
   .card-header .control-btn svg {
     margin-right: 0;
   }
@@ -1614,6 +1903,20 @@ html.dark .btn.danger:hover {
   }
   .months-container {
     gap: 12px;
+  }
+
+  /* Reduce spacing around year wheel in mobile */
+  .card-header {
+    padding: 14px 18px 0;
+  }
+  .divider {
+    margin: 10px 18px;
+  }
+  .habit-year-wheel .year-wheel-container {
+    padding: 0.25rem 0;
+  }
+  .habit-year-wheel .year-wheel-scroll {
+    padding: 0.25rem 0.75rem;
   }
 }
 .habit-visual {
@@ -1711,7 +2014,7 @@ html.dark .card-subtitle .stat-item {
   padding:0 28px 28px;
   overflow: hidden;
   position: relative;
-  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .eyebrow {
   font-size: 10px;
@@ -1751,47 +2054,86 @@ html.dark .card-subtitle .stat-item {
 /* Hide month view by default (when in year view) */
 html[data-view="year"] .months-container-month-view {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(40px) scale(0.95);
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   pointer-events: none;
   visibility: hidden;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0.5s;
 }
 
 html[data-view="year"] .dots-grid-year-view {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
   position: relative;
   visibility: visible;
   transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0s;
 }
 
 /* Hide year view when month is active */
 html[data-view="month"] .dots-grid-year-view {
   opacity: 0;
-  transform: translateY(-20px);
+  transform: translateY(-40px) scale(0.95);
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   pointer-events: none;
   visibility: hidden;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0.5s;
 }
 
 html[data-view="month"] .months-container-month-view {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
   position: relative;
   visibility: visible;
   transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0s;
 }
 .month-container {
   flex-shrink: 0;
 }
+
+/* Staggered appearance for each month during view toggle (only during transitions) */
+html.view-transitioning[data-view="month"] .month-container {
+  animation: month-container-appear 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Keyframe for month container appearance */
+@keyframes month-container-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Staggered delays for month containers - cascading month by month, completing in ~1.4s */
+html.view-transitioning[data-view="month"] .month-container:nth-child(1) { animation-delay: 0s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(2) { animation-delay: 0.055s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(3) { animation-delay: 0.11s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(4) { animation-delay: 0.165s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(5) { animation-delay: 0.22s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(6) { animation-delay: 0.275s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(7) { animation-delay: 0.33s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(8) { animation-delay: 0.385s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(9) { animation-delay: 0.44s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(10) { animation-delay: 0.495s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(11) { animation-delay: 0.55s; }
+html.view-transitioning[data-view="month"] .month-container:nth-child(12) { animation-delay: 0.605s; }
 .month-grid {
   display: grid;
   grid-template-columns: repeat(7, var(--dot-outer));
@@ -1807,7 +2149,7 @@ html[data-view="month"] .months-container-month-view {
   place-items:center;
   border:none;
   background:transparent;
-  cursor:pointer;
+  cursor:default !important;
   position:relative;
   padding:0;
   will-change:transform;
@@ -1815,7 +2157,59 @@ html[data-view="month"] .months-container-month-view {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
+  pointer-events: none;
+  /* Enhanced smooth transitions for rhythmic morphing */
+  transition: opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+/* Only today's dot is interactive (but not if disabled) */
+.dot[aria-current="date"]:not([aria-disabled="true"]) {
+  cursor: pointer !important;
+  pointer-events: auto;
+}
+/* Disabled dots are never interactive */
+.dot[aria-disabled="true"] {
+  pointer-events: none !important;
+  cursor: default !important;
+  transition: none !important;
+}
+
+/* Wave-like rhythmic motion - Year view appearing (only during transitions) */
+html.view-transitioning[data-view="year"] .dots-grid-year-view .dot {
+  animation: dot-enter-year 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Wave-like rhythmic motion - Month view appearing (only during transitions) */
+html.view-transitioning[data-view="month"] .months-container-month-view .dot {
+  animation: dot-enter-month 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Keyframes for year view dots entering */
+@keyframes dot-enter-year {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.7) rotate(-5deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+/* Keyframes for month view dots entering */
+@keyframes dot-enter-month {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.7) rotate(5deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+/* Animation delays are now set dynamically via JavaScript for all dots */
+/* This ensures smooth cascading for all 365+ dots in year view and all dots in month view */
 
 /* Long press feedback */
 .dot.long-pressing {
@@ -1828,16 +2222,23 @@ html[data-view="month"] .months-container-month-view {
   height:var(--dot-inner);
   border-radius:50%;
   background: var(--accent-tint, #EFF4FF);
-  transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease, opacity .15s ease;
+  opacity: 0.7;
+  /* Enhanced transitions for smoother morphing during view changes */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform;
 }
-/* Disable hover effect during toggle animation for consistent experience */
-.dot:not(.just-toggled):hover::before {
+/* Only today's dot has hover effect */
+.dot[aria-current="date"]:not(.just-toggled):hover::before {
   transform:scale(1.2);
   background: radial-gradient(circle, rgba(255,255,255,0.65) 10%, var(--accent-base, var(--muted)) 70%);
   box-shadow: inset 0 0 6px rgba(255,255,255,0.35), 0 0 2px rgba(0,0,0,0.08);
 }
-html.dark .dot:not(.just-toggled):hover::before {
+html.dark .dot[aria-current="date"]:not(.just-toggled):hover::before {
   background: radial-gradient(circle, rgba(255,255,255,0.35) 15%, var(--accent-base, rgba(226,232,240,.6)) 70%);
   box-shadow: inset 0 0 6px rgba(0,0,0,0.4), 0 0 2px rgba(0,0,0,0.3);
 }
@@ -1845,6 +2246,7 @@ html.dark .dot:not(.just-toggled):hover::before {
   width:var(--dot-active);
   height:var(--dot-active);
   background: var(--accent-base, var(--primary));
+  opacity: 1;
   transform:none;
   animation: pop .25s ease;
 }
@@ -1868,13 +2270,9 @@ html.dark .dot:not(.just-toggled):hover::before {
 .dot[aria-pressed="true"].just-toggled::after {
   animation: ripple .4s ease-out;
 }
-.dot:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
-}
-.dot:disabled:hover::before {
-  transform: none;
-  background: var(--accent-tint, #EFF4FF);
+.dot[aria-disabled="true"]::before {
+  opacity: 0.3 !important;
+  transition: none !important;
 }
 @keyframes ripple {
   0% {
@@ -2498,6 +2896,34 @@ html[data-view="month"] .icon-year-view {
   opacity: 0;
 }
 
+/* width-toggle button - hide on mobile */
+#width-toggle {
+  display: none;
+}
+
+@media (min-width: 901px) {
+  #width-toggle {
+    display: flex;
+  }
+}
+
+/* width-toggle icon swap */
+.width-toggle .icon-width-normal,
+.width-toggle .icon-width-wide {
+  position: absolute;
+  transition: opacity 0.2s ease;
+}
+
+html:not([data-card-width="wide"]) .icon-width-normal,
+html[data-card-width="wide"] .icon-width-wide {
+  opacity: 1;
+}
+
+html:not([data-card-width="wide"]) .icon-width-wide,
+html[data-card-width="wide"] .icon-width-normal {
+  opacity: 0;
+}
+
 /* theme-toggle icon swap */
 .theme-toggle .icon-moon {
   transform: translate(-50%, -50%) rotate(0deg) scale(1);
@@ -2559,8 +2985,8 @@ html.dark #scroll-blur-overlay {
   animation:none !important;
 }
 
-/* painting mode highlight */
-html.painting .dot:hover::before {
+/* painting mode highlight - only for today's dot */
+html.painting .dot[aria-current="date"]:hover::before {
   transform: scale(1.25);
 }
 
@@ -3150,4 +3576,27 @@ html.dark .card.drag-over {
 
 html.dark .card.draggable-card::after {
   background: rgba(255, 255, 255, 0.1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WIDE CARD MODE - MUST BE AT END OF FILE FOR HIGHEST CASCADE PRIORITY
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Wide card mode - DESKTOP ONLY (button is hidden on mobile anyway) */
+@media (min-width: 901px) {
+  html[data-card-width="wide"] .app-header {
+    width: calc(100% - 40px) !important;
+    max-width: 95vw !important;
+  }
+
+  html[data-card-width="wide"] .card,
+  html[data-card-width="wide"] .skeleton-card,
+  html[data-card-width="wide"] #list > .card,
+  html[data-card-width="wide"] #list > .skeleton-card {
+    max-width: 95vw !important;
+  }
+
+  html[data-card-width="wide"] .card.card-hydrating {
+    max-width: 95vw !important;
+  }
 }
