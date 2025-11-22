@@ -823,14 +823,14 @@ html.dark .bottom-nav {
     top: 10px; /* Changed from 5px to 10px */
     left: 50%;
     transform: translateX(-50%);
-    width: 96vw;
-    max-width: 96vw;
+    width: 95vw;
+    max-width: 95vw;
     margin-left: auto;
     margin-right: auto;
   }
   #list > .card {
-    width: 96vw;
-    max-width: 96vw;
+    width: 95vw;
+    max-width: 95vw;
     position: relative;
     left: 50%;
     transform: translateX(-50%);
@@ -869,7 +869,7 @@ html.dark .bottom-nav {
     padding: 16px 0 80px; /* Removed left and right padding */
     padding-top: 160px; /* Space for fixed header */
   }
-  /* Both header and cards use 96vw for perfect width alignment */
+  /* Both header and cards use 95vw for perfect width alignment */
   .app-header {
     padding-left: 0;
     padding-right: 0;
@@ -877,8 +877,8 @@ html.dark .bottom-nav {
     top: 10px; /* Changed from 5px to 10px */
     left: 50%;
     transform: translateX(-50%);
-    width: 96vw;
-    max-width: 96vw;
+    width: 95vw;
+    max-width: 95vw;
     margin-left: auto;
     margin-right: auto;
     margin-top: 0;
@@ -897,8 +897,8 @@ html.dark .bottom-nav {
     margin-top: 0;
   }
   #list > .card {
-    width: 96vw;
-    max-width: 96vw;
+    width: 95vw;
+    max-width: 95vw;
     position: relative;
     left: 50%;
     transform: translateX(-50%);
@@ -1440,8 +1440,8 @@ html.dark .btn.danger:hover {
   }
 
   .skeleton-list {
-    width: 96vw;
-    max-width: 96vw;
+    width: 95vw;
+    max-width: 95vw;
     position: relative;
     left: 50%;
     transform: translateX(-50%);
