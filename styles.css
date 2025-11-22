@@ -1306,7 +1306,9 @@ html.dark .btn.danger:hover {
   opacity: 0;
   animation: skeleton-fade-in 0.4s ease-out forwards;
   transition: opacity 0.3s ease-out;
-  /* Width inherited from parent .skeleton-list container */
+  /* Fill grid cell - grid creates single column matching container width */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Skeleton fade-out during lazy load hydration */
