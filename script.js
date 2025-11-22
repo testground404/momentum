@@ -851,6 +851,13 @@ window.Storage = Storage;
         wrap.style.borderColor = 'rgba(' + rgb + ',0.1)';
       } catch (e){}
 
+      // Ensure centering is applied immediately for all viewports (prevent flash)
+      if (window.innerWidth <= 900) {
+        wrap.style.position = 'relative';
+        wrap.style.left = '50%';
+        wrap.style.transform = 'translateX(-50%)';
+      }
+
       // Create skeleton header
       var header = document.createElement('div');
       header.className = 'card-header';
@@ -950,6 +957,12 @@ window.Storage = Storage;
       fullCard.style.opacity = '0';
       fullCard.classList.add('card-hydrating');
 
+      // Ensure proper positioning during crossfade in mobile
+      if (window.innerWidth <= 900) {
+        fullCard.style.left = '50%';
+        fullCard.style.transform = 'translateX(-50%)';
+      }
+
       // Insert full card before placeholder
       placeholderCard.parentNode.insertBefore(fullCard, placeholderCard);
 
@@ -970,6 +983,12 @@ window.Storage = Storage;
           fullCard.classList.remove('card-hydrating');
           fullCard.style.transition = '';
           fullCard.style.opacity = '';
+          // Clean up inline styles - let CSS take over
+          if (window.innerWidth <= 900) {
+            fullCard.style.position = '';
+            fullCard.style.left = '';
+            fullCard.style.transform = '';
+          }
 
           // Initialize year wheel for the hydrated card
           requestAnimationFrame(function() {
@@ -987,6 +1006,13 @@ window.Storage = Storage;
       var wrap = document.createElement('section');
       wrap.className = 'card';
       wrap.dataset.habitId = habit.id;
+
+      // Ensure centering is applied immediately for all viewports (prevent flash)
+      if (window.innerWidth <= 900) {
+        wrap.style.position = 'relative';
+        wrap.style.left = '50%';
+        wrap.style.transform = 'translateX(-50%)';
+      }
 
       var acc = habit.accent || '#3d85c6';
       try {
