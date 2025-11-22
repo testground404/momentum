@@ -186,20 +186,36 @@ window.Storage = Storage;
     function applyCardWidth(width) {
       if (width === 'wide') {
         document.documentElement.setAttribute('data-card-width', 'wide');
-        console.log('Card width set to WIDE');
         if (widthToggle) {
           widthToggle.setAttribute('aria-label', 'Toggle to normal width');
           widthToggle.setAttribute('title', 'Toggle to normal width');
         }
       } else {
         document.documentElement.removeAttribute('data-card-width');
-        console.log('Card width set to NORMAL');
         if (widthToggle) {
           widthToggle.setAttribute('aria-label', 'Toggle to wide width');
           widthToggle.setAttribute('title', 'Toggle to wide width');
         }
       }
       localStorage.setItem(WIDTHKEY, width);
+
+      // Log header and card widths after DOM update
+      requestAnimationFrame(function() {
+        var header = document.querySelector('.app-header');
+        var cards = document.querySelectorAll('.card');
+
+        if (header) {
+          var headerStyles = window.getComputedStyle(header);
+          console.log('=== WIDE VIEW TOGGLED: ' + width.toUpperCase() + ' ===');
+          console.log('Header width: ' + headerStyles.width + ' (max-width: ' + headerStyles.maxWidth + ')');
+
+          if (cards.length > 0) {
+            var firstCard = cards[0];
+            var cardStyles = window.getComputedStyle(firstCard);
+            console.log('Card width: ' + cardStyles.width + ' (max-width: ' + cardStyles.maxWidth + ')');
+          }
+        }
+      });
     }
     if (widthToggle) {
       widthToggle.addEventListener('click', function () {
@@ -234,7 +250,6 @@ window.Storage = Storage;
         habitCache.timestamp = now;
         return habitCache.data;
       } catch (e) {
-        console.error('Error loading habits:', e);
         return [];
       }
     }
@@ -273,7 +288,6 @@ window.Storage = Storage;
         await Storage.saveHabits(habits);
         lastSavedHabitsJSON = currentJSON;
       } catch (e){
-        console.warn('Save failed', e);
       } finally {
         saveQueued = false;
       }
@@ -578,7 +592,6 @@ window.Storage = Storage;
             await showAlert('Error', 'Error deleting account. Please try again.');
           }
         } catch (error) {
-          console.error('Account deletion error:', error);
           await showAlert('Error', 'Error deleting account. Please try again.');
         }
       }
@@ -677,12 +690,10 @@ window.Storage = Storage;
       var scale = percentage / 100; // Convert percentage to 0-1 scale
       var style = createProgressBar();
       style.textContent = '.header-top .year-banner::before { transform: scaleX(' + scale + ') !important; }';
-      console.log('Set progress bar scaleX to:', scale.toFixed(4), '(' + percentage.toFixed(2) + '%)');
     }
 
     function updateYearBanner() {
       if (!yearBanner) {
-        console.error('ERROR: yearBanner element not found!');
         return;
       }
 
@@ -690,12 +701,6 @@ window.Storage = Storage;
       var today = Math.min(dayIndexForYear(y)+1, daysInYear(y));
       var total = daysInYear(y);
       var completionPercentage = (today / total) * 100;
-
-      console.log('=== YEAR BANNER DEBUG ===');
-      console.log('Year:', y);
-      console.log('Today (day of year):', today);
-      console.log('Total days:', total);
-      console.log('Completion percentage:', completionPercentage.toFixed(2) + '%');
 
       yearBanner.innerHTML =
         '<span class="yb-label">Year</span> <span class="yb-value">' + y + '</span>' +
@@ -705,7 +710,6 @@ window.Storage = Storage;
       // Animate fill on first load
       if (!hasAnimatedYearBanner) {
         hasAnimatedYearBanner = true;
-        console.log('First load - animating from 0% to', completionPercentage.toFixed(2) + '%');
 
         // Start at 0%
         setProgressBarScale(0);
@@ -713,22 +717,11 @@ window.Storage = Storage;
         // Animate to actual percentage after a brief delay
         setTimeout(function() {
           setProgressBarScale(completionPercentage);
-          console.log('Animation started - smooth GPU-accelerated transition');
-
-          // Verify after animation
-          setTimeout(function() {
-            var beforeStyle = getComputedStyle(yearBanner, '::before');
-            console.log('Verification - ::before transform:', beforeStyle.transform);
-            console.log('Verification - ::before background:', beforeStyle.background);
-            console.log('Verification - ::before opacity:', beforeStyle.opacity);
-          }, 1300);
         }, 100);
       } else {
         // Direct update for subsequent calls
-        console.log('Direct update to', completionPercentage.toFixed(2) + '%');
         setProgressBarScale(completionPercentage);
       }
-      console.log('=========================');
     }
 
     function dotTitle(habit, index, baseLabel, isToday) {
@@ -1286,12 +1279,10 @@ window.Storage = Storage;
           // 3. Trigger skeleton fade-out by adding class
           if (skeletonEl) {
             skeletonEl.classList.add('fading-out');
-            console.log('Starting skeleton fade-out');
 
             // 4. After fade-out completes (250ms), actually hide it
             setTimeout(function() {
               skeletonEl.hidden = true;
-              console.log('Skeleton hidden - app ready');
             }, 250);
           }
 
@@ -2302,27 +2293,19 @@ window.Storage = Storage;
     var editResetBtn = document.getElementById('edit-reset-btn');
     if (editResetBtn) {
       editResetBtn.addEventListener('click', async function() {
-        console.log('Reset button clicked');
         var id = document.getElementById('edit-habit-id').value;
-        console.log('Habit ID:', id);
         var habit = HABITS.find(function(h) { return h.id === id; });
-        console.log('Found habit:', habit);
         if (!habit) {
-          console.log('No habit found, returning');
           return;
         }
 
         // 1. Confirm with the user
-        console.log('Showing confirmation dialog...');
         var confirmed = await showConfirm(
           'Reset Habit',
           'Are you sure you want to reset "' + habit.name + '"? This will delete the habit and create a new one with the same settings. This cannot be undone.'
         );
-        console.log('Confirmation result:', confirmed);
 
         if (confirmed) {
-          console.log('User confirmed, resetting habit...');
-
           // 2. Store habit properties before deletion
           var habitName = habit.name;
           var habitAccent = habit.accent;
@@ -2330,36 +2313,27 @@ window.Storage = Storage;
           var habitStartDate = habit.startDate;
           var habitFrequency = habit.frequency;
           var habitIndex = HABITS.findIndex(function(h) { return h.id === id; });
-          console.log('Stored habit properties:', { name: habitName, icon: habitIcon, startDate: habitStartDate });
 
           // 3. Remove old habit
           if (habitIndex !== -1) {
             HABITS.splice(habitIndex, 1);
-            console.log('Deleted old habit at index:', habitIndex);
           }
 
           // 4. Create new habit with same properties
           var newHabitObj = newHabit(habitName, habitAccent, habitIcon, habitStartDate);
           newHabitObj.frequency = habitFrequency;
           applyFrequencyToHabit(newHabitObj);
-          console.log('Created new habit:', newHabitObj);
 
           // 5. Insert at the same position or at the top
           HABITS.splice(habitIndex, 0, newHabitObj);
-          console.log('Inserted new habit at index:', habitIndex);
 
           // 6. Save and Render
           await saveHabits(HABITS);
-          console.log('Saved habits');
           render();
-          console.log('Rendered');
           announce('Habit reset');
 
           // Optional: Close the modal after resetting
           editHabitOverlay.close();
-          console.log('Modal closed');
-        } else {
-          console.log('User cancelled');
         }
       });
     }
@@ -3117,7 +3091,6 @@ window.Storage = Storage;
       // Ensure skeleton loader is visible during authentication and data loading
       if (skeletonEl) {
         skeletonEl.hidden = false;
-        console.log('Showing skeleton loader during initialization');
       }
       if (listEl) {
         listEl.hidden = true;
@@ -3125,26 +3098,19 @@ window.Storage = Storage;
 
       // For Firebase mode, wait for auth state to be ready
       if (typeof Auth !== 'undefined' && Auth.useFirebase) {
-        console.log('Checking Firebase authentication...');
         await new Promise(function(resolve) {
           var unsubscribe = Auth.onAuthStateChanged(function(user) {
             if (user) {
-              console.log('Auth ready, loading data for user:', user.uid);
               unsubscribe();
               resolve();
             }
           });
         });
-        console.log('Firebase authentication confirmed');
-      } else {
-        console.log('Using localStorage authentication');
       }
 
       // Load habits from storage (Firebase or localStorage)
-      console.log('Loading habits data...');
       var loadedHabits = await loadHabits();
       HABITS = loadedHabits.map(rolloverIfNeeded);
-      console.log('Habits loaded:', HABITS.length);
 
       // Set initial view
       var initialView = getInitialView();
@@ -3152,12 +3118,10 @@ window.Storage = Storage;
       updateViewToggleLabels(initialView);
 
       // Render the UI (this will hide skeleton and show list)
-      console.log('Rendering UI...');
       render();
       ensureWaveStyles();
 
       initCustomSelects();
-      console.log('App initialization complete');
     }
 
     /* ────────── Year Wheel Centering Fix ────────── */
@@ -3264,7 +3228,6 @@ window.Storage = Storage;
       var container = document.getElementById(containerId);
 
       if (!container) {
-        console.warn('YearWheel container not found for habit:', habit.id);
         return;
       }
 
@@ -3478,5 +3441,4 @@ window.Storage = Storage;
 
     // Start the app
     initializeApp().catch(function(error) {
-      console.error('Error initializing app:', error);
     });
