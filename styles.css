@@ -2921,20 +2921,23 @@ html[data-card-width="wide"] .icon-width-normal {
   opacity: 0;
 }
 
-/* Wide card mode - applies to header and cards on all screens */
-html[data-card-width="wide"] .app-header {
-  max-width: min(95vw, 1500px) !important;
-}
+/* Wide card mode - DESKTOP ONLY (button is hidden on mobile anyway) */
+@media (min-width: 901px) {
+  html[data-card-width="wide"] .app-header {
+    width: calc(100% - 40px) !important;
+    max-width: 95vw !important;
+  }
 
-html[data-card-width="wide"] .card,
-html[data-card-width="wide"] .skeleton-card,
-html[data-card-width="wide"] #list > .card,
-html[data-card-width="wide"] #list > .skeleton-card {
-  max-width: 95vw !important;
-}
+  html[data-card-width="wide"] .card,
+  html[data-card-width="wide"] .skeleton-card,
+  html[data-card-width="wide"] #list > .card,
+  html[data-card-width="wide"] #list > .skeleton-card {
+    max-width: 95vw !important;
+  }
 
-html[data-card-width="wide"] .card.card-hydrating {
-  max-width: 95vw !important;
+  html[data-card-width="wide"] .card.card-hydrating {
+    max-width: 95vw !important;
+  }
 }
 
 /* theme-toggle icon swap */
