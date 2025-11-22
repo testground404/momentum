@@ -1875,11 +1875,19 @@ window.Storage = Storage;
             onHabitChanged(habit);
             announce(newState ? "Marked today" : "Unmarked today");
 
-            // Add visual feedback for double-tap
-            card.style.transform = 'scale(0.98)';
-            setTimeout(function() {
-              card.style.transform = '';
-            }, 100);
+            // Add visual feedback for double-tap - preserve mobile centering transform
+            var isMobileCentered = window.innerWidth <= 900;
+            if (isMobileCentered) {
+              card.style.transform = 'translateX(-50%) scale(0.98)';
+              setTimeout(function() {
+                card.style.transform = 'translateX(-50%)';
+              }, 100);
+            } else {
+              card.style.transform = 'scale(0.98)';
+              setTimeout(function() {
+                card.style.transform = '';
+              }, 100);
+            }
           }
         } else {
           // If viewing a different year, switch to current year first
