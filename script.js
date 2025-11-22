@@ -1387,6 +1387,7 @@ window.Storage = Storage;
       var dots = habit.dots;
       var offDays = habit.offDays;
       var notes = habit.notes;
+      var startIndex = getHabitStartIndex(habit);
 
       for (var i = 0; i < days; i++) {
         var dot = document.createElement('div');
@@ -1410,6 +1411,13 @@ window.Storage = Storage;
           dot.setAttribute('aria-current', 'date');
         }
 
+        // Mark future dates and dates before start as disabled
+        var isFuture = isCurrentYear && i > todayIndex;
+        var isBeforeStart = i < startIndex;
+        if (isFuture || isBeforeStart) {
+          dot.setAttribute('aria-disabled', 'true');
+        }
+
         frag.appendChild(dot);
       }
 
@@ -1427,6 +1435,7 @@ window.Storage = Storage;
       var dots = habit.dots;
       var offDays = habit.offDays;
       var notes = habit.notes;
+      var startIndex = getHabitStartIndex(habit);
 
       for (var month = 0; month < 12; month++) {
         var monthContainer = document.createElement('div');
@@ -1466,6 +1475,13 @@ window.Storage = Storage;
           }
           if (isCurrentYear && dayOfYearIndex === todayIndex) {
             dot.setAttribute('aria-current', 'date');
+          }
+
+          // Mark future dates and dates before start as disabled
+          var isFuture = isCurrentYear && dayOfYearIndex > todayIndex;
+          var isBeforeStart = dayOfYearIndex < startIndex;
+          if (isFuture || isBeforeStart) {
+            dot.setAttribute('aria-disabled', 'true');
           }
 
           frag.appendChild(dot);
@@ -2475,7 +2491,7 @@ window.Storage = Storage;
       s.textContent = [
         '.dot-wave{animation:dotWave .42s cubic-bezier(0.4,0,0.2,1) both;}',
         '.dot-wave-active::before,.dot-wave[aria-pressed="true"]::before{animation:dotWaveInner .42s cubic-bezier(0.4,0,0.2,1) both;}',
-        '.dot:disabled.dot-wave,.dot:disabled.dot-wave::before{opacity:.5!important;}',
+        '.dot[aria-disabled="true"].dot-wave,.dot[aria-disabled="true"].dot-wave::before{opacity:.5!important;}',
         '@keyframes dotWave{0%{transform:scale(.4);opacity:0;}100%{transform:scale(1);opacity:1;}}',
         '@keyframes dotWaveInner{0%{transform:scale(.4);opacity:0;}100%{transform:scale(1);opacity:1;}}'
       ].join('');

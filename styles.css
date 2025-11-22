@@ -1969,10 +1969,15 @@ html.view-transitioning[data-view="month"] .month-container:nth-child(12) { anim
   transition: opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
               transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-/* Only today's dot is interactive */
-.dot[aria-current="date"] {
+/* Only today's dot is interactive (but not if disabled) */
+.dot[aria-current="date"]:not([aria-disabled="true"]) {
   cursor: pointer;
   pointer-events: auto;
+}
+/* Disabled dots are never interactive */
+.dot[aria-disabled="true"] {
+  pointer-events: none !important;
+  cursor: not-allowed;
 }
 
 /* Wave-like rhythmic motion - Year view appearing (only during transitions) */
@@ -2071,11 +2076,8 @@ html.dark .dot[aria-current="date"]:not(.just-toggled):hover::before {
 .dot[aria-pressed="true"].just-toggled::after {
   animation: ripple .4s ease-out;
 }
-.dot:disabled {
-  cursor: not-allowed;
-}
-.dot:disabled::before {
-  opacity: 0.5;
+.dot[aria-disabled="true"]::before {
+  opacity: 0.5 !important;
 }
 @keyframes ripple {
   0% {
