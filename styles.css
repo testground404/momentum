@@ -2924,13 +2924,15 @@ html[data-card-width="wide"] .icon-width-normal {
 /* Wide card mode - only for desktop */
 @media (min-width: 901px) {
   html[data-card-width="wide"] .card,
-  html[data-card-width="wide"] .skeleton-card {
-    max-width: 95vw;
+  html[data-card-width="wide"] .skeleton-card,
+  html[data-card-width="wide"] #list > .card,
+  html[data-card-width="wide"] #list > .skeleton-card {
+    max-width: 95vw !important;
     width: calc(100% - 40px);
   }
 
   html[data-card-width="wide"] .card.card-hydrating {
-    max-width: 95vw;
+    max-width: 95vw !important;
   }
 }
 
