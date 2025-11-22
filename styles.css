@@ -1233,6 +1233,19 @@ html.dark .btn.danger:hover {
   /* Fade-in animation */
   opacity: 0;
   animation: skeleton-fade-in 0.4s ease-out forwards;
+  transition: opacity 0.3s ease-out;
+}
+
+/* Skeleton fade-out during lazy load hydration */
+.skeleton-card.skeleton-fading-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Card being hydrated from skeleton */
+.card.card-hydrating {
+  position: absolute;
+  width: 100%;
 }
 
 /* Staggered delays for skeleton cards */

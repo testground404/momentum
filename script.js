@@ -835,14 +835,14 @@ window.Storage = Storage;
     }
 
     /**
-     * Render a lightweight placeholder card for lazy loading
+     * Render a skeleton card for lazy loading
      */
     function renderPlaceholderCard(habit) {
       var wrap = document.createElement('section');
-      wrap.className = 'card card-placeholder';
+      wrap.className = 'card skeleton-card card-placeholder';
       wrap.dataset.habitId = habit.id;
-      wrap.style.minHeight = '400px'; // Reserve space to prevent layout shift
 
+      // Apply accent color to skeleton
       var acc = habit.accent || '#3d85c6';
       try {
         var rgb = hexToRgb(acc);
@@ -851,43 +851,93 @@ window.Storage = Storage;
         wrap.style.borderColor = 'rgba(' + rgb + ',0.1)';
       } catch (e){}
 
-      // Create minimal header with just the title
+      // Create skeleton header
       var header = document.createElement('div');
       header.className = 'card-header';
 
-      var title = document.createElement('h2');
-      title.className = 'card-title';
-      title.style.opacity = '0.5';
+      var headerTopRow = document.createElement('div');
+      headerTopRow.className = 'header-top-row';
 
-      var visualEl = document.createElement('span');
-      visualEl.className = 'habit-visual';
+      var left = document.createElement('div');
+      left.className = 'left';
 
-      var icon = document.createElement('i');
-      icon.className = 'ti ti-' + (habit.visualValue || 'target');
-      icon.style.color = acc;
-      visualEl.appendChild(icon);
+      var skCircle = document.createElement('div');
+      skCircle.className = 'sk-circle skeleton-shimmer';
+      left.appendChild(skCircle);
 
-      var nameSpan = document.createElement('span');
-      nameSpan.className = 'habit-name';
-      nameSpan.textContent = habit.name;
+      var skLine = document.createElement('div');
+      skLine.className = 'sk-line sk-line-lg skeleton-shimmer';
+      left.appendChild(skLine);
 
-      title.appendChild(visualEl);
-      title.appendChild(nameSpan);
-      header.appendChild(title);
+      headerTopRow.appendChild(left);
+
+      var buttons = document.createElement('div');
+      buttons.className = 'card-header-buttons';
+
+      var btn1 = document.createElement('div');
+      btn1.className = 'sk-button sk-button-small skeleton-shimmer';
+      buttons.appendChild(btn1);
+
+      var btn2 = document.createElement('div');
+      btn2.className = 'sk-button sk-button-small skeleton-shimmer';
+      buttons.appendChild(btn2);
+
+      headerTopRow.appendChild(buttons);
+      header.appendChild(headerTopRow);
+
+      // Pills wrapper
+      var pillsWrapper = document.createElement('div');
+      pillsWrapper.className = 'card-pills-wrapper';
+
+      var subtitleWrap = document.createElement('div');
+      subtitleWrap.className = 'card-subtitle-wrap';
+
+      var subtitle = document.createElement('div');
+      subtitle.className = 'card-subtitle';
+
+      for (var i = 0; i < 4; i++) {
+        var pill = document.createElement('div');
+        pill.className = 'sk-pill skeleton-shimmer';
+        subtitle.appendChild(pill);
+      }
+
+      for (var j = 0; j < 2; j++) {
+        var widePill = document.createElement('div');
+        widePill.className = 'sk-pill sk-pill-wide skeleton-shimmer';
+        subtitle.appendChild(widePill);
+      }
+
+      subtitleWrap.appendChild(subtitle);
+      pillsWrapper.appendChild(subtitleWrap);
+      header.appendChild(pillsWrapper);
+
+      // Divider with year wheel skeleton
+      var divider = document.createElement('div');
+      divider.className = 'divider';
+
+      var yearWheel = document.createElement('div');
+      yearWheel.className = 'sk-year-wheel skeleton-shimmer';
+      divider.appendChild(yearWheel);
+
+      header.appendChild(divider);
       wrap.appendChild(header);
 
-      // Add loading indicator
-      var loadingDiv = document.createElement('div');
-      loadingDiv.className = 'card-loading';
-      loadingDiv.style.cssText = 'padding: 2rem; text-align: center; opacity: 0.3;';
-      loadingDiv.textContent = 'Loading...';
-      wrap.appendChild(loadingDiv);
+      // Card content with skeleton dots
+      var content = document.createElement('div');
+      content.className = 'card-content';
+
+      var dotsGrid = document.createElement('div');
+      dotsGrid.className = 'dots-grid sk-dots-desktop';
+      content.appendChild(dotsGrid);
+
+      wrap.appendChild(content);
 
       return wrap;
     }
 
     /**
      * Hydrate a placeholder card with full content
+     * Creates smooth fade transition from skeleton to real card
      */
     function hydrateCard(placeholderCard, habitId) {
       var habit = HABITS.find(function(h) { return h.id === habitId; });
@@ -896,15 +946,36 @@ window.Storage = Storage;
       // Render full card
       var fullCard = renderHabitCard(habit);
 
-      // Copy over the placeholder's position in DOM
-      placeholderCard.parentNode.replaceChild(fullCard, placeholderCard);
+      // Start with card invisible
+      fullCard.style.opacity = '0';
+      fullCard.classList.add('card-hydrating');
 
-      // Remove placeholder class
-      fullCard.classList.remove('card-placeholder');
+      // Insert full card before placeholder
+      placeholderCard.parentNode.insertBefore(fullCard, placeholderCard);
 
-      // Initialize year wheel for the hydrated card
+      // Fade out skeleton and fade in real card simultaneously
       requestAnimationFrame(function() {
-        initHabitYearWheel(habit);
+        // Start fade out of skeleton
+        placeholderCard.classList.add('skeleton-fading-out');
+
+        // Start fade in of real card
+        fullCard.style.transition = 'opacity 0.3s ease-in';
+        fullCard.style.opacity = '1';
+
+        // After transition completes, remove skeleton and cleanup
+        setTimeout(function() {
+          if (placeholderCard.parentNode) {
+            placeholderCard.parentNode.removeChild(placeholderCard);
+          }
+          fullCard.classList.remove('card-hydrating');
+          fullCard.style.transition = '';
+          fullCard.style.opacity = '';
+
+          // Initialize year wheel for the hydrated card
+          requestAnimationFrame(function() {
+            initHabitYearWheel(habit);
+          });
+        }, 300);
       });
     }
 
