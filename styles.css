@@ -838,11 +838,11 @@ html.dark .bottom-nav {
     margin-right: 0;
   }
   /* Fix entrance animation to preserve horizontal centering */
-  .card.card-entering {
-    transform: translateX(-50%) translateY(40px);
+  #list > .card.card-entering {
+    transform: translateX(-50%) translateY(40px) !important;
   }
-  .card.card-enter-active {
-    transform: translateX(-50%) translateY(0);
+  #list > .card.card-enter-active {
+    transform: translateX(-50%) translateY(0) !important;
   }
   .header-toolbar {
     column-gap: 14px;
@@ -904,6 +904,13 @@ html.dark .bottom-nav {
     transform: translateX(-50%);
     margin-left: 0;
     margin-right: 0;
+  }
+  /* Fix entrance animation to preserve horizontal centering */
+  #list > .card.card-entering {
+    transform: translateX(-50%) translateY(40px) !important;
+  }
+  #list > .card.card-enter-active {
+    transform: translateX(-50%) translateY(0) !important;
   }
   .header-toolbar {
     display: flex;
