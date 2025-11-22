@@ -836,12 +836,16 @@ html.dark .bottom-nav {
     margin-left: 0;
     margin-right: 0;
   }
-  /* Fix entrance animation to preserve horizontal centering */
+  /* Fix entrance animation - use translate property for vertical animation only */
   #list > .card.card-entering {
-    transform: translateX(-50%) translateY(40px) !important;
+    translate: 0 40px;
+    opacity: 0;
   }
   #list > .card.card-enter-active {
-    transform: translateX(-50%) translateY(0) !important;
+    translate: 0 0;
+    opacity: 1;
+    transition: translate 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .header-toolbar {
     column-gap: 14px;
@@ -904,12 +908,16 @@ html.dark .bottom-nav {
     margin-left: 0;
     margin-right: 0;
   }
-  /* Fix entrance animation to preserve horizontal centering */
+  /* Fix entrance animation - use translate property for vertical animation only */
   #list > .card.card-entering {
-    transform: translateX(-50%) translateY(40px) !important;
+    translate: 0 40px;
+    opacity: 0;
   }
   #list > .card.card-enter-active {
-    transform: translateX(-50%) translateY(0) !important;
+    translate: 0 0;
+    opacity: 1;
+    transition: translate 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .header-toolbar {
     display: flex;
@@ -1644,6 +1652,16 @@ html.dark .btn.danger:hover {
   /* Increase duration to 0.5s so the fade is smoother */
   transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
               transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Override for desktop to ensure no horizontal movement */
+@media (min-width: 901px) {
+  #list > .card.card-entering {
+    transform: translateY(40px) !important;
+  }
+  #list > .card.card-enter-active {
+    transform: translateY(0) !important;
+  }
 }
 .habit-visual {
   transition: all .3s ease;
