@@ -16,7 +16,7 @@
   --chip-fg: #374151;
 
   --dot-outer: 20px;
-  --dot-inner: 5px;
+  --dot-inner: 8px;
   --dot-active: 16px;
   --radius: 22px;
   --gap: 4px;
@@ -80,7 +80,7 @@ html.dark {
 @media (max-width: 768px) {
   :root {
     --dot-outer: 20px;
-    --dot-inner: 5px;
+    --dot-inner: 8px;
     --dot-active: 16px;
     --gap: 4px;
   }
