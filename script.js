@@ -1021,13 +1021,6 @@ window.Storage = Storage;
       wrap.className = 'card';
       wrap.dataset.habitId = habit.id;
 
-      // Ensure centering is applied immediately for all viewports (prevent flash)
-      if (window.innerWidth <= 900) {
-        wrap.style.position = 'relative';
-        wrap.style.left = '50%';
-        wrap.style.transform = 'translateX(-50%)';
-      }
-
       var acc = habit.accent || '#3d85c6';
       try {
         var rgb = hexToRgb(acc);
