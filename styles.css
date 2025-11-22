@@ -1036,10 +1036,10 @@ html.dark .bottom-nav {
 
   /* --- COPIED 480px RULES --- */
   :root {
-    --dot-outer: 20px;
-    --dot-inner: 10px;
-    --dot-active: 16px;
-    --gap: 4px;
+    --dot-outer: 5px;
+    --dot-inner: 3px;
+    --dot-active: 4px;
+    --gap: 2px;
   }
   .app-header {
     padding: 18px 20px;
