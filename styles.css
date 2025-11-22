@@ -1977,7 +1977,7 @@ html.view-transitioning[data-view="month"] .month-container:nth-child(12) { anim
 /* Disabled dots are never interactive */
 .dot[aria-disabled="true"] {
   pointer-events: none !important;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 /* Wave-like rhythmic motion - Year view appearing (only during transitions) */
