@@ -186,12 +186,14 @@ window.Storage = Storage;
     function applyCardWidth(width) {
       if (width === 'wide') {
         document.documentElement.setAttribute('data-card-width', 'wide');
+        console.log('Card width set to WIDE');
         if (widthToggle) {
           widthToggle.setAttribute('aria-label', 'Toggle to normal width');
           widthToggle.setAttribute('title', 'Toggle to normal width');
         }
       } else {
         document.documentElement.removeAttribute('data-card-width');
+        console.log('Card width set to NORMAL');
         if (widthToggle) {
           widthToggle.setAttribute('aria-label', 'Toggle to wide width');
           widthToggle.setAttribute('title', 'Toggle to wide width');
