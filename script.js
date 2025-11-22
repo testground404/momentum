@@ -884,13 +884,6 @@ window.Storage = Storage;
         wrap.style.borderColor = 'rgba(' + rgb + ',0.1)';
       } catch (e){}
 
-      // Ensure centering is applied immediately for all viewports (prevent flash)
-      if (window.innerWidth <= 900) {
-        wrap.style.position = 'relative';
-        wrap.style.left = '50%';
-        wrap.style.transform = 'translateX(-50%)';
-      }
-
       // Create skeleton header
       var header = document.createElement('div');
       header.className = 'card-header';

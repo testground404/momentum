@@ -1290,7 +1290,6 @@ html.dark .btn.danger:hover {
   border: 1px solid var(--surface-muted);
   background: var(--card);
   box-shadow: var(--shadow-card);
-  width: 100%;
   /* Fade-in animation */
   opacity: 0;
   animation: skeleton-fade-in 0.4s ease-out forwards;
