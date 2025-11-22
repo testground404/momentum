@@ -3587,6 +3587,7 @@ html.dark .card.draggable-card::after {
   html[data-card-width="wide"] .app-header {
     width: 95vw !important;
     max-width: 95vw !important;
+    min-width: 95vw !important;
   }
 
   html[data-card-width="wide"] .card,
@@ -3595,10 +3596,17 @@ html.dark .card.draggable-card::after {
   html[data-card-width="wide"] #list > .skeleton-card {
     width: 95vw !important;
     max-width: 95vw !important;
+    min-width: 95vw !important;
   }
 
   html[data-card-width="wide"] .card.card-hydrating {
     width: 95vw !important;
     max-width: 95vw !important;
+    min-width: 95vw !important;
+  }
+
+  /* Override any parent container constraints */
+  html[data-card-width="wide"] .container {
+    max-width: none !important;
   }
 }
