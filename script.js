@@ -2502,7 +2502,12 @@ window.Storage = Storage;
     function applyWave(dotsNodeList) {
       if (!dotsNodeList || !dotsNodeList.length) return;
 
-      var dots = Array.prototype.slice.call(dotsNodeList).map(function (dot, idx) {
+      // Filter out disabled dots - they should not animate
+      var enabledDots = Array.prototype.slice.call(dotsNodeList).filter(function(dot) {
+        return !dot.getAttribute('aria-disabled');
+      });
+
+      var dots = enabledDots.map(function (dot, idx) {
         var rect = dot.getBoundingClientRect();
         return {
           el: dot,

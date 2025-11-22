@@ -1983,6 +1983,7 @@ html.view-transitioning[data-view="month"] .month-container:nth-child(12) { anim
 .dot[aria-disabled="true"] {
   pointer-events: none !important;
   cursor: default !important;
+  transition: none !important;
 }
 
 /* Wave-like rhythmic motion - Year view appearing (only during transitions) */
@@ -2083,6 +2084,7 @@ html.dark .dot[aria-current="date"]:not(.just-toggled):hover::before {
 }
 .dot[aria-disabled="true"]::before {
   opacity: 0.3 !important;
+  transition: none !important;
 }
 @keyframes ripple {
   0% {
