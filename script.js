@@ -204,34 +204,51 @@ window.Storage = Storage;
         var header = document.querySelector('.app-header');
         var cards = document.querySelectorAll('.card');
         var skeletonCards = document.querySelectorAll('.skeleton-card');
+        var skeletonList = document.querySelector('.skeleton-list');
         var rootStyles = window.getComputedStyle(document.documentElement);
 
         console.log('=== WIDE VIEW TOGGLED: ' + width.toUpperCase() + ' ===');
         console.log('CSS Custom Properties:');
         console.log('  --card-width: ' + rootStyles.getPropertyValue('--card-width').trim());
         console.log('  --card-max-width: ' + rootStyles.getPropertyValue('--card-max-width').trim());
+        console.log('');
 
         if (header) {
           var headerStyles = window.getComputedStyle(header);
           console.log('Header:');
           console.log('  width: ' + headerStyles.width);
           console.log('  max-width: ' + headerStyles.maxWidth);
+        } else {
+          console.log('Header: NOT FOUND');
         }
+        console.log('');
 
+        console.log('Habit Cards found: ' + cards.length);
         if (cards.length > 0) {
           var firstCard = cards[0];
           var cardStyles = window.getComputedStyle(firstCard);
-          console.log('Habit Card:');
+          console.log('Habit Card (first):');
           console.log('  width: ' + cardStyles.width);
           console.log('  max-width: ' + cardStyles.maxWidth);
         }
+        console.log('');
 
+        console.log('Skeleton Cards found: ' + skeletonCards.length);
         if (skeletonCards.length > 0) {
           var firstSkeleton = skeletonCards[0];
           var skeletonStyles = window.getComputedStyle(firstSkeleton);
-          console.log('Skeleton Card:');
+          console.log('Skeleton Card (first):');
           console.log('  width: ' + skeletonStyles.width);
           console.log('  max-width: ' + skeletonStyles.maxWidth);
+        }
+
+        if (skeletonList) {
+          var skeletonListStyles = window.getComputedStyle(skeletonList);
+          console.log('');
+          console.log('Skeleton List Container:');
+          console.log('  width: ' + skeletonListStyles.width);
+          console.log('  max-width: ' + skeletonListStyles.maxWidth);
+          console.log('  display: ' + skeletonListStyles.display);
         }
 
         console.log('========================================');
