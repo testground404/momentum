@@ -199,22 +199,42 @@ window.Storage = Storage;
       }
       localStorage.setItem(WIDTHKEY, width);
 
-      // Log header and card widths after DOM update
+      // Log header, card, and skeleton widths after DOM update
       requestAnimationFrame(function() {
         var header = document.querySelector('.app-header');
         var cards = document.querySelectorAll('.card');
+        var skeletonCards = document.querySelectorAll('.skeleton-card');
+        var rootStyles = window.getComputedStyle(document.documentElement);
+
+        console.log('=== WIDE VIEW TOGGLED: ' + width.toUpperCase() + ' ===');
+        console.log('CSS Custom Properties:');
+        console.log('  --card-width: ' + rootStyles.getPropertyValue('--card-width').trim());
+        console.log('  --card-max-width: ' + rootStyles.getPropertyValue('--card-max-width').trim());
 
         if (header) {
           var headerStyles = window.getComputedStyle(header);
-          console.log('=== WIDE VIEW TOGGLED: ' + width.toUpperCase() + ' ===');
-          console.log('Header width: ' + headerStyles.width + ' (max-width: ' + headerStyles.maxWidth + ')');
-
-          if (cards.length > 0) {
-            var firstCard = cards[0];
-            var cardStyles = window.getComputedStyle(firstCard);
-            console.log('Card width: ' + cardStyles.width + ' (max-width: ' + cardStyles.maxWidth + ')');
-          }
+          console.log('Header:');
+          console.log('  width: ' + headerStyles.width);
+          console.log('  max-width: ' + headerStyles.maxWidth);
         }
+
+        if (cards.length > 0) {
+          var firstCard = cards[0];
+          var cardStyles = window.getComputedStyle(firstCard);
+          console.log('Habit Card:');
+          console.log('  width: ' + cardStyles.width);
+          console.log('  max-width: ' + cardStyles.maxWidth);
+        }
+
+        if (skeletonCards.length > 0) {
+          var firstSkeleton = skeletonCards[0];
+          var skeletonStyles = window.getComputedStyle(firstSkeleton);
+          console.log('Skeleton Card:');
+          console.log('  width: ' + skeletonStyles.width);
+          console.log('  max-width: ' + skeletonStyles.maxWidth);
+        }
+
+        console.log('========================================');
       });
     }
     if (widthToggle) {

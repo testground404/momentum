@@ -41,6 +41,10 @@
 
   --icon-selected: #1e293b;
   --icon-selected-bg: rgba(30,41,59,.12);
+
+  /* Card width system - single source of truth */
+  --card-width: calc(100% - 40px);
+  --card-max-width: min(80vw, 1500px);
 }
 
 html.dark {
@@ -142,8 +146,8 @@ body.scroll-lock {
   top: 30px;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 40px);
-  max-width: min(80vw, 1500px); /* Updated for responsive width */
+  width: var(--card-width);
+  max-width: var(--card-max-width);
   z-index: 100; /* This will keep the header above the scrolling cards */
 }
 .app-header::before {
@@ -1287,8 +1291,8 @@ html.dark .btn.danger:hover {
   display: grid;
   gap: 28px;
   margin-bottom: 28px;
-  width: 100%;
-  max-width: min(80vw, 1500px);
+  width: var(--card-width);
+  max-width: var(--card-max-width);
   margin-left: auto;
   margin-right: auto;
 }
@@ -1682,13 +1686,13 @@ html.dark .btn.danger:hover {
   margin-bottom:28px;
   margin-left: auto;
   margin-right: auto;
-  width: calc(100% - 40px);
+  width: var(--card-width);
   transition: border-color .3s ease, opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s ease;
   position:relative;
   z-index: 1;
   transform-origin: top center;
   user-select: none;
-  max-width: min(80vw, 1500px); /* Updated for responsive width */
+  max-width: var(--card-max-width);
   /* Ensure centering in desktop by default */
   display: block;
 }
@@ -3584,25 +3588,28 @@ html.dark .card.draggable-card::after {
 
 /* Wide card mode - DESKTOP ONLY (button is hidden on mobile anyway) */
 @media (min-width: 901px) {
-  html[data-card-width="wide"] .app-header {
-    width: 95vw !important;
-    max-width: 95vw !important;
-    min-width: 95vw !important;
+  /* Override card width CSS custom properties - single source of truth */
+  html[data-card-width="wide"] {
+    --card-width: 95vw;
+    --card-max-width: 95vw;
   }
 
+  /* Force all card-related elements to respect the custom properties */
+  html[data-card-width="wide"] .app-header,
   html[data-card-width="wide"] .card,
   html[data-card-width="wide"] .skeleton-card,
+  html[data-card-width="wide"] .skeleton-list,
   html[data-card-width="wide"] #list > .card,
   html[data-card-width="wide"] #list > .skeleton-card {
-    width: 95vw !important;
-    max-width: 95vw !important;
-    min-width: 95vw !important;
+    width: var(--card-width) !important;
+    max-width: var(--card-max-width) !important;
+    min-width: var(--card-width) !important;
   }
 
   html[data-card-width="wide"] .card.card-hydrating {
-    width: 95vw !important;
-    max-width: 95vw !important;
-    min-width: 95vw !important;
+    width: var(--card-width) !important;
+    max-width: var(--card-max-width) !important;
+    min-width: var(--card-width) !important;
   }
 
   /* Override any parent container constraints */
