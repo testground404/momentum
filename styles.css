@@ -1544,7 +1544,6 @@ html.dark .btn.danger:hover {
   position:relative;
   z-index: 1;
   transform-origin: top center;
-  cursor: pointer;
   user-select: none;
   max-width: min(80vw, 1500px); /* Updated for responsive width */
 }
@@ -1956,7 +1955,7 @@ html.view-transitioning[data-view="month"] .month-container:nth-child(12) { anim
   place-items:center;
   border:none;
   background:transparent;
-  cursor:default;
+  cursor:default !important;
   position:relative;
   padding:0;
   will-change:transform;
@@ -1971,13 +1970,13 @@ html.view-transitioning[data-view="month"] .month-container:nth-child(12) { anim
 }
 /* Only today's dot is interactive (but not if disabled) */
 .dot[aria-current="date"]:not([aria-disabled="true"]) {
-  cursor: pointer;
+  cursor: pointer !important;
   pointer-events: auto;
 }
 /* Disabled dots are never interactive */
 .dot[aria-disabled="true"] {
   pointer-events: none !important;
-  cursor: default;
+  cursor: default !important;
 }
 
 /* Wave-like rhythmic motion - Year view appearing (only during transitions) */
