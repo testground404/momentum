@@ -79,10 +79,10 @@ html.dark {
 
 @media (max-width: 768px) {
   :root {
-    --dot-outer: 12px;
-    --dot-inner: 6px;
-    --dot-active: 9px;
-    --gap: 3px;
+    --dot-outer: 5px;
+    --dot-inner: 3px;
+    --dot-active: 4px;
+    --gap: 2px;
   }
 }
 
