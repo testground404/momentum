@@ -851,6 +851,11 @@ window.Storage = Storage;
         wrap.style.borderColor = 'rgba(' + rgb + ',0.1)';
       } catch (e){}
 
+      // Ensure centering is applied immediately in mobile (prevent flash from right)
+      if (window.innerWidth <= 900) {
+        wrap.style.transform = 'translateX(-50%)';
+      }
+
       // Create skeleton header
       var header = document.createElement('div');
       header.className = 'card-header';
@@ -950,6 +955,12 @@ window.Storage = Storage;
       fullCard.style.opacity = '0';
       fullCard.classList.add('card-hydrating');
 
+      // Ensure proper positioning during crossfade in mobile
+      if (window.innerWidth <= 900) {
+        fullCard.style.left = '50%';
+        fullCard.style.transform = 'translateX(-50%)';
+      }
+
       // Insert full card before placeholder
       placeholderCard.parentNode.insertBefore(fullCard, placeholderCard);
 
@@ -987,6 +998,11 @@ window.Storage = Storage;
       var wrap = document.createElement('section');
       wrap.className = 'card';
       wrap.dataset.habitId = habit.id;
+
+      // Ensure centering is applied immediately in mobile (prevent flash from right)
+      if (window.innerWidth <= 900) {
+        wrap.style.transform = 'translateX(-50%)';
+      }
 
       var acc = habit.accent || '#3d85c6';
       try {
