@@ -1464,6 +1464,12 @@ html.dark .btn.danger:hover {
 }
 
 @media (max-width: 750px) {
+  :root {
+    --dot-outer: 12px;
+    --dot-inner: 5px;
+    --dot-active: 10px;
+    --gap: 3px;
+  }
   .skeleton-card {
     padding: 20px;
     border-radius: 20px;
