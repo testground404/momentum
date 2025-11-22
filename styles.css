@@ -1306,11 +1306,7 @@ html.dark .btn.danger:hover {
   opacity: 0;
   animation: skeleton-fade-in 0.4s ease-out forwards;
   transition: opacity 0.3s ease-out;
-  /* Match card width system */
-  width: var(--card-width);
-  max-width: var(--card-max-width);
-  margin-left: auto;
-  margin-right: auto;
+  /* Width inherited from parent .skeleton-list container */
 }
 
 /* Skeleton fade-out during lazy load hydration */
