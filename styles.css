@@ -1520,6 +1520,9 @@ html.dark .btn.danger:hover {
 #list {
   opacity: 0;
   transition: opacity 0.25s ease-in;
+  padding-top: 0;
+  font-size: 0;
+  line-height: 0;
 }
 
 #list:not([hidden]) {
