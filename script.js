@@ -219,8 +219,10 @@ window.Storage = Storage;
 
         if (skeletonList) {
           var skeletonListRect = skeletonList.getBoundingClientRect();
+          var skeletonListStyles = window.getComputedStyle(skeletonList);
           console.log('Skeleton List Container position:');
           console.log('  top: ' + skeletonListRect.top + 'px, bottom: ' + skeletonListRect.bottom + 'px');
+          console.log('  padding: ' + skeletonListStyles.paddingTop + ' ' + skeletonListStyles.paddingRight + ' ' + skeletonListStyles.paddingBottom + ' ' + skeletonListStyles.paddingLeft);
           console.log('');
         }
 
