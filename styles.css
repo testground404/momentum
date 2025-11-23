@@ -1135,13 +1135,13 @@ html.dark .bottom-nav {
     font-size: 24px;
   }
 
-  /* Equalized spacing: pills → year wheel = year wheel → dots = 10px */
+  /* Year wheel spacing: 15px above, 10px below */
   .card-header {
     padding: 16px 20px 0;
     margin-bottom: 0;
   }
   .divider {
-    margin: 10px 20px 10px 20px;
+    margin: 15px 20px 10px 20px;
   }
   .habit-year-wheel {
     width: 100%;
@@ -1639,13 +1639,13 @@ html.dark .btn.danger:hover {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  /* Equalized spacing: pills → year wheel = year wheel → dots = 10px */
+  /* Year wheel spacing: 15px above, 10px below */
   .card-header {
     padding: 16px 20px 0;
     margin-bottom: 0;
   }
   .divider {
-    margin: 10px 20px 10px 20px;
+    margin: 15px 20px 10px 20px;
   }
   .habit-year-wheel {
     width: 100%;
