@@ -206,62 +206,6 @@ window.Storage = Storage;
         var skeletonCards = document.querySelectorAll('.skeleton-card');
         var skeletonList = document.querySelector('.skeleton-list');
         var rootStyles = window.getComputedStyle(document.documentElement);
-
-        console.log('=== WIDE VIEW TOGGLED: ' + width.toUpperCase() + ' ===');
-        console.log('');
-
-        if (header) {
-          var headerRect = header.getBoundingClientRect();
-          console.log('Header position:');
-          console.log('  top: ' + headerRect.top + 'px, bottom: ' + headerRect.bottom + 'px, height: ' + headerRect.height + 'px');
-          console.log('');
-        }
-
-        if (skeletonList) {
-          var skeletonListRect = skeletonList.getBoundingClientRect();
-          var skeletonListStyles = window.getComputedStyle(skeletonList);
-          console.log('Skeleton List Container position:');
-          console.log('  top: ' + skeletonListRect.top + 'px, bottom: ' + skeletonListRect.bottom + 'px');
-          console.log('  padding: ' + skeletonListStyles.paddingTop + ' ' + skeletonListStyles.paddingRight + ' ' + skeletonListStyles.paddingBottom + ' ' + skeletonListStyles.paddingLeft);
-          console.log('  display: ' + skeletonListStyles.display);
-          console.log('  align-content: ' + skeletonListStyles.alignContent);
-          console.log('  align-items: ' + skeletonListStyles.alignItems);
-          console.log('  gap: ' + skeletonListStyles.gap);
-          console.log('');
-        }
-
-        var listRect = skeletonList ? skeletonList.getBoundingClientRect() : {top: 0};
-
-        console.log('Skeleton Cards found: ' + skeletonCards.length);
-        for (var i = 0; i < skeletonCards.length; i++) {
-          var skeletonRect = skeletonCards[i].getBoundingClientRect();
-          var skeletonStyles = window.getComputedStyle(skeletonCards[i]);
-          var skeletonType = skeletonCards[i].classList.contains('skeleton-desktop') ? 'desktop' :
-                             skeletonCards[i].classList.contains('skeleton-tablet') ? 'tablet' : 'mobile';
-          var relativeTop = skeletonRect.top - listRect.top;
-          console.log('Skeleton Card #' + i + ' (' + skeletonType + '):');
-          console.log('  display: ' + skeletonStyles.display);
-          console.log('  margin-top: ' + skeletonStyles.marginTop);
-          console.log('  absolute (from viewport): top=' + skeletonRect.top + 'px');
-          console.log('  relative (from container): top=' + relativeTop + 'px');
-        }
-        console.log('');
-
-        var habitList = document.querySelector('#list');
-        var habitListRect = habitList ? habitList.getBoundingClientRect() : {top: 0};
-
-        console.log('Habit Cards found: ' + cards.length);
-        for (var j = 0; j < cards.length; j++) {
-          var cardRect = cards[j].getBoundingClientRect();
-          var cardStyles = window.getComputedStyle(cards[j]);
-          var relativeCardTop = cardRect.top - habitListRect.top;
-          console.log('Habit Card #' + j + ':');
-          console.log('  display: ' + cardStyles.display);
-          console.log('  absolute (from viewport): top=' + cardRect.top + 'px');
-          console.log('  relative (from container): top=' + relativeCardTop + 'px');
-        }
-
-        console.log('========================================');
       });
     }
     if (widthToggle) {
@@ -3592,69 +3536,52 @@ window.Storage = Storage;
     initializeApp().catch(function(error) {
     });
 
-    // Log card positions every 400ms for 10 seconds
+    // Debug spacing between pills, year wheel, and dots
     (function() {
       var startTime = Date.now();
       var duration = 10000; // 10 seconds
-      var interval = 400; // 400ms
+      var interval = 500; // 500ms
 
-      function logCardPositions() {
+      function logSpacing() {
         var elapsed = Date.now() - startTime;
         if (elapsed > duration) {
           clearInterval(timer);
-          console.log('=== Position logging ended after 10 seconds ===');
+          console.log('=== Spacing debug ended after 10 seconds ===');
           return;
         }
 
-        var skeletonList = document.querySelector('.skeleton-list');
-        var skeletonCards = document.querySelectorAll('.skeleton-card');
-        var habitCards = document.querySelectorAll('.card');
-        var skeletonListRect = skeletonList ? skeletonList.getBoundingClientRect() : {top: 0};
-        var habitList = document.querySelector('#list');
-        var habitListRect = habitList ? habitList.getBoundingClientRect() : {top: 0};
+        var cards = document.querySelectorAll('.card');
+        if (cards.length === 0) return;
 
-        console.log('=== CARD POSITIONS at ' + elapsed + 'ms ===');
+        console.log('=== YEAR WHEEL SPACING at ' + elapsed + 'ms ===');
 
-        // Log habit list container info if habit cards are visible
-        if (habitCards.length > 0 && habitList) {
-          var habitListStyles = window.getComputedStyle(habitList);
-          console.log('#list padding-top: ' + habitListStyles.paddingTop + ', top: ' + habitListRect.top + 'px');
+        for (var i = 0; i < Math.min(cards.length, 2); i++) {
+          var card = cards[i];
+          var pillsWrapper = card.querySelector('.card-pills-wrapper');
+          var yearWheel = card.querySelector('.habit-year-wheel');
+          var dotsGrid = card.querySelector('.dots-grid');
+
+          if (!pillsWrapper || !yearWheel || !dotsGrid) continue;
+
+          var pillsRect = pillsWrapper.getBoundingClientRect();
+          var yearWheelRect = yearWheel.getBoundingClientRect();
+          var dotsRect = dotsGrid.getBoundingClientRect();
+
+          var pillsToYearWheel = yearWheelRect.top - pillsRect.bottom;
+          var yearWheelToDots = dotsRect.top - yearWheelRect.bottom;
+
+          console.log('Card #' + i + ':');
+          console.log('  Pills bottom: ' + pillsRect.bottom + 'px');
+          console.log('  Year wheel top: ' + yearWheelRect.top + 'px, bottom: ' + yearWheelRect.bottom + 'px');
+          console.log('  Dots top: ' + dotsRect.top + 'px');
+          console.log('  Space (pills → year wheel): ' + pillsToYearWheel.toFixed(1) + 'px');
+          console.log('  Space (year wheel → dots): ' + yearWheelToDots.toFixed(1) + 'px');
+          console.log('  Difference: ' + (pillsToYearWheel - yearWheelToDots).toFixed(1) + 'px');
+          console.log('');
         }
-
-        // Log skeleton cards
-        var visibleSkeletons = 0;
-        for (var i = 0; i < skeletonCards.length; i++) {
-          var skeletonStyles = window.getComputedStyle(skeletonCards[i]);
-          if (skeletonStyles.display !== 'none') {
-            var skeletonRect = skeletonCards[i].getBoundingClientRect();
-            var relativeTop = skeletonRect.top - skeletonListRect.top;
-            var skeletonType = skeletonCards[i].classList.contains('skeleton-desktop') ? 'desktop' :
-                               skeletonCards[i].classList.contains('skeleton-tablet') ? 'tablet' : 'mobile';
-            console.log('Skeleton #' + i + ' (' + skeletonType + '): absolute=' + skeletonRect.top + 'px, relative=' + relativeTop + 'px');
-            visibleSkeletons++;
-          }
-        }
-        if (visibleSkeletons === 0) {
-          console.log('No skeleton cards visible');
-        }
-
-        // Log habit cards
-        if (habitCards.length > 0) {
-          for (var j = 0; j < habitCards.length; j++) {
-            var cardRect = habitCards[j].getBoundingClientRect();
-            var cardStyles = window.getComputedStyle(habitCards[j]);
-            var relativeCardTop = cardRect.top - habitListRect.top;
-            var marginInfo = j === 0 ? ', margin-top=' + cardStyles.marginTop : '';
-            console.log('Habit Card #' + j + ': absolute=' + cardRect.top + 'px, relative=' + relativeCardTop + 'px' + marginInfo);
-          }
-        } else {
-          console.log('No habit cards visible');
-        }
-
-        console.log('');
       }
 
-      var timer = setInterval(logCardPositions, interval);
+      var timer = setInterval(logSpacing, interval);
       // Log immediately on start
-      logCardPositions();
+      setTimeout(logSpacing, 100);
     })();
