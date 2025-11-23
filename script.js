@@ -224,25 +224,34 @@ window.Storage = Storage;
           console.log('');
         }
 
+        var listRect = skeletonList ? skeletonList.getBoundingClientRect() : {top: 0};
+
         console.log('Skeleton Cards found: ' + skeletonCards.length);
         for (var i = 0; i < skeletonCards.length; i++) {
           var skeletonRect = skeletonCards[i].getBoundingClientRect();
           var skeletonStyles = window.getComputedStyle(skeletonCards[i]);
           var skeletonType = skeletonCards[i].classList.contains('skeleton-desktop') ? 'desktop' :
                              skeletonCards[i].classList.contains('skeleton-tablet') ? 'tablet' : 'mobile';
+          var relativeTop = skeletonRect.top - listRect.top;
           console.log('Skeleton Card #' + i + ' (' + skeletonType + '):');
           console.log('  display: ' + skeletonStyles.display);
-          console.log('  position: top=' + skeletonRect.top + 'px, left=' + skeletonRect.left + 'px, right=' + skeletonRect.right + 'px, bottom=' + skeletonRect.bottom + 'px');
+          console.log('  absolute (from viewport): top=' + skeletonRect.top + 'px');
+          console.log('  relative (from container): top=' + relativeTop + 'px');
         }
         console.log('');
+
+        var habitList = document.querySelector('#list');
+        var habitListRect = habitList ? habitList.getBoundingClientRect() : {top: 0};
 
         console.log('Habit Cards found: ' + cards.length);
         for (var j = 0; j < cards.length; j++) {
           var cardRect = cards[j].getBoundingClientRect();
           var cardStyles = window.getComputedStyle(cards[j]);
+          var relativeCardTop = cardRect.top - habitListRect.top;
           console.log('Habit Card #' + j + ':');
           console.log('  display: ' + cardStyles.display);
-          console.log('  position: top=' + cardRect.top + 'px, left=' + cardRect.left + 'px, right=' + cardRect.right + 'px, bottom=' + cardRect.bottom + 'px');
+          console.log('  absolute (from viewport): top=' + cardRect.top + 'px');
+          console.log('  relative (from container): top=' + relativeCardTop + 'px');
         }
 
         console.log('========================================');
