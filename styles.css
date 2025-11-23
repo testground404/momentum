@@ -478,30 +478,10 @@ html.dark .header-top .year-banner::before {
   font-size: 1.125rem;
   font-weight: 700;
   transform: translateX(0) scale(1.15);
-  color: var(--accent-base, var(--primary));
-  background: linear-gradient(
-      -45deg,
-      var(--accent-base, var(--primary)),
-      rgba(var(--accent-rgb, 61, 133, 198), 0.7),
-      var(--accent-base, var(--primary)),
-      rgba(var(--accent-rgb, 61, 133, 198), 0.5)
-  );
-  background-size: 300% 300%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: yearWheelFlow 15s ease-in-out infinite;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
+  color: var(--accent-base, #3d85c6) !important;
+  opacity: 1 !important;
   min-width: 3.5rem;
   width: 3.5rem;
-}
-/* Fallback for browsers that don't support background-clip: text */
-@supports not (-webkit-background-clip: text) {
-  .habit-year-wheel .year-item.selected {
-    color: var(--accent-base, var(--primary));
-    -webkit-text-fill-color: var(--accent-base, var(--primary));
-  }
 }
 
 .habit-year-wheel .year-item:not(.selected) {

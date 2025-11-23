@@ -60,9 +60,11 @@ export class YearWheel {
     const years = this.getYears();
     const { fadePercent, minSelectableYear, maxSelectableYear } = this.options;
 
+    // Reduce fade to ensure center is always visible (10% fade on edges instead of 25%)
+    const reducedFadePercent = 10;
     const maskStyle = `
-      -webkit-mask-image: linear-gradient(to right, ${this.fade} 0%, black ${fadePercent}%, black ${100 - fadePercent}%, ${this.fade} 100%);
-      mask-image: linear-gradient(to right, ${this.fade} 0%, black ${fadePercent}%, black ${100 - fadePercent}%, ${this.fade} 100%);
+      -webkit-mask-image: linear-gradient(to right, ${this.fade} 0%, black ${reducedFadePercent}%, black ${100 - reducedFadePercent}%, ${this.fade} 100%);
+      mask-image: linear-gradient(to right, ${this.fade} 0%, black ${reducedFadePercent}%, black ${100 - reducedFadePercent}%, ${this.fade} 100%);
     `;
 
     const leftOverlayStyle = `background: linear-gradient(to right, ${this.fade} 0%, rgba(255,255,255,0) 100%);`;
@@ -75,7 +77,7 @@ export class YearWheel {
             ${years.map(y => {
               const isDisabled = y < minSelectableYear || y > maxSelectableYear;
               return `
-                <div class="year-item${isDisabled ? ' disabled' : ''}" data-year="${y}" role="option" aria-selected="${y === this.selected}" ${isDisabled ? 'aria-disabled="true"' : ''}>
+                <div class="year-item${isDisabled ? ' disabled' : ''}${y === this.selected ? ' selected visible' : ''}" data-year="${y}" role="option" aria-selected="${y === this.selected}" ${isDisabled ? 'aria-disabled="true"' : ''} style="${y === this.selected ? 'opacity: 1 !important;' : ''}">
                   ${y}
                 </div>
               `;
@@ -305,9 +307,18 @@ export class YearWheel {
       const isVisible = this.showAllYears || isSelected;
       const isLeft = idx < selectedIdx;
 
-      el.style.opacity = isVisible ? 1 : 0;
-      el.classList.toggle('selected', isSelected);
-      el.classList.toggle('visible', isVisible);
+      // Force selected year to always be visible with !important overrides
+      if (isSelected) {
+        el.style.opacity = '1';
+        el.style.setProperty('opacity', '1', 'important');
+        el.classList.add('selected');
+        el.classList.add('visible');
+      } else {
+        el.style.opacity = isVisible ? 1 : 0;
+        el.classList.toggle('selected', false);
+        el.classList.toggle('visible', isVisible);
+      }
+
       el.classList.toggle('left', isLeft && !isVisible);
       el.setAttribute('aria-selected', isSelected);
     });
