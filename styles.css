@@ -1147,6 +1147,8 @@ html.dark .bottom-nav {
     display: flex;
     justify-content: center;
     padding-top: 8px;
+    position: relative;
+    z-index: 150;
   }
   .habit-year-wheel .year-wheel-container {
     padding: 0.5rem 0;
@@ -1647,6 +1649,8 @@ html.dark .btn.danger:hover {
     display: flex;
     justify-content: center;
     padding-top: 8px;
+    position: relative;
+    z-index: 150;
   }
   .habit-year-wheel .year-wheel-container {
     padding: 0.5rem 0;
