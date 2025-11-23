@@ -1140,8 +1140,11 @@ html.dark .bottom-nav {
     padding: 16px 20px 0;
     margin-bottom: 0;
   }
+  .card-pills-wrapper {
+    margin-bottom: 10px;
+  }
   .divider {
-    margin: 15px 20px 10px 20px;
+    margin: 5px 20px 10px 20px;
   }
   .habit-year-wheel {
     width: 100%;
@@ -1644,8 +1647,11 @@ html.dark .btn.danger:hover {
     padding: 16px 20px 0;
     margin-bottom: 0;
   }
+  .card-pills-wrapper {
+    margin-bottom: 10px;
+  }
   .divider {
-    margin: 15px 20px 10px 20px;
+    margin: 5px 20px 10px 20px;
   }
   .habit-year-wheel {
     width: 100%;
