@@ -1822,7 +1822,10 @@ window.Storage = Storage;
           // Load data for the current year from history, or create new arrays
           if (habit.yearHistory && habit.yearHistory[CURRENTYEAR]) {
             var history = habit.yearHistory[CURRENTYEAR];
-            habit.dots = history.dots.slice();
+            // Normalize dots to handle old boolean data (backwards compatibility)
+            habit.dots = history.dots.map(function(v) {
+              return typeof v === 'boolean' ? (v ? 1 : 0) : (typeof v === 'number' ? Math.max(0, Math.floor(v)) : 0);
+            });
             habit.offDays = history.offDays.slice();
             habit.notes = history.notes.slice();
             // Mark stats as dirty since dots/offDays changed
@@ -1979,7 +1982,10 @@ window.Storage = Storage;
 
           if (habit.yearHistory && habit.yearHistory[CURRENTYEAR]) {
             var history = habit.yearHistory[CURRENTYEAR];
-            habit.dots = history.dots.slice();
+            // Normalize dots to handle old boolean data (backwards compatibility)
+            habit.dots = history.dots.map(function(v) {
+              return typeof v === 'boolean' ? (v ? 1 : 0) : (typeof v === 'number' ? Math.max(0, Math.floor(v)) : 0);
+            });
             habit.offDays = history.offDays.slice();
             habit.notes = history.notes.slice();
             habit._dirtyStats = true;
@@ -3459,7 +3465,10 @@ window.Storage = Storage;
             if (habit.yearHistory && habit.yearHistory[selectedYear]) {
               // Restore historical data
               var history = habit.yearHistory[selectedYear];
-              habit.dots = history.dots.slice();
+              // Normalize dots to handle old boolean data (backwards compatibility)
+              habit.dots = history.dots.map(function(v) {
+                return typeof v === 'boolean' ? (v ? 1 : 0) : (typeof v === 'number' ? Math.max(0, Math.floor(v)) : 0);
+              });
               habit.offDays = history.offDays.slice();
               habit.notes = history.notes.slice();
               // Mark stats as dirty since dots/offDays changed
