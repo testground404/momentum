@@ -475,7 +475,7 @@ html.dark .header-top .year-banner::before {
     transition: none;
     transform: none;
   }
-  .habit-year-wheel .year-item.visible {
+  .habit-year-wheel .year-item.visible:not(.selected) {
     transform: none;
   }
   .habit-year-wheel .year-item.selected {
@@ -484,7 +484,7 @@ html.dark .header-top .year-banner::before {
   }
 }
 
-.habit-year-wheel .year-item.visible {
+.habit-year-wheel .year-item.visible:not(.selected) {
   opacity: 1;
   transform: translateX(0) scale(1);
 }
