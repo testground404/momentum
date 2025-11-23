@@ -429,7 +429,7 @@ html.dark .header-top .year-banner::before {
 
 .habit-year-wheel .year-wheel-scroll {
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   padding: 0.5rem 1rem;
   position: relative;
   -ms-overflow-style: none;
