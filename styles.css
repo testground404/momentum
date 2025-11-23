@@ -3601,7 +3601,7 @@ html.dark .confirm-modal {
     rgba(255, 255, 255, 0.3),
     transparent
   );
-  animation: shimmer 1.5s infinite;
+  animation: shimmer-loading 1.5s infinite;
 }
 
 html.dark .card-placeholder::before {
@@ -3613,7 +3613,7 @@ html.dark .card-placeholder::before {
   );
 }
 
-@keyframes shimmer {
+@keyframes shimmer-loading {
   0% {
     left: -100%;
   }
