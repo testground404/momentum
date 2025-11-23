@@ -1776,12 +1776,13 @@ window.Storage = Storage;
             markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
             markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
 
-            // Show count as visual feedback for 1 second
-            var originalHTML = markTodayBtn.innerHTML;
-            if (newCount > 0) {
-              markTodayBtn.innerHTML = '<span style="font-size:0.9em;font-weight:600">' + newCount + '</span>';
+            // Show count in habit icon for 1 second
+            var habitVisual = card.querySelector('.habit-visual');
+            if (habitVisual && newCount > 0) {
+              var originalHTML = habitVisual.innerHTML;
+              habitVisual.innerHTML = '<span style="font-size:1.5em;font-weight:700;display:flex;align-items:center;justify-content:center">' + newCount + '</span>';
               setTimeout(function() {
-                markTodayBtn.innerHTML = originalHTML;
+                habitVisual.innerHTML = originalHTML;
               }, 1000);
             }
 
@@ -1919,15 +1920,16 @@ window.Storage = Storage;
               markTodayBtn.classList.toggle('marked', newState);
               markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
               markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
+            }
 
-              // Show count as visual feedback for 1 second
-              var originalHTML = markTodayBtn.innerHTML;
-              if (newCount > 0) {
-                markTodayBtn.innerHTML = '<span style="font-size:0.9em;font-weight:600">' + newCount + '</span>';
-                setTimeout(function() {
-                  markTodayBtn.innerHTML = originalHTML;
-                }, 1000);
-              }
+            // Show count in habit icon for 1 second
+            var habitVisual = card.querySelector('.habit-visual');
+            if (habitVisual && newCount > 0) {
+              var originalHTML = habitVisual.innerHTML;
+              habitVisual.innerHTML = '<span style="font-size:1.5em;font-weight:700;display:flex;align-items:center;justify-content:center">' + newCount + '</span>';
+              setTimeout(function() {
+                habitVisual.innerHTML = originalHTML;
+              }, 1000);
             }
 
             onHabitChanged(habit);
