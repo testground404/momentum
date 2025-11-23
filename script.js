@@ -1835,11 +1835,16 @@ window.Storage = Storage;
             var currentCount = habit.dots[todayIdx] || 0;
             var dailyTarget = habit.dailyTarget || 1;
 
-            // Mark as animating
+            // Store original icon HTML if not already stored, or if current content has an icon
+            var currentHTML = habitVisual.innerHTML;
+            if (!habitVisual.dataset.originalIcon || currentHTML.indexOf('<i') !== -1) {
+              habitVisual.dataset.originalIcon = currentHTML;
+            }
+
+            // Mark as animating immediately
             habitVisual.dataset.animating = 'true';
 
             // Show count in habit icon for 1 second with animation
-            var originalHTML = habitVisual.innerHTML;
             var countSpan = document.createElement('span');
             countSpan.textContent = currentCount + '/' + dailyTarget;
             countSpan.style.cssText = 'font-size:0.6em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
@@ -1847,7 +1852,8 @@ window.Storage = Storage;
             habitVisual.appendChild(countSpan);
 
             setTimeout(function() {
-              habitVisual.innerHTML = originalHTML;
+              // Restore from stored original icon
+              habitVisual.innerHTML = habitVisual.dataset.originalIcon;
               // Fade in the restored icon
               var icon = habitVisual.querySelector('i');
               if (icon) {
