@@ -1723,10 +1723,11 @@ window.Storage = Storage;
             // Show count in habit icon for 1 second with animation
             var habitVisual = card.querySelector('.habit-visual');
             if (habitVisual) {
+              var dailyTarget = habit.dailyTarget || 1;
               var originalHTML = habitVisual.innerHTML;
               var countSpan = document.createElement('span');
-              countSpan.textContent = newCount;
-              countSpan.style.cssText = 'font-size:1.5em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
+              countSpan.textContent = newCount + '/' + dailyTarget;
+              countSpan.style.cssText = 'font-size:0.6em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
               habitVisual.innerHTML = '';
               habitVisual.appendChild(countSpan);
               setTimeout(function() {
@@ -1938,10 +1939,11 @@ window.Storage = Storage;
             // Show count in habit icon for 1 second with animation
             var habitVisual = card.querySelector('.habit-visual');
             if (habitVisual) {
+              var dailyTarget = habit.dailyTarget || 1;
               var originalHTML = habitVisual.innerHTML;
               var countSpan = document.createElement('span');
-              countSpan.textContent = newCount;
-              countSpan.style.cssText = 'font-size:1.5em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
+              countSpan.textContent = newCount + '/' + dailyTarget;
+              countSpan.style.cssText = 'font-size:0.6em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
               habitVisual.innerHTML = '';
               habitVisual.appendChild(countSpan);
               setTimeout(function() {
