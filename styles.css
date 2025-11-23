@@ -938,6 +938,11 @@ html.dark .bottom-nav {
     margin-top: 0;
   }
 
+  /* Remove margin from skeleton cards in grid - grid gap handles spacing */
+  .skeleton-list .skeleton-card {
+    margin-top: 0;
+  }
+
   /* ALL cards and skeletons strictly centered */
   .card,
   #list > .card,
