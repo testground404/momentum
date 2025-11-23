@@ -875,6 +875,7 @@ html.dark .bottom-nav {
   /* Hydrating cards maintain absolute centering */
   .card.card-hydrating {
     position: absolute;
+    top: 0;
     width: 95vw;
     max-width: 95vw;
     left: 50%;
@@ -984,6 +985,7 @@ html.dark .bottom-nav {
   /* Hydrating cards maintain absolute centering */
   .card.card-hydrating {
     position: absolute;
+    top: 0;
     width: 95vw;
     max-width: 95vw;
     left: 50%;
@@ -1325,6 +1327,7 @@ html.dark .btn.danger:hover {
 /* Card being hydrated from skeleton */
 .card.card-hydrating {
   position: absolute;
+  top: 0;
   width: 100%;
 }
 
@@ -1755,6 +1758,7 @@ html.dark .btn.danger:hover {
   /* Hydrating cards maintain centering */
   .card.card-hydrating {
     position: absolute;
+    top: 0;
     width: 100%;
     max-width: min(80vw, 1500px);
     left: 50%;
@@ -3618,6 +3622,7 @@ html.dark .card.draggable-card::after {
   }
 
   html[data-card-width="wide"] .card.card-hydrating {
+    top: 0;
     width: var(--card-width) !important;
     max-width: var(--card-max-width) !important;
     min-width: var(--card-width) !important;
