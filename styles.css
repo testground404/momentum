@@ -459,7 +459,7 @@ html.dark .header-top .year-banner::before {
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 600;
-  transition: all 0.4s ease-in-out;
+  transition: opacity 0.3s ease, transform 0.3s ease;
   white-space: nowrap;
   opacity: 0;
   transform: translateX(50px) scale(0.8);
@@ -467,6 +467,20 @@ html.dark .header-top .year-banner::before {
   width: 3.25rem;
   text-align: center;
   flex-shrink: 0;
+}
+
+/* Disable heavy transitions on mobile for better performance */
+@media (max-width: 900px) {
+  .habit-year-wheel .year-item {
+    transition: none;
+    transform: none;
+  }
+  .habit-year-wheel .year-item.visible {
+    transform: none;
+  }
+  .habit-year-wheel .year-item.selected {
+    transform: none;
+  }
 }
 
 .habit-year-wheel .year-item.visible {
