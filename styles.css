@@ -1135,19 +1135,19 @@ html.dark .bottom-nav {
     font-size: 24px;
   }
 
-  /* Equalized spacing: pills → year wheel = year wheel → dots */
+  /* Equalized spacing: pills → year wheel = year wheel → dots = 10px */
   .card-header {
     padding: 16px 20px 0;
-    margin-bottom: 12px;
+    margin-bottom: 0;
   }
   .divider {
-    margin: 20px 20px 20px 20px;
+    margin: 2px 20px 2px 20px;
   }
   .habit-year-wheel {
     width: 100%;
     display: flex;
     justify-content: center;
-    padding: 8px 0;
+    padding: 0;
     margin: 0;
     position: relative;
     z-index: 150;
@@ -1639,19 +1639,19 @@ html.dark .btn.danger:hover {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  /* Equalized spacing: pills → year wheel = year wheel → dots */
+  /* Equalized spacing: pills → year wheel = year wheel → dots = 10px */
   .card-header {
     padding: 16px 20px 0;
-    margin-bottom: 12px;
+    margin-bottom: 0;
   }
   .divider {
-    margin: 20px 20px 20px 20px;
+    margin: 2px 20px 2px 20px;
   }
   .habit-year-wheel {
     width: 100%;
     display: flex;
     justify-content: center;
-    padding: 8px 0;
+    padding: 0;
     margin: 0;
     position: relative;
     z-index: 150;
@@ -1685,16 +1685,16 @@ html.dark .btn.danger:hover {
     width: 100px;
   }
 
-  /* Equalized spacing: pills → year wheel = year wheel → dots */
+  /* Equalized spacing: pills → year wheel = year wheel → dots = 10px */
   .card-header {
     padding: 14px 18px 0;
-    margin-bottom: 12px;
+    margin-bottom: 0;
   }
   .divider {
-    margin: 20px 18px 20px 18px;
+    margin: 2px 18px 2px 18px;
   }
   .habit-year-wheel {
-    padding: 8px 0;
+    padding: 0;
     margin: 0;
   }
   .habit-year-wheel .year-wheel-container {
@@ -1715,16 +1715,16 @@ html.dark .btn.danger:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  /* Equalized spacing: pills → year wheel = year wheel → dots */
+  /* Equalized spacing: pills → year wheel = year wheel → dots = 10px */
   .card-header {
     padding: 14px 18px 0;
-    margin-bottom: 12px;
+    margin-bottom: 0;
   }
   .divider {
-    margin: 20px 18px 20px 18px;
+    margin: 2px 18px 2px 18px;
   }
   .habit-year-wheel {
-    padding: 8px 0;
+    padding: 0;
     margin: 0;
   }
   .habit-year-wheel .year-wheel-container {
@@ -1969,16 +1969,16 @@ html.dark .btn.danger:hover {
     gap: 12px;
   }
 
-  /* Equalized spacing: pills → year wheel = year wheel → dots */
+  /* Equalized spacing: pills → year wheel = year wheel → dots = 10px */
   .card-header {
     padding: 14px 18px 0;
-    margin-bottom: 12px;
+    margin-bottom: 0;
   }
   .divider {
-    margin: 20px 18px 20px 18px;
+    margin: 2px 18px 2px 18px;
   }
   .habit-year-wheel {
-    padding: 8px 0;
+    padding: 0;
     margin: 0;
   }
   .habit-year-wheel .year-wheel-container {
