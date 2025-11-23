@@ -2359,6 +2359,26 @@ html.dark .dot[aria-current="date"]:not(.just-toggled):hover::before {
     transform: scale(1);
   }
 }
+
+@keyframes dotFrequencyFade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  85% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+}
+
 .dot::after {
   content:'';
   position: absolute;
