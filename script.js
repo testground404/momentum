@@ -3513,10 +3513,10 @@ window.Storage = Storage;
 
         console.log('=== CARD POSITIONS at ' + elapsed + 'ms ===');
 
-        // Log habit list container padding if habit cards are visible
+        // Log habit list container info if habit cards are visible
         if (habitCards.length > 0 && habitList) {
           var habitListStyles = window.getComputedStyle(habitList);
-          console.log('#list padding-top: ' + habitListStyles.paddingTop);
+          console.log('#list padding-top: ' + habitListStyles.paddingTop + ', top: ' + habitListRect.top + 'px');
         }
 
         // Log skeleton cards
