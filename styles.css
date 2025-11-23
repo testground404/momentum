@@ -499,6 +499,10 @@ html.dark .header-top .year-banner::before {
   color: var(--accent-base);
 }
 
+.habit-year-wheel .year-item.selected:not(.visible) {
+  opacity: 0.5 !important;
+}
+
 .habit-year-wheel .year-item:not(.selected) {
   color: var(--muted);
 }
