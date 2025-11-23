@@ -1836,7 +1836,7 @@ window.Storage = Storage;
             var originalHTML = habitVisual.innerHTML;
             var countSpan = document.createElement('span');
             countSpan.textContent = currentCount + '/' + dailyTarget;
-            countSpan.style.cssText = 'font-size:1.5em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
+            countSpan.style.cssText = 'font-size:0.6em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
             habitVisual.innerHTML = '';
             habitVisual.appendChild(countSpan);
 
