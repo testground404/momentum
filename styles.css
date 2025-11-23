@@ -1146,9 +1146,10 @@ html.dark .bottom-nav {
     width: 100%;
     display: flex;
     justify-content: center;
+    padding-top: 8px;
   }
   .habit-year-wheel .year-wheel-container {
-    padding: 0.25rem 0;
+    padding: 0.5rem 0;
     margin: 0 auto;
     width: 100%;
     max-width: 100%;
@@ -1156,7 +1157,7 @@ html.dark .bottom-nav {
     justify-content: center;
   }
   .habit-year-wheel .year-wheel-scroll {
-    padding: 0.25rem 1rem;
+    padding: 0.5rem 1rem;
     width: 100%;
     max-width: 100%;
   }
@@ -1645,9 +1646,10 @@ html.dark .btn.danger:hover {
     width: 100%;
     display: flex;
     justify-content: center;
+    padding-top: 8px;
   }
   .habit-year-wheel .year-wheel-container {
-    padding: 0.25rem 0;
+    padding: 0.5rem 0;
     margin: 0 auto;
     width: 100%;
     max-width: 100%;
@@ -1655,7 +1657,7 @@ html.dark .btn.danger:hover {
     justify-content: center;
   }
   .habit-year-wheel .year-wheel-scroll {
-    padding: 0.25rem 1rem;
+    padding: 0.5rem 1rem;
     width: 100%;
     max-width: 100%;
   }
