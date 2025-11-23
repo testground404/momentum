@@ -496,6 +496,7 @@ html.dark .header-top .year-banner::before {
   opacity: 1 !important;
   min-width: 3.5rem;
   width: 3.5rem;
+  padding-top: 5px;
 }
 
 .habit-year-wheel .year-item:not(.selected) {
