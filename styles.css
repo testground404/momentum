@@ -2000,7 +2000,7 @@ html.dark .btn.danger:hover {
   color: var(--accent-base, var(--text));
   border-radius: 14px;
   border: 1px solid var(--surface-muted);
-  background: var(--accent-a-03, var(--chip-bg));
+  background: var(--accent-a-01, var(--chip-bg));
 }
 .habit-visual i {
   font-size: 22px;
