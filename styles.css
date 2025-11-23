@@ -1997,10 +1997,10 @@ html.dark .btn.danger:hover {
   align-items:center;
   justify-content:center;
   flex-shrink: 0;
-  color: var(--accent-base, var(--text));
+  color: white;
   border-radius: 14px;
   border: 1px solid var(--surface-muted);
-  background: var(--accent-a-02, var(--chip-bg));
+  background: var(--accent-base, var(--chip-bg));
 }
 .habit-visual i {
   font-size: 22px;
