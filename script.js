@@ -3489,3 +3489,62 @@ window.Storage = Storage;
     // Start the app
     initializeApp().catch(function(error) {
     });
+
+    // Log card positions every 400ms for 10 seconds
+    (function() {
+      var startTime = Date.now();
+      var duration = 10000; // 10 seconds
+      var interval = 400; // 400ms
+
+      function logCardPositions() {
+        var elapsed = Date.now() - startTime;
+        if (elapsed > duration) {
+          clearInterval(timer);
+          console.log('=== Position logging ended after 10 seconds ===');
+          return;
+        }
+
+        var skeletonList = document.querySelector('.skeleton-list');
+        var skeletonCards = document.querySelectorAll('.skeleton-card');
+        var habitCards = document.querySelectorAll('.card');
+        var skeletonListRect = skeletonList ? skeletonList.getBoundingClientRect() : {top: 0};
+        var habitList = document.querySelector('#list');
+        var habitListRect = habitList ? habitList.getBoundingClientRect() : {top: 0};
+
+        console.log('=== CARD POSITIONS at ' + elapsed + 'ms ===');
+
+        // Log skeleton cards
+        var visibleSkeletons = 0;
+        for (var i = 0; i < skeletonCards.length; i++) {
+          var skeletonStyles = window.getComputedStyle(skeletonCards[i]);
+          if (skeletonStyles.display !== 'none') {
+            var skeletonRect = skeletonCards[i].getBoundingClientRect();
+            var relativeTop = skeletonRect.top - skeletonListRect.top;
+            var skeletonType = skeletonCards[i].classList.contains('skeleton-desktop') ? 'desktop' :
+                               skeletonCards[i].classList.contains('skeleton-tablet') ? 'tablet' : 'mobile';
+            console.log('Skeleton #' + i + ' (' + skeletonType + '): absolute=' + skeletonRect.top + 'px, relative=' + relativeTop + 'px');
+            visibleSkeletons++;
+          }
+        }
+        if (visibleSkeletons === 0) {
+          console.log('No skeleton cards visible');
+        }
+
+        // Log habit cards
+        if (habitCards.length > 0) {
+          for (var j = 0; j < habitCards.length; j++) {
+            var cardRect = habitCards[j].getBoundingClientRect();
+            var relativeCardTop = cardRect.top - habitListRect.top;
+            console.log('Habit Card #' + j + ': absolute=' + cardRect.top + 'px, relative=' + relativeCardTop + 'px');
+          }
+        } else {
+          console.log('No habit cards visible');
+        }
+
+        console.log('');
+      }
+
+      var timer = setInterval(logCardPositions, interval);
+      // Log immediately on start
+      logCardPositions();
+    })();
