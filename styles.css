@@ -2277,6 +2277,27 @@ html.dark .dot[aria-current="date"]:not(.just-toggled):hover::before {
 @keyframes pop {
   50% { transform: scale(1.25); }
 }
+@keyframes countFeedback {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  20% {
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
 .dot::after {
   content:'';
   position: absolute;

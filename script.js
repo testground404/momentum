@@ -1776,11 +1776,15 @@ window.Storage = Storage;
             markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
             markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
 
-            // Show count in habit icon for 1 second
+            // Show count in habit icon for 1 second with animation
             var habitVisual = card.querySelector('.habit-visual');
-            if (habitVisual && newCount > 0) {
+            if (habitVisual) {
               var originalHTML = habitVisual.innerHTML;
-              habitVisual.innerHTML = '<span style="font-size:1.5em;font-weight:700;display:flex;align-items:center;justify-content:center">' + newCount + '</span>';
+              var countSpan = document.createElement('span');
+              countSpan.textContent = newCount;
+              countSpan.style.cssText = 'font-size:1.5em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
+              habitVisual.innerHTML = '';
+              habitVisual.appendChild(countSpan);
               setTimeout(function() {
                 habitVisual.innerHTML = originalHTML;
               }, 1000);
@@ -1922,11 +1926,15 @@ window.Storage = Storage;
               markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
             }
 
-            // Show count in habit icon for 1 second
+            // Show count in habit icon for 1 second with animation
             var habitVisual = card.querySelector('.habit-visual');
-            if (habitVisual && newCount > 0) {
+            if (habitVisual) {
               var originalHTML = habitVisual.innerHTML;
-              habitVisual.innerHTML = '<span style="font-size:1.5em;font-weight:700;display:flex;align-items:center;justify-content:center">' + newCount + '</span>';
+              var countSpan = document.createElement('span');
+              countSpan.textContent = newCount;
+              countSpan.style.cssText = 'font-size:1.5em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
+              habitVisual.innerHTML = '';
+              habitVisual.appendChild(countSpan);
               setTimeout(function() {
                 habitVisual.innerHTML = originalHTML;
               }, 1000);
