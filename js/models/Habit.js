@@ -41,13 +41,14 @@ export function newHabit(name, accent, value, startDateValue) {
     visualValue: value || 'target',
     year: year,
     days: days,
-    dots: new Array(days).fill(false),
+    dots: new Array(days).fill(0),
     offDays: new Array(days).fill(false),
     notes: new Array(days).fill(''),
     accent: accent || '#3d85c6',
     startDate: startDate,
     createdAt: new Date().toISOString(),
-    frequency: defaultFrequency()
+    frequency: defaultFrequency(),
+    dailyTarget: 1
   };
   applyFrequencyToHabit(h); // mark offs right away
   return h;
@@ -64,10 +65,14 @@ export function normalizeHabit(h) {
   const year = h.year || CURRENTYEAR;
   const expected = daysInYear(year);
   const accent = (h.accent && typeof h.accent === 'string') ? h.accent : '#3d85c6';
-  const dots = (Array.isArray(h.dots) && h.dots.length === expected) ? h.dots.map(Boolean) : new Array(expected).fill(false);
+  // Backwards compatibility: convert boolean to number (false→0, true→1)
+  const dots = (Array.isArray(h.dots) && h.dots.length === expected)
+    ? h.dots.map(v => typeof v === 'boolean' ? (v ? 1 : 0) : (typeof v === 'number' ? Math.max(0, Math.floor(v)) : 0))
+    : new Array(expected).fill(0);
   const offDays = (Array.isArray(h.offDays) && h.offDays.length === expected) ? h.offDays.map(Boolean) : new Array(expected).fill(false);
   const notes = (Array.isArray(h.notes) && h.notes.length === expected) ? h.notes.map(v => typeof v === 'string' ? v : '') : new Array(expected).fill('');
   const frequency = (h.frequency && typeof h.frequency === 'object') ? h.frequency : defaultFrequency();
+  const dailyTarget = (typeof h.dailyTarget === 'number' && h.dailyTarget >= 1) ? Math.floor(h.dailyTarget) : 1;
 
   // Preserve original startDate without clamping to year
   const startDate = h.startDate || h.createdAt || toDateInputValue(new Date(year, 0, 1));
@@ -89,6 +94,7 @@ export function normalizeHabit(h) {
     startDate: startDate,
     createdAt: h.createdAt || new Date().toISOString(),
     frequency: frequency,
+    dailyTarget: dailyTarget,
     yearHistory: yearHistory  // Stores {year: {dots, offDays, notes}}
   };
 
@@ -117,10 +123,11 @@ export function rolloverIfNeeded(h) {
     // Now roll to current year
     h.year = CURRENTYEAR;
     h.days = daysInYear(CURRENTYEAR);
-    h.dots = new Array(h.days).fill(false);
+    h.dots = new Array(h.days).fill(0);
     h.offDays = new Array(h.days).fill(false);
     h.notes = new Array(h.days).fill('');
     if (!h.frequency) h.frequency = defaultFrequency();
+    if (!h.dailyTarget) h.dailyTarget = 1;
     applyFrequencyToHabit(h);
   } else {
     // same year but maybe no frequency
@@ -184,7 +191,7 @@ export function applyFrequencyToHabit(habit) {
 
   // don't hide days the user already completed
   for (let j = 0; j < totalDays; j++) {
-    if (habit.dots[j]) {
+    if (habit.dots[j] > 0) {
       newOff[j] = false;
     }
   }
@@ -212,12 +219,13 @@ export function formatFrequency(freq) {
 
 /**
  * Calculate habit statistics
+ * Note: dots are now numbers (count per day), but stats count "days completed" not total count
  */
 export function calcStats(dots, offDays, dayIdx) {
-  const total = dots.reduce((a, b) => a + (b ? 1 : 0), 0);
+  const total = dots.reduce((a, b) => a + (b > 0 ? 1 : 0), 0);
   let longest = 0, run = 0;
   for (let i = 0; i < dots.length; i++) {
-    if (dots[i]) {
+    if (dots[i] > 0) {
       run++;
     } else if (offDays[i]) {
       // skip
@@ -230,7 +238,7 @@ export function calcStats(dots, offDays, dayIdx) {
 
   let current = 0;
   for (let j = Math.min(dayIdx, dots.length - 1); j >= 0; j--) {
-    if (dots[j]) {
+    if (dots[j] > 0) {
       current++;
     } else if (offDays[j]) {
       // keep alive
@@ -273,7 +281,7 @@ export function getCompletionRate(habit, stats) {
   for (let i = startIndex; i < elapsed; i++) {
     if (!habit.offDays[i]) {
       eligible++;
-      if (habit.dots[i]) completed++;
+      if (habit.dots[i] > 0) completed++;
     }
   }
   if (eligible === 0) return 0;

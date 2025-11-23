@@ -31,6 +31,9 @@ export class YearWheel {
     this.animationFrame = null;
     this.itemElements = new Map();
 
+    // Detect mobile for performance optimizations
+    this.isMobile = window.innerWidth <= 900;
+
     this.container = document.getElementById(elementId);
     this.detectFadeColor();
     this.render();
@@ -58,15 +61,17 @@ export class YearWheel {
 
   render() {
     const years = this.getYears();
-    const { fadePercent, minSelectableYear, maxSelectableYear } = this.options;
+    const { minSelectableYear, maxSelectableYear } = this.options;
 
-    const maskStyle = `
-      -webkit-mask-image: linear-gradient(to right, ${this.fade} 0%, black ${fadePercent}%, black ${100 - fadePercent}%, ${this.fade} 100%);
-      mask-image: linear-gradient(to right, ${this.fade} 0%, black ${fadePercent}%, black ${100 - fadePercent}%, ${this.fade} 100%);
+    // Remove mask entirely on mobile for better performance
+    const maskStyle = this.isMobile ? '' : `
+      -webkit-mask-image: linear-gradient(to right, ${this.fade} 0%, black 10%, black 90%, ${this.fade} 100%);
+      mask-image: linear-gradient(to right, ${this.fade} 0%, black 10%, black 90%, ${this.fade} 100%);
     `;
 
-    const leftOverlayStyle = `background: linear-gradient(to right, ${this.fade} 0%, rgba(255,255,255,0) 100%);`;
-    const rightOverlayStyle = `background: linear-gradient(to left, ${this.fade} 0%, rgba(255,255,255,0) 100%);`;
+    // Simplify or remove overlays on mobile
+    const leftOverlayStyle = this.isMobile ? 'display:none;' : `background: linear-gradient(to right, ${this.fade} 0%, rgba(255,255,255,0) 100%);`;
+    const rightOverlayStyle = this.isMobile ? 'display:none;' : `background: linear-gradient(to left, ${this.fade} 0%, rgba(255,255,255,0) 100%);`;
 
     this.container.innerHTML = `
       <div class="year-wheel-container">
@@ -75,7 +80,7 @@ export class YearWheel {
             ${years.map(y => {
               const isDisabled = y < minSelectableYear || y > maxSelectableYear;
               return `
-                <div class="year-item${isDisabled ? ' disabled' : ''}" data-year="${y}" role="option" aria-selected="${y === this.selected}" ${isDisabled ? 'aria-disabled="true"' : ''}>
+                <div class="year-item${isDisabled ? ' disabled' : ''}${y === this.selected ? ' selected visible' : ''}" data-year="${y}" role="option" aria-selected="${y === this.selected}" ${isDisabled ? 'aria-disabled="true"' : ''} style="${y === this.selected ? 'opacity: 1 !important;' : ''}">
                   ${y}
                 </div>
               `;
@@ -100,27 +105,36 @@ export class YearWheel {
   }
 
   init() {
-    // Center the selected year immediately and with delays to ensure it works
-    this.centerYear(this.selected, false);
-
-    requestAnimationFrame(() => {
+    // Reduce centering attempts on mobile for better performance
+    if (this.isMobile) {
+      // Single immediate center on mobile
       this.centerYear(this.selected, false);
-    });
 
-    setTimeout(() => {
+      // One delayed attempt to ensure layout is ready
+      setTimeout(() => {
+        this.centerYear(this.selected, false);
+      }, 100);
+    } else {
+      // Desktop: multiple attempts for smoother centering
       this.centerYear(this.selected, false);
-    }, 100);
 
-    setTimeout(() => {
-      this.centerYear(this.selected, false);
-    }, 300);
+      requestAnimationFrame(() => {
+        this.centerYear(this.selected, false);
+      });
 
-    // Mouse wheel scroll support
+      setTimeout(() => {
+        this.centerYear(this.selected, false);
+      }, 100);
+    }
+
+    // Mouse wheel scroll support (passive on mobile)
     this.scrollContainer.addEventListener('wheel', (e) => {
       if (e.deltaY === 0) return;
-      e.preventDefault();
+      if (!this.isMobile) {
+        e.preventDefault();
+      }
       this.scrollContainer.scrollLeft += e.deltaY;
-    }, { passive: false });
+    }, { passive: this.isMobile });
 
     // Click to select year
     this.container.addEventListener('click', (e) => {
@@ -131,39 +145,39 @@ export class YearWheel {
       }
     });
 
-    // Touch/drag scroll support
-    let isDown = false;
-    let startX;
-    let scrollLeft;
+    // Skip drag scroll on mobile - use native scrolling instead
+    if (!this.isMobile) {
+      // Touch/drag scroll support for desktop only
+      let isDown = false;
+      let startX;
+      let scrollLeft;
 
-    this.scrollContainer.addEventListener('mousedown', (e) => {
-      if (e.target.closest('.year-item')) return; // Allow clicks on items
-      isDown = true;
-      this.scrollContainer.style.cursor = 'grabbing';
-      startX = e.pageX - this.scrollContainer.offsetLeft;
-      scrollLeft = this.scrollContainer.scrollLeft;
-    });
+      this.scrollContainer.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.year-item')) return; // Allow clicks on items
+        isDown = true;
+        this.scrollContainer.style.cursor = 'grabbing';
+        startX = e.pageX - this.scrollContainer.offsetLeft;
+        scrollLeft = this.scrollContainer.scrollLeft;
+      });
 
-    this.scrollContainer.addEventListener('mouseleave', () => {
-      isDown = false;
-      this.scrollContainer.style.cursor = 'grab';
-    });
+      this.scrollContainer.addEventListener('mouseleave', () => {
+        isDown = false;
+        this.scrollContainer.style.cursor = 'grab';
+      });
 
-    this.scrollContainer.addEventListener('mouseup', () => {
-      isDown = false;
-      this.scrollContainer.style.cursor = 'grab';
-    });
+      this.scrollContainer.addEventListener('mouseup', () => {
+        isDown = false;
+        this.scrollContainer.style.cursor = 'grab';
+      });
 
-    this.scrollContainer.addEventListener('mousemove', (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - this.scrollContainer.offsetLeft;
-      const walk = (x - startX) * 2;
-      this.scrollContainer.scrollLeft = scrollLeft - walk;
-    });
-
-    // Remove global keyboard listeners as they would affect all wheels
-    // Individual cards should handle their own focus
+      this.scrollContainer.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - this.scrollContainer.offsetLeft;
+        const walk = (x - startX) * 2;
+        this.scrollContainer.scrollLeft = scrollLeft - walk;
+      });
+    }
   }
 
   centerYear(year, smooth = true) {
@@ -305,9 +319,18 @@ export class YearWheel {
       const isVisible = this.showAllYears || isSelected;
       const isLeft = idx < selectedIdx;
 
-      el.style.opacity = isVisible ? 1 : 0;
-      el.classList.toggle('selected', isSelected);
-      el.classList.toggle('visible', isVisible);
+      // Force selected year to always be visible with !important overrides
+      if (isSelected) {
+        el.style.opacity = '1';
+        el.style.setProperty('opacity', '1', 'important');
+        el.classList.add('selected');
+        el.classList.add('visible');
+      } else {
+        el.style.opacity = isVisible ? 1 : 0;
+        el.classList.toggle('selected', false);
+        el.classList.toggle('visible', isVisible);
+      }
+
       el.classList.toggle('left', isLeft && !isVisible);
       el.setAttribute('aria-selected', isSelected);
     });

@@ -412,7 +412,7 @@ html.dark .header-top .year-banner::before {
   margin: 0 auto;
   padding: 0;
   overflow: visible;
-  min-height: 50px;
+  min-height: 60px;
   display: flex;
   justify-content: center;
 }
@@ -423,14 +423,14 @@ html.dark .header-top .year-banner::before {
   margin: 0;
   padding: 0.5rem 0;
   position: relative;
-  overflow: hidden;
-  min-height: 50px;
+  overflow: visible;
+  min-height: 60px;
 }
 
 .habit-year-wheel .year-wheel-scroll {
   overflow-x: auto;
-  overflow-y: hidden;
-  padding: 0.5rem 1rem;
+  overflow-y: visible;
+  padding: 1rem 1rem;
   position: relative;
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -459,7 +459,7 @@ html.dark .header-top .year-banner::before {
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 600;
-  transition: all 0.4s ease-in-out;
+  transition: opacity 0.3s ease, transform 0.3s ease;
   white-space: nowrap;
   opacity: 0;
   transform: translateX(50px) scale(0.8);
@@ -469,32 +469,41 @@ html.dark .header-top .year-banner::before {
   flex-shrink: 0;
 }
 
-.habit-year-wheel .year-item.visible {
+/* Disable heavy transitions on mobile for better performance */
+@media (max-width: 900px) {
+  .habit-year-wheel .year-item {
+    transition: none;
+    transform: none;
+  }
+  .habit-year-wheel .year-item.visible:not(.selected) {
+    transform: none;
+  }
+  .habit-year-wheel .year-item.selected {
+    transform: none;
+    transition: opacity 0.3s ease;
+  }
+}
+
+.habit-year-wheel .year-item.visible:not(.selected) {
   opacity: 1;
   transform: translateX(0) scale(1);
 }
 
 .habit-year-wheel .year-item.selected {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 800;
   transform: translateX(0) scale(1.15);
-  background: linear-gradient(
-      -45deg,
-      var(--accent-base),
-      rgba(var(--accent-rgb), 0.7),
-      var(--accent-base),
-      rgba(var(--accent-rgb), 0.5)
-  );
-  background-size: 300% 300%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  animation: yearWheelFlow 15s ease-in-out infinite;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
+  opacity: 0.5;
   min-width: 3.5rem;
   width: 3.5rem;
+  padding-top: 5px;
+  color: var(--accent-base);
+  transition: opacity 0.3s ease;
+}
+
+.habit-year-wheel:hover .year-item.selected,
+.habit-year-wheel .year-wheel-scroll:active .year-item.selected {
+  opacity: 1;
 }
 
 .habit-year-wheel .year-item:not(.selected) {
@@ -875,6 +884,7 @@ html.dark .bottom-nav {
   /* Hydrating cards maintain absolute centering */
   .card.card-hydrating {
     position: absolute;
+    top: 0;
     width: 95vw;
     max-width: 95vw;
     left: 50%;
@@ -938,6 +948,11 @@ html.dark .bottom-nav {
     margin-top: 0;
   }
 
+  /* Remove margin from skeleton cards in grid - grid gap handles spacing */
+  .skeleton-list .skeleton-card {
+    margin-top: 0;
+  }
+
   /* ALL cards and skeletons strictly centered */
   .card,
   #list > .card,
@@ -979,6 +994,7 @@ html.dark .bottom-nav {
   /* Hydrating cards maintain absolute centering */
   .card.card-hydrating {
     position: absolute;
+    top: 0;
     width: 95vw;
     max-width: 95vw;
     left: 50%;
@@ -1127,18 +1143,38 @@ html.dark .bottom-nav {
     font-size: 24px;
   }
 
-  /* Reduce spacing around year wheel in mobile */
+  /* Year wheel spacing: 15px above, 10px below */
   .card-header {
     padding: 16px 20px 0;
+    margin-bottom: 0;
+  }
+  .card-pills-wrapper {
+    margin-bottom: 10px;
   }
   .divider {
-    margin: 12px 20px;
+    margin: 5px 20px 10px 20px;
+  }
+  .habit-year-wheel {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    position: relative;
+    z-index: 150;
   }
   .habit-year-wheel .year-wheel-container {
-    padding: 0.25rem 0;
+    padding: 0;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
   }
   .habit-year-wheel .year-wheel-scroll {
-    padding: 0.25rem 1rem;
+    padding: 0 1rem;
+    width: 100%;
+    max-width: 100%;
   }
 }
 
@@ -1320,6 +1356,7 @@ html.dark .btn.danger:hover {
 /* Card being hydrated from skeleton */
 .card.card-hydrating {
   position: absolute;
+  top: 0;
   width: 100%;
 }
 
@@ -1515,6 +1552,9 @@ html.dark .btn.danger:hover {
 #list {
   opacity: 0;
   transition: opacity 0.25s ease-in;
+  padding-top: 0;
+  font-size: 0;
+  line-height: 0;
 }
 
 #list:not([hidden]) {
@@ -1610,18 +1650,38 @@ html.dark .btn.danger:hover {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  /* Reduce spacing around year wheel in mobile */
+  /* Year wheel spacing: 15px above, 10px below */
   .card-header {
     padding: 16px 20px 0;
+    margin-bottom: 0;
+  }
+  .card-pills-wrapper {
+    margin-bottom: 10px;
   }
   .divider {
-    margin: 12px 20px;
+    margin: 5px 20px 10px 20px;
+  }
+  .habit-year-wheel {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    position: relative;
+    z-index: 150;
   }
   .habit-year-wheel .year-wheel-container {
-    padding: 0.25rem 0;
+    padding: 0;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
   }
   .habit-year-wheel .year-wheel-scroll {
-    padding: 0.25rem 1rem;
+    padding: 0 1rem;
+    width: 100%;
+    max-width: 100%;
   }
 }
 @media (max-width: 480px) {
@@ -1639,18 +1699,23 @@ html.dark .btn.danger:hover {
     width: 100px;
   }
 
-  /* Reduce spacing around year wheel in mobile */
+  /* Equalized spacing: pills → year wheel = year wheel → dots = 10px */
   .card-header {
     padding: 14px 18px 0;
+    margin-bottom: 0;
   }
   .divider {
-    margin: 10px 18px;
+    margin: 2px 18px 2px 18px;
+  }
+  .habit-year-wheel {
+    padding: 0;
+    margin: 0;
   }
   .habit-year-wheel .year-wheel-container {
-    padding: 0.25rem 0;
+    padding: 0.5rem 0;
   }
   .habit-year-wheel .year-wheel-scroll {
-    padding: 0.25rem 0.75rem;
+    padding: 0.5rem 0.75rem;
   }
 }
 @media (max-width: 420px) {
@@ -1664,18 +1729,23 @@ html.dark .btn.danger:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  /* Reduce spacing around year wheel in mobile */
+  /* Equalized spacing: pills → year wheel = year wheel → dots = 10px */
   .card-header {
     padding: 14px 18px 0;
+    margin-bottom: 0;
   }
   .divider {
-    margin: 10px 18px;
+    margin: 2px 18px 2px 18px;
+  }
+  .habit-year-wheel {
+    padding: 0;
+    margin: 0;
   }
   .habit-year-wheel .year-wheel-container {
-    padding: 0.25rem 0;
+    padding: 0.5rem 0;
   }
   .habit-year-wheel .year-wheel-scroll {
-    padding: 0.25rem 0.75rem;
+    padding: 0.5rem 0.75rem;
   }
 }
 
@@ -1747,6 +1817,7 @@ html.dark .btn.danger:hover {
   /* Hydrating cards maintain centering */
   .card.card-hydrating {
     position: absolute;
+    top: 0;
     width: 100%;
     max-width: min(80vw, 1500px);
     left: 50%;
@@ -1843,16 +1914,6 @@ html.dark .btn.danger:hover {
     }
 }
 
-@keyframes shimmer {
-    0% {
-        background-position: 100% 0%; /* Start from bottom right (or similar) */
-    }
-    100% {
-        background-position: 0% 100%; /* End at top left (or similar) */
-    }
-}
-
-
 .left {
   text-align:left;
   flex: 1;
@@ -1912,18 +1973,23 @@ html.dark .btn.danger:hover {
     gap: 12px;
   }
 
-  /* Reduce spacing around year wheel in mobile */
+  /* Equalized spacing: pills → year wheel = year wheel → dots = 10px */
   .card-header {
     padding: 14px 18px 0;
+    margin-bottom: 0;
   }
   .divider {
-    margin: 10px 18px;
+    margin: 2px 18px 2px 18px;
+  }
+  .habit-year-wheel {
+    padding: 0;
+    margin: 0;
   }
   .habit-year-wheel .year-wheel-container {
-    padding: 0.25rem 0;
+    padding: 0.5rem 0;
   }
   .habit-year-wheel .year-wheel-scroll {
-    padding: 0.25rem 0.75rem;
+    padding: 0.5rem 0.75rem;
   }
 }
 .habit-visual {
@@ -1937,7 +2003,12 @@ html.dark .btn.danger:hover {
   color: var(--accent-base, var(--text));
   border-radius: 14px;
   border: 1px solid var(--surface-muted);
-  background: var(--chip-bg);
+  background: var(--accent-a-01, var(--chip-bg));
+  transition: background 0.3s ease-in-out;
+}
+
+.habit-visual.showing-frequency {
+  background: var(--accent-a-03, var(--chip-bg));
 }
 .habit-visual i {
   font-size: 22px;
@@ -2253,7 +2324,7 @@ html.dark .dot[aria-current="date"]:not(.just-toggled):hover::before {
   width:var(--dot-active);
   height:var(--dot-active);
   background: var(--accent-base, var(--primary));
-  opacity: 1;
+  opacity: var(--dot-opacity, 1);
   transform:none;
   animation: pop .25s ease;
 }
@@ -2264,6 +2335,37 @@ html.dark .dot[aria-current="date"]:not(.just-toggled):hover::before {
 }
 @keyframes pop {
   50% { transform: scale(1.25); }
+}
+@keyframes countFeedback {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  20% {
+    transform: scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+@keyframes iconFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 .dot::after {
   content:'';
@@ -3483,7 +3585,7 @@ html.dark .confirm-modal {
     rgba(255, 255, 255, 0.3),
     transparent
   );
-  animation: shimmer 1.5s infinite;
+  animation: shimmer-loading 1.5s infinite;
 }
 
 html.dark .card-placeholder::before {
@@ -3495,7 +3597,7 @@ html.dark .card-placeholder::before {
   );
 }
 
-@keyframes shimmer {
+@keyframes shimmer-loading {
   0% {
     left: -100%;
   }
@@ -3610,6 +3712,7 @@ html.dark .card.draggable-card::after {
   }
 
   html[data-card-width="wide"] .card.card-hydrating {
+    top: 0;
     width: var(--card-width) !important;
     max-width: var(--card-max-width) !important;
     min-width: var(--card-width) !important;

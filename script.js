@@ -206,52 +206,6 @@ window.Storage = Storage;
         var skeletonCards = document.querySelectorAll('.skeleton-card');
         var skeletonList = document.querySelector('.skeleton-list');
         var rootStyles = window.getComputedStyle(document.documentElement);
-
-        console.log('=== WIDE VIEW TOGGLED: ' + width.toUpperCase() + ' ===');
-        console.log('CSS Custom Properties:');
-        console.log('  --card-width: ' + rootStyles.getPropertyValue('--card-width').trim());
-        console.log('  --card-max-width: ' + rootStyles.getPropertyValue('--card-max-width').trim());
-        console.log('');
-
-        if (header) {
-          var headerStyles = window.getComputedStyle(header);
-          console.log('Header:');
-          console.log('  width: ' + headerStyles.width);
-          console.log('  max-width: ' + headerStyles.maxWidth);
-        } else {
-          console.log('Header: NOT FOUND');
-        }
-        console.log('');
-
-        console.log('Habit Cards found: ' + cards.length);
-        if (cards.length > 0) {
-          var firstCard = cards[0];
-          var cardStyles = window.getComputedStyle(firstCard);
-          console.log('Habit Card (first):');
-          console.log('  width: ' + cardStyles.width);
-          console.log('  max-width: ' + cardStyles.maxWidth);
-        }
-        console.log('');
-
-        console.log('Skeleton Cards found: ' + skeletonCards.length);
-        if (skeletonCards.length > 0) {
-          var firstSkeleton = skeletonCards[0];
-          var skeletonStyles = window.getComputedStyle(firstSkeleton);
-          console.log('Skeleton Card (first):');
-          console.log('  width: ' + skeletonStyles.width);
-          console.log('  max-width: ' + skeletonStyles.maxWidth);
-        }
-
-        if (skeletonList) {
-          var skeletonListStyles = window.getComputedStyle(skeletonList);
-          console.log('');
-          console.log('Skeleton List Container:');
-          console.log('  width: ' + skeletonListStyles.width);
-          console.log('  max-width: ' + skeletonListStyles.maxWidth);
-          console.log('  display: ' + skeletonListStyles.display);
-        }
-
-        console.log('========================================');
       });
     }
     if (widthToggle) {
@@ -1100,7 +1054,7 @@ window.Storage = Storage;
       var markTodayBtn = document.createElement('button');
       markTodayBtn.className = 'control-btn mark-today-btn';
       markTodayBtn.dataset.action = 'mark-today';
-      var isTodayMarked = habit.dots[todayIdx];
+      var isTodayMarked = habit.dots[todayIdx] > 0;
       if (isTodayMarked) {
         markTodayBtn.classList.add('marked');
       }
@@ -1548,14 +1502,14 @@ window.Storage = Storage;
         if (isFuture || isBeforeStart) {
           dot.setAttribute('aria-disabled', 'true');
           // Remove checked state from dots that are now disabled
-          if (isBeforeStart && habit.dots && habit.dots[index]) {
-            habit.dots[index] = false;
+          if (isBeforeStart && habit.dots && habit.dots[index] > 0) {
+            habit.dots[index] = 0;
             dot.removeAttribute('aria-pressed');
           }
         } else {
           dot.removeAttribute('aria-disabled');
           // Update visual state to match data
-          if (habit.dots && habit.dots[index]) {
+          if (habit.dots && habit.dots[index] > 0) {
             dot.setAttribute('aria-pressed', 'true');
           } else {
             dot.removeAttribute('aria-pressed');
@@ -1580,6 +1534,7 @@ window.Storage = Storage;
       var offDays = habit.offDays;
       var notes = habit.notes;
       var startIndex = getHabitStartIndex(habit);
+      var dailyTarget = habit.dailyTarget || 1;
 
       for (var i = 0; i < days; i++) {
         var dot = document.createElement('div');
@@ -1590,8 +1545,11 @@ window.Storage = Storage;
         dot.dataset.habitId = habitId;
 
         // Set visual state using attributes (minimal DOM operations)
-        if (dots[i]) {
+        if (dots[i] > 0) {
           dot.setAttribute('aria-pressed', 'true');
+          // Apply opacity heatmap: opacity = count / dailyTarget
+          var opacity = Math.min(dots[i] / dailyTarget, 1);
+          dot.style.setProperty('--dot-opacity', opacity);
         }
         if (offDays[i]) {
           dot.dataset.off = 'true';
@@ -1628,6 +1586,7 @@ window.Storage = Storage;
       var offDays = habit.offDays;
       var notes = habit.notes;
       var startIndex = getHabitStartIndex(habit);
+      var dailyTarget = habit.dailyTarget || 1;
 
       for (var month = 0; month < 12; month++) {
         var monthContainer = document.createElement('div');
@@ -1656,8 +1615,11 @@ window.Storage = Storage;
           dot.dataset.habitId = habitId;
 
           // Set visual state using attributes (minimal DOM operations)
-          if (dots[dayOfYearIndex]) {
+          if (dots[dayOfYearIndex] > 0) {
             dot.setAttribute('aria-pressed', 'true');
+            // Apply opacity heatmap: opacity = count / dailyTarget
+            var opacity = Math.min(dots[dayOfYearIndex] / dailyTarget, 1);
+            dot.style.setProperty('--dot-opacity', opacity);
           }
           if (offDays[dayOfYearIndex]) {
             dot.dataset.off = 'true';
@@ -1687,22 +1649,34 @@ window.Storage = Storage;
     }
 
     /* ────────── Simplified dot state toggling (used by Mark Today button) ────────── */
-    function setDotState(dotEl, shouldBeChecked){
+    function setDotState(dotEl, incrementCount){
       if (!dotEl) return;
       var hid = dotEl.dataset.habitId;
       var idx = Number(dotEl.dataset.index);
       var h = HABITS.find(function (x){ return x.id === hid; });
-      if (h && h.dots[idx] !== shouldBeChecked) {
-        h.dots[idx] = shouldBeChecked;
-        // if user checks a day that was auto-off, we should clear off for that day
-        if (shouldBeChecked && h.offDays[idx]) {
+      if (h) {
+        var target = h.dailyTarget || 1;
+        var oldValue = h.dots[idx] || 0;
+
+        // Cycle through counts: 0 → 1 → 2 → ... → dailyTarget → 0
+        if (incrementCount) {
+          h.dots[idx] = (oldValue + 1) % (target + 1);
+        } else {
+          // Allow direct setting for backward compatibility
+          h.dots[idx] = incrementCount;
+        }
+
+        var newValue = h.dots[idx];
+
+        // if user increments a day that was auto-off, we should clear off for that day
+        if (newValue > 0 && h.offDays[idx]) {
           h.offDays[idx] = false;
         }
         // Mark stats as dirty so they recalculate next time
         h._dirtyStats = true;
 
-        dotEl.setAttribute('aria-pressed', String(shouldBeChecked));
-        if (shouldBeChecked) {
+        dotEl.setAttribute('aria-pressed', String(newValue > 0));
+        if (newValue > oldValue || (oldValue > 0 && newValue === 0)) {
           dotEl.classList.add('just-toggled');
           dotEl.addEventListener('animationend', function (){
             dotEl.classList.remove('just-toggled');
@@ -1735,14 +1709,38 @@ window.Storage = Storage;
           var todayDot = activeContainer ? activeContainer.querySelector('.dot[data-index="' + todayIdx + '"]') : null;
 
           if (todayDot) {
-            var currentState = habit.dots[todayIdx];
-            var newState = !currentState;
-            setDotState(todayDot, newState);
+            // Increment the count for today
+            setDotState(todayDot, true);
+
+            var newCount = habit.dots[todayIdx];
+            var newState = newCount > 0;
 
             // Update button visual state immediately
             markTodayBtn.classList.toggle('marked', newState);
             markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
             markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
+
+            // Show count in habit icon for 1 second with animation
+            var habitVisual = card.querySelector('.habit-visual');
+            if (habitVisual) {
+              var dailyTarget = habit.dailyTarget || 1;
+              habitVisual.classList.add('showing-frequency');
+              var originalHTML = habitVisual.innerHTML;
+              var countSpan = document.createElement('span');
+              countSpan.textContent = newCount + '/' + dailyTarget;
+              countSpan.style.cssText = 'font-size:0.6em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
+              habitVisual.innerHTML = '';
+              habitVisual.appendChild(countSpan);
+              setTimeout(function() {
+                habitVisual.classList.remove('showing-frequency');
+                habitVisual.innerHTML = originalHTML;
+                // Fade in the restored icon
+                var icon = habitVisual.querySelector('i');
+                if (icon) {
+                  icon.style.animation = 'iconFadeIn 0.2s ease-in-out';
+                }
+              }, 1000);
+            }
 
             onHabitChanged(habit); // This updates stats and saves
             announce(newState ? "Marked today" : "Unmarked today");
@@ -1771,13 +1769,16 @@ window.Storage = Storage;
           // Load data for the current year from history, or create new arrays
           if (habit.yearHistory && habit.yearHistory[CURRENTYEAR]) {
             var history = habit.yearHistory[CURRENTYEAR];
-            habit.dots = history.dots.slice();
+            // Normalize dots to handle old boolean data (backwards compatibility)
+            habit.dots = history.dots.map(function(v) {
+              return typeof v === 'boolean' ? (v ? 1 : 0) : (typeof v === 'number' ? Math.max(0, Math.floor(v)) : 0);
+            });
             habit.offDays = history.offDays.slice();
             habit.notes = history.notes.slice();
             // Mark stats as dirty since dots/offDays changed
             habit._dirtyStats = true;
           } else {
-            habit.dots = new Array(habit.days).fill(false);
+            habit.dots = new Array(habit.days).fill(0);
             habit.offDays = new Array(habit.days).fill(false);
             habit.notes = new Array(habit.days).fill('');
             applyFrequencyToHabit(habit); // This will mark as dirty
@@ -1788,15 +1789,19 @@ window.Storage = Storage;
           var todayIsBeforeStartDate = todayIdx < getHabitStartIndex(habit);
 
           if (!todayIsBeforeStartDate) {
-            var newState = !habit.dots[todayIdx]; // Toggle the state
-            habit.dots[todayIdx] = newState;
+            // Increment the count for today
+            var target = habit.dailyTarget || 1;
+            var oldValue = habit.dots[todayIdx] || 0;
+            habit.dots[todayIdx] = (oldValue + 1) % (target + 1);
+            var newValue = habit.dots[todayIdx];
+
             // If we mark a day, it can't be an "off day"
-            if (newState && habit.offDays[todayIdx]) {
+            if (newValue > 0 && habit.offDays[todayIdx]) {
               habit.offDays[todayIdx] = false;
             }
             // Mark stats as dirty since we just toggled today's dot
             habit._dirtyStats = true;
-            announce("Switched to current year and " + (newState ? "marked today" : "unmarked today"));
+            announce("Switched to current year and " + (newValue > 0 ? "marked today" : "unmarked today"));
           } else {
             announce("Switched to current year. Cannot mark today as it is before the habit's start date.");
           }
@@ -1815,6 +1820,69 @@ window.Storage = Storage;
         var habit = HABITS.find(function (h){ return h.id === habitId; });
         if (habit) openEditOverlay(habit);
       }
+      // Handle habit icon clicks to show today's frequency
+      var habitVisual = e.target.closest('.habit-visual');
+      if (habitVisual) {
+        e.stopPropagation(); // Prevent opening stats overlay
+
+        // Prevent multiple clicks while animation is running
+        if (habitVisual.dataset.animating === 'true') return;
+
+        var titleBtn = habitVisual.closest('.habit-title-btn');
+        if (titleBtn) {
+          var habitId = titleBtn.dataset.habitId;
+          var habit = HABITS.find(function(h) { return h.id === habitId; });
+
+          if (habit && habit.year === CURRENTYEAR) {
+            var todayIdx = dayIndexForYear(CURRENTYEAR);
+            var currentCount = habit.dots[todayIdx] || 0;
+            var dailyTarget = habit.dailyTarget || 1;
+
+            // Store original icon HTML if not already stored, or if current content has an icon
+            var currentHTML = habitVisual.innerHTML;
+            if (!habitVisual.dataset.originalIcon || currentHTML.indexOf('<i') !== -1) {
+              habitVisual.dataset.originalIcon = currentHTML;
+            }
+
+            // Mark as animating immediately
+            habitVisual.dataset.animating = 'true';
+
+            // Add class to increase background opacity
+            habitVisual.classList.add('showing-frequency');
+
+            // Show count in habit icon for 1 second with animation
+            var countSpan = document.createElement('span');
+            countSpan.textContent = currentCount + '/' + dailyTarget;
+            countSpan.style.cssText = 'font-size:0.6em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
+            habitVisual.innerHTML = '';
+            habitVisual.appendChild(countSpan);
+
+            setTimeout(function() {
+              // Remove frequency class to fade background back
+              habitVisual.classList.remove('showing-frequency');
+
+              // Restore from stored original icon
+              habitVisual.innerHTML = habitVisual.dataset.originalIcon;
+              // Fade in the restored icon
+              var icon = habitVisual.querySelector('i');
+              if (icon) {
+                icon.style.animation = 'iconFadeIn 0.2s ease-in-out';
+                // Clear animation style after it completes
+                setTimeout(function() {
+                  if (icon) icon.style.animation = '';
+                  // Clear animating flag
+                  habitVisual.dataset.animating = 'false';
+                }, 200);
+              } else {
+                // Clear animating flag even if icon not found
+                habitVisual.dataset.animating = 'false';
+              }
+            }, 1000);
+          }
+        }
+        return;
+      }
+
       var titleBtn = e.target.closest('.habit-title-btn');
       if (titleBtn) {
         var hid = titleBtn.dataset.habitId;
@@ -1862,9 +1930,11 @@ window.Storage = Storage;
           var todayDot = activeContainer ? activeContainer.querySelector('.dot[data-index="' + todayIdx + '"]') : null;
 
           if (todayDot) {
-            var currentState = habit.dots[todayIdx];
-            var newState = !currentState;
-            setDotState(todayDot, newState);
+            // Increment the count for today
+            setDotState(todayDot, true);
+
+            var newCount = habit.dots[todayIdx];
+            var newState = newCount > 0;
 
             // Update mark-today button visual state
             var markTodayBtn = card.querySelector('.mark-today-btn');
@@ -1874,14 +1944,30 @@ window.Storage = Storage;
               markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
             }
 
+            // Show count in habit icon for 1 second with animation
+            var habitVisual = card.querySelector('.habit-visual');
+            if (habitVisual) {
+              var dailyTarget = habit.dailyTarget || 1;
+              habitVisual.classList.add('showing-frequency');
+              var originalHTML = habitVisual.innerHTML;
+              var countSpan = document.createElement('span');
+              countSpan.textContent = newCount + '/' + dailyTarget;
+              countSpan.style.cssText = 'font-size:0.6em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
+              habitVisual.innerHTML = '';
+              habitVisual.appendChild(countSpan);
+              setTimeout(function() {
+                habitVisual.classList.remove('showing-frequency');
+                habitVisual.innerHTML = originalHTML;
+                // Fade in the restored icon
+                var icon = habitVisual.querySelector('i');
+                if (icon) {
+                  icon.style.animation = 'iconFadeIn 0.2s ease-in-out';
+                }
+              }, 1000);
+            }
+
             onHabitChanged(habit);
             announce(newState ? "Marked today" : "Unmarked today");
-
-            // Add visual feedback for double-tap using scale property (no transform conflicts)
-            card.style.scale = '0.98';
-            setTimeout(function() {
-              card.style.scale = '';
-            }, 100);
           }
         } else {
           // If viewing a different year, switch to current year first
@@ -1903,12 +1989,15 @@ window.Storage = Storage;
 
           if (habit.yearHistory && habit.yearHistory[CURRENTYEAR]) {
             var history = habit.yearHistory[CURRENTYEAR];
-            habit.dots = history.dots.slice();
+            // Normalize dots to handle old boolean data (backwards compatibility)
+            habit.dots = history.dots.map(function(v) {
+              return typeof v === 'boolean' ? (v ? 1 : 0) : (typeof v === 'number' ? Math.max(0, Math.floor(v)) : 0);
+            });
             habit.offDays = history.offDays.slice();
             habit.notes = history.notes.slice();
             habit._dirtyStats = true;
           } else {
-            habit.dots = new Array(habit.days).fill(false);
+            habit.dots = new Array(habit.days).fill(0);
             habit.offDays = new Array(habit.days).fill(false);
             habit.notes = new Array(habit.days).fill('');
             applyFrequencyToHabit(habit);
@@ -1918,9 +2007,12 @@ window.Storage = Storage;
           var todayIsBeforeStartDate = todayIdx < getHabitStartIndex(habit);
 
           if (!todayIsBeforeStartDate) {
-            var newState = !habit.dots[todayIdx];
-            habit.dots[todayIdx] = newState;
-            if (newState) habit.offDays[todayIdx] = false;
+            // Increment the count for today
+            var target = habit.dailyTarget || 1;
+            var oldValue = habit.dots[todayIdx] || 0;
+            habit.dots[todayIdx] = (oldValue + 1) % (target + 1);
+            var newValue = habit.dots[todayIdx];
+            if (newValue > 0) habit.offDays[todayIdx] = false;
             habit._dirtyStats = true;
           }
 
@@ -2251,6 +2343,14 @@ window.Storage = Storage;
         : defaultStartDateForYear(CURRENTYEAR);
       var h = newHabit(name, newSelectedAccent, newSelectedIcon, startDateValue);
       h.frequency = freqObj;
+
+      // Read dailyTarget from form
+      var dailyTargetEl = document.getElementById('habit-daily-target');
+      var dailyTarget = dailyTargetEl ? Number(dailyTargetEl.value) : 1;
+      if (!dailyTarget || dailyTarget < 1) dailyTarget = 1;
+      if (dailyTarget > 99) dailyTarget = 99;
+      h.dailyTarget = dailyTarget;
+
       applyFrequencyToHabit(h);
 
       HABITS.unshift(h);
@@ -2321,6 +2421,12 @@ window.Storage = Storage;
         editFreqExtra.innerHTML = '';
       }
 
+      // prefill dailyTarget
+      var dailyTargetEl = document.getElementById('edit-habit-daily-target');
+      if (dailyTargetEl) {
+        dailyTargetEl.value = h.dailyTarget || 1;
+      }
+
       editHabitOverlay.open();
     }
     document.getElementById('edit-sheet-close').addEventListener('click', function (){ editHabitOverlay.close(); });
@@ -2349,6 +2455,7 @@ window.Storage = Storage;
           var habitIcon = habit.visualValue;
           var habitStartDate = habit.startDate;
           var habitFrequency = habit.frequency;
+          var habitDailyTarget = habit.dailyTarget;
           var habitIndex = HABITS.findIndex(function(h) { return h.id === id; });
 
           // 3. Remove old habit
@@ -2359,6 +2466,7 @@ window.Storage = Storage;
           // 4. Create new habit with same properties
           var newHabitObj = newHabit(habitName, habitAccent, habitIcon, habitStartDate);
           newHabitObj.frequency = habitFrequency;
+          newHabitObj.dailyTarget = habitDailyTarget || 1;
           applyFrequencyToHabit(newHabitObj);
 
           // 5. Insert at the same position or at the top
@@ -2413,12 +2521,12 @@ window.Storage = Storage;
           // Check if new start date is in the future
           if (newStartDate > today) {
             // Check if habit has any existing completions in current year
-            var hasCompletions = habit.dots && habit.dots.some(function(dot) { return dot === true; });
+            var hasCompletions = habit.dots && habit.dots.some(function(dot) { return dot > 0; });
 
             // Also check historical years for completions
             if (!hasCompletions && habit.yearHistory) {
               for (var yr in habit.yearHistory) {
-                if (habit.yearHistory[yr].dots && habit.yearHistory[yr].dots.some(function(dot) { return dot === true; })) {
+                if (habit.yearHistory[yr].dots && habit.yearHistory[yr].dots.some(function(dot) { return dot > 0; })) {
                   hasCompletions = true;
                   break;
                 }
@@ -2511,6 +2619,14 @@ window.Storage = Storage;
         freqObj.timesPerWeek = tpw;
       }
       habit.frequency = freqObj;
+
+      // Read dailyTarget from edit form
+      var dailyTargetEl = document.getElementById('edit-habit-daily-target');
+      var dailyTarget = dailyTargetEl ? Number(dailyTargetEl.value) : 1;
+      if (!dailyTarget || dailyTarget < 1) dailyTarget = 1;
+      if (dailyTarget > 99) dailyTarget = 99;
+      habit.dailyTarget = dailyTarget;
+
       applyFrequencyToHabit(habit);
 
       // Update disabled state of dots if start date changed
@@ -3356,14 +3472,17 @@ window.Storage = Storage;
             if (habit.yearHistory && habit.yearHistory[selectedYear]) {
               // Restore historical data
               var history = habit.yearHistory[selectedYear];
-              habit.dots = history.dots.slice();
+              // Normalize dots to handle old boolean data (backwards compatibility)
+              habit.dots = history.dots.map(function(v) {
+                return typeof v === 'boolean' ? (v ? 1 : 0) : (typeof v === 'number' ? Math.max(0, Math.floor(v)) : 0);
+              });
               habit.offDays = history.offDays.slice();
               habit.notes = history.notes.slice();
               // Mark stats as dirty since dots/offDays changed
               habit._dirtyStats = true;
             } else {
               // No historical data, create fresh arrays for this year
-              habit.dots = new Array(habit.days).fill(false);
+              habit.dots = new Array(habit.days).fill(0);
               habit.offDays = new Array(habit.days).fill(false);
               habit.notes = new Array(habit.days).fill('');
 
@@ -3479,3 +3598,88 @@ window.Storage = Storage;
     // Start the app
     initializeApp().catch(function(error) {
     });
+
+    // Debug year wheel positioning and overlap detection
+    (function() {
+      var startTime = Date.now();
+      var duration = 10000; // 10 seconds
+      var interval = 500; // 500ms
+
+      function checkOverlap(rect1, rect2) {
+        return !(rect1.right < rect2.left ||
+                 rect1.left > rect2.right ||
+                 rect1.bottom < rect2.top ||
+                 rect1.top > rect2.bottom);
+      }
+
+      function debugYearWheelPosition() {
+        var elapsed = Date.now() - startTime;
+        if (elapsed > duration) {
+          clearInterval(timer);
+          console.log('=== Year wheel position debugging ended ===');
+          return;
+        }
+
+        var header = document.querySelector('.app-header');
+        var cards = document.querySelectorAll('.card');
+
+        if (!header || cards.length === 0) return;
+
+        var headerRect = header.getBoundingClientRect();
+
+        console.log('=== YEAR WHEEL POSITION CHECK at ' + elapsed + 'ms ===');
+        console.log('Header: top=' + headerRect.top.toFixed(1) + ', bottom=' + headerRect.bottom.toFixed(1) + ', height=' + headerRect.height.toFixed(1));
+        console.log('');
+
+        for (var i = 0; i < Math.min(cards.length, 2); i++) {
+          var card = cards[i];
+          var cardRect = card.getBoundingClientRect();
+          var pillsWrapper = card.querySelector('.card-pills-wrapper');
+          var yearWheel = card.querySelector('.habit-year-wheel');
+          var dotsGrid = card.querySelector('.dots-grid');
+
+          if (!pillsWrapper || !yearWheel || !dotsGrid) continue;
+
+          var pillsRect = pillsWrapper.getBoundingClientRect();
+          var yearWheelRect = yearWheel.getBoundingClientRect();
+          var dotsRect = dotsGrid.getBoundingClientRect();
+
+          console.log('Card #' + i + ':');
+          console.log('  Card top: ' + cardRect.top.toFixed(1) + ', bottom: ' + cardRect.bottom.toFixed(1));
+          console.log('');
+
+          console.log('  Pills: top=' + pillsRect.top.toFixed(1) + ', bottom=' + pillsRect.bottom.toFixed(1) + ', height=' + pillsRect.height.toFixed(1));
+          console.log('  Year Wheel: top=' + yearWheelRect.top.toFixed(1) + ', bottom=' + yearWheelRect.bottom.toFixed(1) + ', height=' + yearWheelRect.height.toFixed(1));
+          console.log('  Dots: top=' + dotsRect.top.toFixed(1) + ', bottom=' + dotsRect.bottom.toFixed(1) + ', height=' + dotsRect.height.toFixed(1));
+          console.log('');
+
+          // Check spacing
+          var pillsToYearWheel = yearWheelRect.top - pillsRect.bottom;
+          var yearWheelToDots = dotsRect.top - yearWheelRect.bottom;
+          var headerToYearWheel = yearWheelRect.top - headerRect.bottom;
+
+          console.log('  Spacing:');
+          console.log('    Pills → Year Wheel: ' + pillsToYearWheel.toFixed(1) + 'px ' + (pillsToYearWheel >= 9 && pillsToYearWheel <= 11 ? '✓' : '✗ (expected ~10px)'));
+          console.log('    Year Wheel → Dots: ' + yearWheelToDots.toFixed(1) + 'px ' + (yearWheelToDots >= 9 && yearWheelToDots <= 11 ? '✓' : '✗ (expected ~10px)'));
+          console.log('    Header → Year Wheel: ' + headerToYearWheel.toFixed(1) + 'px');
+          console.log('');
+
+          // Check overlaps
+          var overlaps = [];
+          if (checkOverlap(yearWheelRect, headerRect)) overlaps.push('HEADER');
+          if (checkOverlap(yearWheelRect, pillsRect)) overlaps.push('PILLS');
+          if (checkOverlap(yearWheelRect, dotsRect)) overlaps.push('DOTS');
+
+          if (overlaps.length > 0) {
+            console.log('  ⚠️  OVERLAPS DETECTED: ' + overlaps.join(', '));
+          } else {
+            console.log('  ✓ No overlaps detected');
+          }
+          console.log('');
+        }
+      }
+
+      var timer = setInterval(debugYearWheelPosition, interval);
+      // Log immediately on start
+      setTimeout(debugYearWheelPosition, 100);
+    })();
