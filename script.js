@@ -1110,7 +1110,7 @@ window.Storage = Storage;
       var markTodayBtn = document.createElement('button');
       markTodayBtn.className = 'control-btn mark-today-btn';
       markTodayBtn.dataset.action = 'mark-today';
-      var isTodayMarked = habit.dots[todayIdx];
+      var isTodayMarked = habit.dots[todayIdx] > 0;
       if (isTodayMarked) {
         markTodayBtn.classList.add('marked');
       }
@@ -1558,14 +1558,14 @@ window.Storage = Storage;
         if (isFuture || isBeforeStart) {
           dot.setAttribute('aria-disabled', 'true');
           // Remove checked state from dots that are now disabled
-          if (isBeforeStart && habit.dots && habit.dots[index]) {
-            habit.dots[index] = false;
+          if (isBeforeStart && habit.dots && habit.dots[index] > 0) {
+            habit.dots[index] = 0;
             dot.removeAttribute('aria-pressed');
           }
         } else {
           dot.removeAttribute('aria-disabled');
           // Update visual state to match data
-          if (habit.dots && habit.dots[index]) {
+          if (habit.dots && habit.dots[index] > 0) {
             dot.setAttribute('aria-pressed', 'true');
           } else {
             dot.removeAttribute('aria-pressed');
@@ -1590,6 +1590,7 @@ window.Storage = Storage;
       var offDays = habit.offDays;
       var notes = habit.notes;
       var startIndex = getHabitStartIndex(habit);
+      var dailyTarget = habit.dailyTarget || 1;
 
       for (var i = 0; i < days; i++) {
         var dot = document.createElement('div');
@@ -1600,8 +1601,11 @@ window.Storage = Storage;
         dot.dataset.habitId = habitId;
 
         // Set visual state using attributes (minimal DOM operations)
-        if (dots[i]) {
+        if (dots[i] > 0) {
           dot.setAttribute('aria-pressed', 'true');
+          // Apply opacity heatmap: opacity = count / dailyTarget
+          var opacity = Math.min(dots[i] / dailyTarget, 1);
+          dot.style.setProperty('--dot-opacity', opacity);
         }
         if (offDays[i]) {
           dot.dataset.off = 'true';
@@ -1638,6 +1642,7 @@ window.Storage = Storage;
       var offDays = habit.offDays;
       var notes = habit.notes;
       var startIndex = getHabitStartIndex(habit);
+      var dailyTarget = habit.dailyTarget || 1;
 
       for (var month = 0; month < 12; month++) {
         var monthContainer = document.createElement('div');
@@ -1666,8 +1671,11 @@ window.Storage = Storage;
           dot.dataset.habitId = habitId;
 
           // Set visual state using attributes (minimal DOM operations)
-          if (dots[dayOfYearIndex]) {
+          if (dots[dayOfYearIndex] > 0) {
             dot.setAttribute('aria-pressed', 'true');
+            // Apply opacity heatmap: opacity = count / dailyTarget
+            var opacity = Math.min(dots[dayOfYearIndex] / dailyTarget, 1);
+            dot.style.setProperty('--dot-opacity', opacity);
           }
           if (offDays[dayOfYearIndex]) {
             dot.dataset.off = 'true';
@@ -1697,22 +1705,34 @@ window.Storage = Storage;
     }
 
     /* ────────── Simplified dot state toggling (used by Mark Today button) ────────── */
-    function setDotState(dotEl, shouldBeChecked){
+    function setDotState(dotEl, incrementCount){
       if (!dotEl) return;
       var hid = dotEl.dataset.habitId;
       var idx = Number(dotEl.dataset.index);
       var h = HABITS.find(function (x){ return x.id === hid; });
-      if (h && h.dots[idx] !== shouldBeChecked) {
-        h.dots[idx] = shouldBeChecked;
-        // if user checks a day that was auto-off, we should clear off for that day
-        if (shouldBeChecked && h.offDays[idx]) {
+      if (h) {
+        var target = h.dailyTarget || 1;
+        var oldValue = h.dots[idx] || 0;
+
+        // Cycle through counts: 0 → 1 → 2 → ... → dailyTarget → 0
+        if (incrementCount) {
+          h.dots[idx] = (oldValue + 1) % (target + 1);
+        } else {
+          // Allow direct setting for backward compatibility
+          h.dots[idx] = incrementCount;
+        }
+
+        var newValue = h.dots[idx];
+
+        // if user increments a day that was auto-off, we should clear off for that day
+        if (newValue > 0 && h.offDays[idx]) {
           h.offDays[idx] = false;
         }
         // Mark stats as dirty so they recalculate next time
         h._dirtyStats = true;
 
-        dotEl.setAttribute('aria-pressed', String(shouldBeChecked));
-        if (shouldBeChecked) {
+        dotEl.setAttribute('aria-pressed', String(newValue > 0));
+        if (newValue > oldValue || (oldValue > 0 && newValue === 0)) {
           dotEl.classList.add('just-toggled');
           dotEl.addEventListener('animationend', function (){
             dotEl.classList.remove('just-toggled');
@@ -1745,10 +1765,10 @@ window.Storage = Storage;
           var todayDot = activeContainer ? activeContainer.querySelector('.dot[data-index="' + todayIdx + '"]') : null;
 
           if (todayDot) {
-            var currentState = habit.dots[todayIdx];
-            var newState = !currentState;
-            setDotState(todayDot, newState);
+            // Increment the count for today
+            setDotState(todayDot, true);
 
+            var newState = habit.dots[todayIdx] > 0;
             // Update button visual state immediately
             markTodayBtn.classList.toggle('marked', newState);
             markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
@@ -1787,7 +1807,7 @@ window.Storage = Storage;
             // Mark stats as dirty since dots/offDays changed
             habit._dirtyStats = true;
           } else {
-            habit.dots = new Array(habit.days).fill(false);
+            habit.dots = new Array(habit.days).fill(0);
             habit.offDays = new Array(habit.days).fill(false);
             habit.notes = new Array(habit.days).fill('');
             applyFrequencyToHabit(habit); // This will mark as dirty
@@ -1798,15 +1818,19 @@ window.Storage = Storage;
           var todayIsBeforeStartDate = todayIdx < getHabitStartIndex(habit);
 
           if (!todayIsBeforeStartDate) {
-            var newState = !habit.dots[todayIdx]; // Toggle the state
-            habit.dots[todayIdx] = newState;
+            // Increment the count for today
+            var target = habit.dailyTarget || 1;
+            var oldValue = habit.dots[todayIdx] || 0;
+            habit.dots[todayIdx] = (oldValue + 1) % (target + 1);
+            var newValue = habit.dots[todayIdx];
+
             // If we mark a day, it can't be an "off day"
-            if (newState && habit.offDays[todayIdx]) {
+            if (newValue > 0 && habit.offDays[todayIdx]) {
               habit.offDays[todayIdx] = false;
             }
             // Mark stats as dirty since we just toggled today's dot
             habit._dirtyStats = true;
-            announce("Switched to current year and " + (newState ? "marked today" : "unmarked today"));
+            announce("Switched to current year and " + (newValue > 0 ? "marked today" : "unmarked today"));
           } else {
             announce("Switched to current year. Cannot mark today as it is before the habit's start date.");
           }
@@ -1918,7 +1942,7 @@ window.Storage = Storage;
             habit.notes = history.notes.slice();
             habit._dirtyStats = true;
           } else {
-            habit.dots = new Array(habit.days).fill(false);
+            habit.dots = new Array(habit.days).fill(0);
             habit.offDays = new Array(habit.days).fill(false);
             habit.notes = new Array(habit.days).fill('');
             applyFrequencyToHabit(habit);
@@ -1928,9 +1952,12 @@ window.Storage = Storage;
           var todayIsBeforeStartDate = todayIdx < getHabitStartIndex(habit);
 
           if (!todayIsBeforeStartDate) {
-            var newState = !habit.dots[todayIdx];
-            habit.dots[todayIdx] = newState;
-            if (newState) habit.offDays[todayIdx] = false;
+            // Increment the count for today
+            var target = habit.dailyTarget || 1;
+            var oldValue = habit.dots[todayIdx] || 0;
+            habit.dots[todayIdx] = (oldValue + 1) % (target + 1);
+            var newValue = habit.dots[todayIdx];
+            if (newValue > 0) habit.offDays[todayIdx] = false;
             habit._dirtyStats = true;
           }
 
@@ -2261,6 +2288,14 @@ window.Storage = Storage;
         : defaultStartDateForYear(CURRENTYEAR);
       var h = newHabit(name, newSelectedAccent, newSelectedIcon, startDateValue);
       h.frequency = freqObj;
+
+      // Read dailyTarget from form
+      var dailyTargetEl = document.getElementById('habit-daily-target');
+      var dailyTarget = dailyTargetEl ? Number(dailyTargetEl.value) : 1;
+      if (!dailyTarget || dailyTarget < 1) dailyTarget = 1;
+      if (dailyTarget > 99) dailyTarget = 99;
+      h.dailyTarget = dailyTarget;
+
       applyFrequencyToHabit(h);
 
       HABITS.unshift(h);
@@ -2331,6 +2366,12 @@ window.Storage = Storage;
         editFreqExtra.innerHTML = '';
       }
 
+      // prefill dailyTarget
+      var dailyTargetEl = document.getElementById('edit-habit-daily-target');
+      if (dailyTargetEl) {
+        dailyTargetEl.value = h.dailyTarget || 1;
+      }
+
       editHabitOverlay.open();
     }
     document.getElementById('edit-sheet-close').addEventListener('click', function (){ editHabitOverlay.close(); });
@@ -2359,6 +2400,7 @@ window.Storage = Storage;
           var habitIcon = habit.visualValue;
           var habitStartDate = habit.startDate;
           var habitFrequency = habit.frequency;
+          var habitDailyTarget = habit.dailyTarget;
           var habitIndex = HABITS.findIndex(function(h) { return h.id === id; });
 
           // 3. Remove old habit
@@ -2369,6 +2411,7 @@ window.Storage = Storage;
           // 4. Create new habit with same properties
           var newHabitObj = newHabit(habitName, habitAccent, habitIcon, habitStartDate);
           newHabitObj.frequency = habitFrequency;
+          newHabitObj.dailyTarget = habitDailyTarget || 1;
           applyFrequencyToHabit(newHabitObj);
 
           // 5. Insert at the same position or at the top
@@ -2423,12 +2466,12 @@ window.Storage = Storage;
           // Check if new start date is in the future
           if (newStartDate > today) {
             // Check if habit has any existing completions in current year
-            var hasCompletions = habit.dots && habit.dots.some(function(dot) { return dot === true; });
+            var hasCompletions = habit.dots && habit.dots.some(function(dot) { return dot > 0; });
 
             // Also check historical years for completions
             if (!hasCompletions && habit.yearHistory) {
               for (var yr in habit.yearHistory) {
-                if (habit.yearHistory[yr].dots && habit.yearHistory[yr].dots.some(function(dot) { return dot === true; })) {
+                if (habit.yearHistory[yr].dots && habit.yearHistory[yr].dots.some(function(dot) { return dot > 0; })) {
                   hasCompletions = true;
                   break;
                 }
@@ -2521,6 +2564,14 @@ window.Storage = Storage;
         freqObj.timesPerWeek = tpw;
       }
       habit.frequency = freqObj;
+
+      // Read dailyTarget from edit form
+      var dailyTargetEl = document.getElementById('edit-habit-daily-target');
+      var dailyTarget = dailyTargetEl ? Number(dailyTargetEl.value) : 1;
+      if (!dailyTarget || dailyTarget < 1) dailyTarget = 1;
+      if (dailyTarget > 99) dailyTarget = 99;
+      habit.dailyTarget = dailyTarget;
+
       applyFrequencyToHabit(habit);
 
       // Update disabled state of dots if start date changed
@@ -3373,7 +3424,7 @@ window.Storage = Storage;
               habit._dirtyStats = true;
             } else {
               // No historical data, create fresh arrays for this year
-              habit.dots = new Array(habit.days).fill(false);
+              habit.dots = new Array(habit.days).fill(0);
               habit.offDays = new Array(habit.days).fill(false);
               habit.notes = new Array(habit.days).fill('');
 

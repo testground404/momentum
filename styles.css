@@ -2265,7 +2265,7 @@ html.dark .dot[aria-current="date"]:not(.just-toggled):hover::before {
   width:var(--dot-active);
   height:var(--dot-active);
   background: var(--accent-base, var(--primary));
-  opacity: 1;
+  opacity: var(--dot-opacity, 1);
   transform:none;
   animation: pop .25s ease;
 }
