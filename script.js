@@ -1822,6 +1822,9 @@ window.Storage = Storage;
       if (habitVisual) {
         e.stopPropagation(); // Prevent opening stats overlay
 
+        // Prevent multiple clicks while animation is running
+        if (habitVisual.dataset.animating === 'true') return;
+
         var titleBtn = habitVisual.closest('.habit-title-btn');
         if (titleBtn) {
           var habitId = titleBtn.dataset.habitId;
@@ -1831,6 +1834,9 @@ window.Storage = Storage;
             var todayIdx = dayIndexForYear(CURRENTYEAR);
             var currentCount = habit.dots[todayIdx] || 0;
             var dailyTarget = habit.dailyTarget || 1;
+
+            // Mark as animating
+            habitVisual.dataset.animating = 'true';
 
             // Show count in habit icon for 1 second with animation
             var originalHTML = habitVisual.innerHTML;
@@ -1846,6 +1852,15 @@ window.Storage = Storage;
               var icon = habitVisual.querySelector('i');
               if (icon) {
                 icon.style.animation = 'iconFadeIn 0.2s ease-in-out';
+                // Clear animation style after it completes
+                setTimeout(function() {
+                  if (icon) icon.style.animation = '';
+                  // Clear animating flag
+                  habitVisual.dataset.animating = 'false';
+                }, 200);
+              } else {
+                // Clear animating flag even if icon not found
+                habitVisual.dataset.animating = 'false';
               }
             }, 1000);
           }
