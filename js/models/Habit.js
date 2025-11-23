@@ -41,7 +41,7 @@ export function newHabit(name, accent, value, startDateValue) {
     visualValue: value || 'target',
     year: year,
     days: days,
-    dots: new Array(days).fill(0), // Changed from false to 0 for count-based tracking
+    dots: new Array(days).fill(false),
     offDays: new Array(days).fill(false),
     notes: new Array(days).fill(''),
     accent: accent || '#3d85c6',
@@ -64,10 +64,7 @@ export function normalizeHabit(h) {
   const year = h.year || CURRENTYEAR;
   const expected = daysInYear(year);
   const accent = (h.accent && typeof h.accent === 'string') ? h.accent : '#3d85c6';
-  // Convert dots: handle both old boolean and new number format
-  const dots = (Array.isArray(h.dots) && h.dots.length === expected)
-    ? h.dots.map(v => typeof v === 'number' ? Math.max(0, Math.floor(v)) : (v ? 1 : 0))
-    : new Array(expected).fill(0);
+  const dots = (Array.isArray(h.dots) && h.dots.length === expected) ? h.dots.map(Boolean) : new Array(expected).fill(false);
   const offDays = (Array.isArray(h.offDays) && h.offDays.length === expected) ? h.offDays.map(Boolean) : new Array(expected).fill(false);
   const notes = (Array.isArray(h.notes) && h.notes.length === expected) ? h.notes.map(v => typeof v === 'string' ? v : '') : new Array(expected).fill('');
   const frequency = (h.frequency && typeof h.frequency === 'object') ? h.frequency : defaultFrequency();
@@ -120,7 +117,7 @@ export function rolloverIfNeeded(h) {
     // Now roll to current year
     h.year = CURRENTYEAR;
     h.days = daysInYear(CURRENTYEAR);
-    h.dots = new Array(h.days).fill(0); // Use 0 for count-based tracking
+    h.dots = new Array(h.days).fill(false);
     h.offDays = new Array(h.days).fill(false);
     h.notes = new Array(h.days).fill('');
     if (!h.frequency) h.frequency = defaultFrequency();
@@ -187,7 +184,7 @@ export function applyFrequencyToHabit(habit) {
 
   // don't hide days the user already completed
   for (let j = 0; j < totalDays; j++) {
-    if (habit.dots[j] > 0) {
+    if (habit.dots[j]) {
       newOff[j] = false;
     }
   }
@@ -215,21 +212,15 @@ export function formatFrequency(freq) {
 
 /**
  * Calculate habit statistics
- * For count-based tracking:
- * - total: sum of all dot values
- * - longest/current: count of consecutive days with dots[i] > 0
  */
 export function calcStats(dots, offDays, dayIdx) {
-  // Sum all dot values for total
-  const total = dots.reduce((a, b) => a + (typeof b === 'number' ? b : (b ? 1 : 0)), 0);
-
-  // Calculate longest streak (count of consecutive days with count > 0)
+  const total = dots.reduce((a, b) => a + (b ? 1 : 0), 0);
   let longest = 0, run = 0;
   for (let i = 0; i < dots.length; i++) {
-    if (dots[i] > 0) {
+    if (dots[i]) {
       run++;
     } else if (offDays[i]) {
-      // skip - off days don't break the streak
+      // skip
     } else {
       if (run > longest) longest = run;
       run = 0;
@@ -237,13 +228,12 @@ export function calcStats(dots, offDays, dayIdx) {
   }
   if (run > longest) longest = run;
 
-  // Calculate current streak (count of consecutive days from today backward)
   let current = 0;
   for (let j = Math.min(dayIdx, dots.length - 1); j >= 0; j--) {
-    if (dots[j] > 0) {
+    if (dots[j]) {
       current++;
     } else if (offDays[j]) {
-      // keep alive - off days don't break the streak
+      // keep alive
     } else {
       break;
     }
@@ -283,7 +273,7 @@ export function getCompletionRate(habit, stats) {
   for (let i = startIndex; i < elapsed; i++) {
     if (!habit.offDays[i]) {
       eligible++;
-      if (habit.dots[i] > 0) completed++;
+      if (habit.dots[i]) completed++;
     }
   }
   if (eligible === 0) return 0;
