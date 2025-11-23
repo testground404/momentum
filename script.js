@@ -1776,13 +1776,13 @@ window.Storage = Storage;
             markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
             markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
 
-            // Show count as visual feedback for a split second
+            // Show count as visual feedback for 1 second
             var originalHTML = markTodayBtn.innerHTML;
             if (newCount > 0) {
               markTodayBtn.innerHTML = '<span style="font-size:0.9em;font-weight:600">' + newCount + '</span>';
               setTimeout(function() {
                 markTodayBtn.innerHTML = originalHTML;
-              }, 400);
+              }, 1000);
             }
 
             onHabitChanged(habit); // This updates stats and saves
@@ -1920,13 +1920,13 @@ window.Storage = Storage;
               markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
               markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
 
-              // Show count as visual feedback for a split second
+              // Show count as visual feedback for 1 second
               var originalHTML = markTodayBtn.innerHTML;
               if (newCount > 0) {
                 markTodayBtn.innerHTML = '<span style="font-size:0.9em;font-weight:600">' + newCount + '</span>';
                 setTimeout(function() {
                   markTodayBtn.innerHTML = originalHTML;
-                }, 400);
+                }, 1000);
               }
             }
 
