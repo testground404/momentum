@@ -1823,39 +1823,6 @@ window.Storage = Storage;
         var habit = HABITS.find(function (h){ return h.id === hid; });
         if (habit) openStatsOverlay(habit);
       }
-
-      // Handle dot clicks to show current frequency
-      var dotClicked = e.target.closest('.dot');
-      if (dotClicked) {
-        var habitId = dotClicked.dataset.habitId;
-        var index = Number(dotClicked.dataset.index);
-        var habit = HABITS.find(function(h) { return h.id === habitId; });
-
-        if (habit) {
-          var currentCount = habit.dots[index] || 0;
-          var dailyTarget = habit.dailyTarget || 1;
-
-          // Only show frequency if the dot has a value
-          if (currentCount > 0) {
-            // Create frequency display element
-            var frequencyDisplay = document.createElement('span');
-            frequencyDisplay.className = 'dot-frequency-display';
-            frequencyDisplay.textContent = currentCount + '/' + dailyTarget;
-            frequencyDisplay.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:0.7em;font-weight:700;color:var(--accent-base);z-index:10;pointer-events:none;animation:dotFrequencyFade 1s ease-in-out forwards;';
-
-            // Position relative to dot
-            dotClicked.style.position = 'relative';
-            dotClicked.appendChild(frequencyDisplay);
-
-            // Remove after 1 second
-            setTimeout(function() {
-              if (frequencyDisplay.parentNode === dotClicked) {
-                dotClicked.removeChild(frequencyDisplay);
-              }
-            }, 1000);
-          }
-        }
-      }
     });
 
     /* ────────── Mobile Double-Tap to Toggle Today ────────── */
