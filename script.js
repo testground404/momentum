@@ -210,6 +210,20 @@ window.Storage = Storage;
         console.log('=== WIDE VIEW TOGGLED: ' + width.toUpperCase() + ' ===');
         console.log('');
 
+        if (header) {
+          var headerRect = header.getBoundingClientRect();
+          console.log('Header position:');
+          console.log('  top: ' + headerRect.top + 'px, bottom: ' + headerRect.bottom + 'px, height: ' + headerRect.height + 'px');
+          console.log('');
+        }
+
+        if (skeletonList) {
+          var skeletonListRect = skeletonList.getBoundingClientRect();
+          console.log('Skeleton List Container position:');
+          console.log('  top: ' + skeletonListRect.top + 'px, bottom: ' + skeletonListRect.bottom + 'px');
+          console.log('');
+        }
+
         console.log('Skeleton Cards found: ' + skeletonCards.length);
         for (var i = 0; i < skeletonCards.length; i++) {
           var skeletonRect = skeletonCards[i].getBoundingClientRect();
