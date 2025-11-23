@@ -1768,11 +1768,22 @@ window.Storage = Storage;
             // Increment the count for today
             setDotState(todayDot, true);
 
-            var newState = habit.dots[todayIdx] > 0;
+            var newCount = habit.dots[todayIdx];
+            var newState = newCount > 0;
+
             // Update button visual state immediately
             markTodayBtn.classList.toggle('marked', newState);
             markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
             markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
+
+            // Show count as visual feedback for a split second
+            var originalHTML = markTodayBtn.innerHTML;
+            if (newCount > 0) {
+              markTodayBtn.innerHTML = '<span style="font-size:0.9em;font-weight:600">' + newCount + '</span>';
+              setTimeout(function() {
+                markTodayBtn.innerHTML = originalHTML;
+              }, 400);
+            }
 
             onHabitChanged(habit); // This updates stats and saves
             announce(newState ? "Marked today" : "Unmarked today");
@@ -1896,9 +1907,11 @@ window.Storage = Storage;
           var todayDot = activeContainer ? activeContainer.querySelector('.dot[data-index="' + todayIdx + '"]') : null;
 
           if (todayDot) {
-            var currentState = habit.dots[todayIdx];
-            var newState = !currentState;
-            setDotState(todayDot, newState);
+            // Increment the count for today
+            setDotState(todayDot, true);
+
+            var newCount = habit.dots[todayIdx];
+            var newState = newCount > 0;
 
             // Update mark-today button visual state
             var markTodayBtn = card.querySelector('.mark-today-btn');
@@ -1906,6 +1919,15 @@ window.Storage = Storage;
               markTodayBtn.classList.toggle('marked', newState);
               markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
               markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
+
+              // Show count as visual feedback for a split second
+              var originalHTML = markTodayBtn.innerHTML;
+              if (newCount > 0) {
+                markTodayBtn.innerHTML = '<span style="font-size:0.9em;font-weight:600">' + newCount + '</span>';
+                setTimeout(function() {
+                  markTodayBtn.innerHTML = originalHTML;
+                }, 400);
+              }
             }
 
             onHabitChanged(habit);
