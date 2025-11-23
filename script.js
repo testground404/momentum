@@ -1817,6 +1817,42 @@ window.Storage = Storage;
         var habit = HABITS.find(function (h){ return h.id === habitId; });
         if (habit) openEditOverlay(habit);
       }
+      // Handle habit icon clicks to show today's frequency
+      var habitVisual = e.target.closest('.habit-visual');
+      if (habitVisual) {
+        e.stopPropagation(); // Prevent opening stats overlay
+
+        var titleBtn = habitVisual.closest('.habit-title-btn');
+        if (titleBtn) {
+          var habitId = titleBtn.dataset.habitId;
+          var habit = HABITS.find(function(h) { return h.id === habitId; });
+
+          if (habit && habit.year === CURRENTYEAR) {
+            var todayIdx = dayIndexForYear(CURRENTYEAR);
+            var currentCount = habit.dots[todayIdx] || 0;
+            var dailyTarget = habit.dailyTarget || 1;
+
+            // Show count in habit icon for 1 second with animation
+            var originalHTML = habitVisual.innerHTML;
+            var countSpan = document.createElement('span');
+            countSpan.textContent = currentCount + '/' + dailyTarget;
+            countSpan.style.cssText = 'font-size:1.5em;font-weight:700;display:flex;align-items:center;justify-content:center;animation:countFeedback 1s ease-in-out forwards';
+            habitVisual.innerHTML = '';
+            habitVisual.appendChild(countSpan);
+
+            setTimeout(function() {
+              habitVisual.innerHTML = originalHTML;
+              // Fade in the restored icon
+              var icon = habitVisual.querySelector('i');
+              if (icon) {
+                icon.style.animation = 'iconFadeIn 0.2s ease-in-out';
+              }
+            }, 1000);
+          }
+        }
+        return;
+      }
+
       var titleBtn = e.target.closest('.habit-title-btn');
       if (titleBtn) {
         var hid = titleBtn.dataset.habitId;
