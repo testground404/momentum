@@ -496,29 +496,7 @@ html.dark .header-top .year-banner::before {
   min-width: 3.5rem;
   width: 3.5rem;
   padding-top: 5px;
-  background: linear-gradient(
-    to right,
-    var(--accent-base, #3d85c6) 0%,
-    var(--accent-base, #3d85c6) calc(50% - 20%),
-    color-mix(in srgb, var(--accent-base, #3d85c6) 60%, transparent) calc(50% - calc(20% * 1)),
-    color-mix(in srgb, var(--accent-base, #3d85c6) 66%, transparent) calc(50% - calc(20% * 0.8)),
-    color-mix(in srgb, var(--accent-base, #3d85c6) 72%, transparent) calc(50% - calc(20% * 0.6)),
-    color-mix(in srgb, var(--accent-base, #3d85c6) 76%, transparent) calc(50% - calc(20% * 0.4)),
-    color-mix(in srgb, var(--accent-base, #3d85c6) 79%, transparent) calc(50% - calc(20% * 0.2)),
-    color-mix(in srgb, var(--accent-base, #3d85c6) 80%, transparent) 50%,
-    color-mix(in srgb, var(--accent-base, #3d85c6) 79%, transparent) calc(50% + calc(20% * 0.20)),
-    color-mix(in srgb, var(--accent-base, #3d85c6) 76%, transparent) calc(50% + calc(20% * 0.40)),
-    color-mix(in srgb, var(--accent-base, #3d85c6) 72%, transparent) calc(50% + calc(20% * 0.60)),
-    color-mix(in srgb, var(--accent-base, #3d85c6) 66%, transparent) calc(50% + calc(20% * 0.80)),
-    color-mix(in srgb, var(--accent-base, #3d85c6) 60%, transparent) calc(50% + calc(20% * 1.00)),
-    var(--accent-base, #3d85c6) calc(50% + 20%),
-    var(--accent-base, #3d85c6) 100%
-  );
-  background-size: 200% auto;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 4.5s linear infinite;
+  color: var(--accent-base);
 }
 
 .habit-year-wheel .year-item:not(.selected) {
@@ -1928,12 +1906,6 @@ html.dark .btn.danger:hover {
         background-position: 0% 50%;
     }
 }
-
-@keyframes shimmer {
-  0% { background-position: 200% center; }
-  100% { background-position: -200% center; }
-}
-
 
 .left {
   text-align:left;
