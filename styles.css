@@ -1142,11 +1142,23 @@ html.dark .bottom-nav {
   .divider {
     margin: 12px 20px;
   }
+  .habit-year-wheel {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
   .habit-year-wheel .year-wheel-container {
     padding: 0.25rem 0;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
   }
   .habit-year-wheel .year-wheel-scroll {
     padding: 0.25rem 1rem;
+    width: 100%;
+    max-width: 100%;
   }
 }
 
@@ -1629,11 +1641,23 @@ html.dark .btn.danger:hover {
   .divider {
     margin: 12px 20px;
   }
+  .habit-year-wheel {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
   .habit-year-wheel .year-wheel-container {
     padding: 0.25rem 0;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
   }
   .habit-year-wheel .year-wheel-scroll {
     padding: 0.25rem 1rem;
+    width: 100%;
+    max-width: 100%;
   }
 }
 @media (max-width: 480px) {
