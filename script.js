@@ -1787,6 +1787,11 @@ window.Storage = Storage;
               habitVisual.appendChild(countSpan);
               setTimeout(function() {
                 habitVisual.innerHTML = originalHTML;
+                // Fade in the restored icon
+                var icon = habitVisual.querySelector('i');
+                if (icon) {
+                  icon.style.animation = 'iconFadeIn 0.2s ease-in-out';
+                }
               }, 1000);
             }
 
@@ -1937,6 +1942,11 @@ window.Storage = Storage;
               habitVisual.appendChild(countSpan);
               setTimeout(function() {
                 habitVisual.innerHTML = originalHTML;
+                // Fade in the restored icon
+                var icon = habitVisual.querySelector('i');
+                if (icon) {
+                  icon.style.animation = 'iconFadeIn 0.2s ease-in-out';
+                }
               }, 1000);
             }
 
