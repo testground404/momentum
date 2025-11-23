@@ -492,15 +492,17 @@ html.dark .header-top .year-banner::before {
   font-size: 1.125rem;
   font-weight: 800;
   transform: translateX(0) scale(1.15);
-  opacity: 1 !important;
+  opacity: 0.5 !important;
   min-width: 3.5rem;
   width: 3.5rem;
   padding-top: 5px;
   color: var(--accent-base);
+  transition: opacity 0.3s ease;
 }
 
-.habit-year-wheel .year-item.selected:not(.visible) {
-  opacity: 0.5 !important;
+.habit-year-wheel:hover .year-item.selected,
+.habit-year-wheel .year-wheel-scroll:active .year-item.selected {
+  opacity: 1 !important;
 }
 
 .habit-year-wheel .year-item:not(.selected) {
