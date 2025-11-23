@@ -2001,6 +2001,11 @@ html.dark .btn.danger:hover {
   border-radius: 14px;
   border: 1px solid var(--surface-muted);
   background: var(--accent-a-01, var(--chip-bg));
+  transition: background 0.3s ease-in-out;
+}
+
+.habit-visual.showing-frequency {
+  background: var(--accent-a-03, var(--chip-bg));
 }
 .habit-visual i {
   font-size: 22px;

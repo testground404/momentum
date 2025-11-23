@@ -1724,6 +1724,7 @@ window.Storage = Storage;
             var habitVisual = card.querySelector('.habit-visual');
             if (habitVisual) {
               var dailyTarget = habit.dailyTarget || 1;
+              habitVisual.classList.add('showing-frequency');
               var originalHTML = habitVisual.innerHTML;
               var countSpan = document.createElement('span');
               countSpan.textContent = newCount + '/' + dailyTarget;
@@ -1731,6 +1732,7 @@ window.Storage = Storage;
               habitVisual.innerHTML = '';
               habitVisual.appendChild(countSpan);
               setTimeout(function() {
+                habitVisual.classList.remove('showing-frequency');
                 habitVisual.innerHTML = originalHTML;
                 // Fade in the restored icon
                 var icon = habitVisual.querySelector('i');
@@ -1845,6 +1847,9 @@ window.Storage = Storage;
             // Mark as animating immediately
             habitVisual.dataset.animating = 'true';
 
+            // Add class to increase background opacity
+            habitVisual.classList.add('showing-frequency');
+
             // Show count in habit icon for 1 second with animation
             var countSpan = document.createElement('span');
             countSpan.textContent = currentCount + '/' + dailyTarget;
@@ -1853,6 +1858,9 @@ window.Storage = Storage;
             habitVisual.appendChild(countSpan);
 
             setTimeout(function() {
+              // Remove frequency class to fade background back
+              habitVisual.classList.remove('showing-frequency');
+
               // Restore from stored original icon
               habitVisual.innerHTML = habitVisual.dataset.originalIcon;
               // Fade in the restored icon
@@ -1940,6 +1948,7 @@ window.Storage = Storage;
             var habitVisual = card.querySelector('.habit-visual');
             if (habitVisual) {
               var dailyTarget = habit.dailyTarget || 1;
+              habitVisual.classList.add('showing-frequency');
               var originalHTML = habitVisual.innerHTML;
               var countSpan = document.createElement('span');
               countSpan.textContent = newCount + '/' + dailyTarget;
@@ -1947,6 +1956,7 @@ window.Storage = Storage;
               habitVisual.innerHTML = '';
               habitVisual.appendChild(countSpan);
               setTimeout(function() {
+                habitVisual.classList.remove('showing-frequency');
                 habitVisual.innerHTML = originalHTML;
                 // Fade in the restored icon
                 var icon = habitVisual.querySelector('i');
