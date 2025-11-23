@@ -1935,12 +1935,6 @@ window.Storage = Storage;
 
             onHabitChanged(habit);
             announce(newState ? "Marked today" : "Unmarked today");
-
-            // Add visual feedback for double-tap using scale property (no transform conflicts)
-            card.style.scale = '0.98';
-            setTimeout(function() {
-              card.style.scale = '';
-            }, 100);
           }
         } else {
           // If viewing a different year, switch to current year first
