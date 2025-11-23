@@ -421,7 +421,7 @@ html.dark .header-top .year-banner::before {
   width: 100%;
   max-width: 350px;
   margin: 0;
-  padding: 0.5rem 0;
+  padding: 0;
   position: relative;
   overflow: visible;
   min-height: 50px;
@@ -1841,6 +1841,7 @@ html.dark .btn.danger:hover {
 
 .card-pills-wrapper {
   padding: 0;
+  margin-bottom: 10px;
 }
 
 
@@ -1848,7 +1849,7 @@ html.dark .btn.danger:hover {
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 24px 28px;
+  margin: 5px 28px 10px 28px;
 }
 
 .divider::before,
