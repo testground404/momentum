@@ -480,6 +480,7 @@ html.dark .header-top .year-banner::before {
   }
   .habit-year-wheel .year-item.selected {
     transform: none;
+    transition: opacity 0.3s ease;
   }
 }
 
