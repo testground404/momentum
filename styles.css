@@ -490,13 +490,35 @@ html.dark .header-top .year-banner::before {
 
 .habit-year-wheel .year-item.selected {
   font-size: 1.125rem;
-  font-weight: 700;
+  font-weight: 800;
   transform: translateX(0) scale(1.15);
-  color: var(--accent-base, #3d85c6) !important;
   opacity: 1 !important;
   min-width: 3.5rem;
   width: 3.5rem;
   padding-top: 5px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 89, 0, 0.6) 0%,
+    rgba(255, 89, 0, 0.6) calc(50% - 20%),
+    rgba(255, 89, 0, 0.600) calc(50% - calc(20% * 1)),
+    rgba(255, 89, 0, 0.662) calc(50% - calc(20% * 0.8)),
+    rgba(255, 89, 0, 0.718) calc(50% - calc(20% * 0.6)),
+    rgba(255, 89, 0, 0.762) calc(50% - calc(20% * 0.4)),
+    rgba(255, 89, 0, 0.790) calc(50% - calc(20% * 0.2)),
+    rgba(255, 89, 0, 0.800) 50%,
+    rgba(255, 89, 0, 0.790) calc(50% + calc(20% * 0.20)),
+    rgba(255, 89, 0, 0.762) calc(50% + calc(20% * 0.40)),
+    rgba(255, 89, 0, 0.718) calc(50% + calc(20% * 0.60)),
+    rgba(255, 89, 0, 0.662) calc(50% + calc(20% * 0.80)),
+    rgba(255, 89, 0, 0.600) calc(50% + calc(20% * 1.00)),
+    rgba(255, 89, 0, 0.6) calc(50% + 20%),
+    rgba(255, 89, 0, 0.6) 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4.5s linear infinite;
 }
 
 .habit-year-wheel .year-item:not(.selected) {
@@ -1908,12 +1930,8 @@ html.dark .btn.danger:hover {
 }
 
 @keyframes shimmer {
-    0% {
-        background-position: 100% 0%; /* Start from bottom right (or similar) */
-    }
-    100% {
-        background-position: 0% 100%; /* End at top left (or similar) */
-    }
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
 }
 
 
