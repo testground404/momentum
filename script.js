@@ -3540,8 +3540,10 @@ window.Storage = Storage;
         if (habitCards.length > 0) {
           for (var j = 0; j < habitCards.length; j++) {
             var cardRect = habitCards[j].getBoundingClientRect();
+            var cardStyles = window.getComputedStyle(habitCards[j]);
             var relativeCardTop = cardRect.top - habitListRect.top;
-            console.log('Habit Card #' + j + ': absolute=' + cardRect.top + 'px, relative=' + relativeCardTop + 'px');
+            var marginInfo = j === 0 ? ', margin-top=' + cardStyles.marginTop : '';
+            console.log('Habit Card #' + j + ': absolute=' + cardRect.top + 'px, relative=' + relativeCardTop + 'px' + marginInfo);
           }
         } else {
           console.log('No habit cards visible');
