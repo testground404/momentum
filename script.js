@@ -223,6 +223,10 @@ window.Storage = Storage;
           console.log('Skeleton List Container position:');
           console.log('  top: ' + skeletonListRect.top + 'px, bottom: ' + skeletonListRect.bottom + 'px');
           console.log('  padding: ' + skeletonListStyles.paddingTop + ' ' + skeletonListStyles.paddingRight + ' ' + skeletonListStyles.paddingBottom + ' ' + skeletonListStyles.paddingLeft);
+          console.log('  display: ' + skeletonListStyles.display);
+          console.log('  align-content: ' + skeletonListStyles.alignContent);
+          console.log('  align-items: ' + skeletonListStyles.alignItems);
+          console.log('  gap: ' + skeletonListStyles.gap);
           console.log('');
         }
 
@@ -237,6 +241,7 @@ window.Storage = Storage;
           var relativeTop = skeletonRect.top - listRect.top;
           console.log('Skeleton Card #' + i + ' (' + skeletonType + '):');
           console.log('  display: ' + skeletonStyles.display);
+          console.log('  margin-top: ' + skeletonStyles.marginTop);
           console.log('  absolute (from viewport): top=' + skeletonRect.top + 'px');
           console.log('  relative (from container): top=' + relativeTop + 'px');
         }
