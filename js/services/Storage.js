@@ -22,8 +22,6 @@ const STORAGE_PREFIX = 'momentum_';
 // Check if Firebase is available
 const useFirebase = firebaseInitialized;
 
-console.log('Storage mode:', useFirebase ? 'Firestore' : 'LocalStorage');
-
 // ========== Firestore Methods ==========
 
 // Cache for delta-based updates
@@ -36,7 +34,6 @@ async function saveHabitsToFirestore(habits) {
   try {
     const userId = getCurrentUser();
     if (!userId) {
-      console.error('No authenticated user');
       return false;
     }
 
@@ -76,20 +73,16 @@ async function saveHabitsToFirestore(habits) {
     // Only commit if there are changes
     if (operationCount > 0) {
       await batch.commit();
-      console.log(`Habits saved to Firestore (${operationCount} operations)`);
 
       // Update cache
       lastSavedHabits = currentHabitsMap;
 
       // Also save to IndexedDB cache
       saveToIndexedDB(userId, habits);
-    } else {
-      console.log('No changes detected, skipping Firestore write');
     }
 
     return true;
   } catch (error) {
-    console.error('Error saving habits to Firestore:', error);
     return false;
   }
 }
@@ -101,15 +94,12 @@ async function loadHabitsFromFirestore() {
   try {
     const userId = getCurrentUser();
     if (!userId) {
-      console.log('No authenticated user');
       return [];
     }
 
     // Try loading from IndexedDB cache first for instant load
     const cachedHabits = await loadFromIndexedDB(userId);
     if (cachedHabits && cachedHabits.length > 0) {
-      console.log('Using IndexedDB cache for instant load');
-
       // Populate delta cache
       lastSavedHabits.clear();
       cachedHabits.forEach(habit => {
@@ -136,8 +126,6 @@ async function loadHabitsFromFirestore() {
       lastSavedHabits.set(habit.id, JSON.stringify(habit));
     });
 
-    console.log('Loaded', habits.length, 'habits from Firestore');
-
     // Cache to IndexedDB for next time
     if (habits.length > 0) {
       saveToIndexedDB(userId, habits);
@@ -145,14 +133,11 @@ async function loadHabitsFromFirestore() {
 
     return habits;
   } catch (error) {
-    console.error('Error loading habits from Firestore:', error);
-
     // Fallback to IndexedDB if Firebase fails
     const userId = getCurrentUser();
     if (userId) {
       const cachedHabits = await loadFromIndexedDB(userId);
       if (cachedHabits) {
-        console.log('Using IndexedDB fallback due to Firebase error');
         return cachedHabits;
       }
     }
@@ -179,12 +164,10 @@ async function loadFromFirestoreInBackground(userId, cachedHabits) {
     const firestoreJSON = JSON.stringify(habits);
 
     if (cachedJSON !== firestoreJSON) {
-      console.log('Firestore has updates, updating cache');
       saveToIndexedDB(userId, habits);
       // Note: In a real app, you'd want to notify the UI to refresh
     }
   } catch (error) {
-    console.warn('Background sync failed:', error);
   }
 }
 
@@ -195,17 +178,14 @@ async function saveSettingsToFirestore(settings) {
   try {
     const userId = getCurrentUser();
     if (!userId) {
-      console.error('No authenticated user');
       return false;
     }
 
     const settingsDocRef = doc(db, 'users', userId, 'settings', 'preferences');
     await setDoc(settingsDocRef, settings);
 
-    console.log('Settings saved to Firestore');
     return true;
   } catch (error) {
-    console.error('Error saving settings to Firestore:', error);
     return false;
   }
 }
@@ -217,7 +197,6 @@ async function loadSettingsFromFirestore() {
   try {
     const userId = getCurrentUser();
     if (!userId) {
-      console.log('No authenticated user');
       return getDefaultSettings();
     }
 
@@ -225,13 +204,11 @@ async function loadSettingsFromFirestore() {
     const settingsDoc = await getDoc(settingsDocRef);
 
     if (settingsDoc.exists()) {
-      console.log('Settings loaded from Firestore');
       return settingsDoc.data();
     }
 
     return getDefaultSettings();
   } catch (error) {
-    console.error('Error loading settings from Firestore:', error);
     return getDefaultSettings();
   }
 }
@@ -264,7 +241,6 @@ async function clearUserDataFromFirestore() {
     });
 
     await batch.commit();
-    console.log('User data cleared from Firestore');
 
     // Also clear IndexedDB cache
     await clearIndexedDBCache(userId);
@@ -272,7 +248,6 @@ async function clearUserDataFromFirestore() {
 
     return true;
   } catch (error) {
-    console.error('Error clearing Firestore data:', error);
     return false;
   }
 }
@@ -294,13 +269,11 @@ async function initIndexedDB() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
-      console.warn('IndexedDB failed to open:', request.error);
       resolve(null);
     };
 
     request.onsuccess = () => {
       idb = request.result;
-      console.log('IndexedDB initialized');
       resolve(idb);
     };
 
@@ -336,17 +309,14 @@ async function saveToIndexedDB(userId, habits) {
       const request = objectStore.put(cacheEntry);
 
       request.onsuccess = () => {
-        console.log('Habits cached to IndexedDB');
         resolve(true);
       };
 
       request.onerror = () => {
-        console.warn('Failed to cache to IndexedDB:', request.error);
         resolve(false);
       };
     });
   } catch (error) {
-    console.warn('IndexedDB cache error:', error);
     return false;
   }
 }
@@ -367,7 +337,6 @@ async function loadFromIndexedDB(userId) {
       request.onsuccess = () => {
         const result = request.result;
         if (result && result.habits) {
-          console.log('Loaded habits from IndexedDB cache');
           resolve(result.habits);
         } else {
           resolve(null);
@@ -375,12 +344,10 @@ async function loadFromIndexedDB(userId) {
       };
 
       request.onerror = () => {
-        console.warn('Failed to load from IndexedDB:', request.error);
         resolve(null);
       };
     });
   } catch (error) {
-    console.warn('IndexedDB load error:', error);
     return null;
   }
 }
@@ -405,17 +372,14 @@ async function clearIndexedDBCache(userId = null) {
       }
 
       request.onsuccess = () => {
-        console.log('IndexedDB cache cleared');
         resolve(true);
       };
 
       request.onerror = () => {
-        console.warn('Failed to clear IndexedDB:', request.error);
         resolve(false);
       };
     });
   } catch (error) {
-    console.warn('IndexedDB clear error:', error);
     return false;
   }
 }
@@ -481,7 +445,6 @@ function clearDayBasedCache(habitId = null) {
 function getUserKey(key) {
   const username = getCurrentUser();
   if (!username) {
-    console.warn('No user logged in');
     return null;
   }
   return STORAGE_PREFIX + username + '_' + key;
@@ -499,7 +462,6 @@ function saveToLocalStorage(key, data) {
     localStorage.setItem(storageKey, jsonData);
     return true;
   } catch (error) {
-    console.error('Error saving to localStorage:', error);
     return false;
   }
 }
@@ -515,7 +477,6 @@ function loadFromLocalStorage(key, defaultValue = null) {
     const data = localStorage.getItem(storageKey);
     return data ? JSON.parse(data) : defaultValue;
   } catch (e) {
-    console.error('Error loading from localStorage:', e);
     return defaultValue;
   }
 }
@@ -531,7 +492,6 @@ function removeFromLocalStorage(key) {
     localStorage.removeItem(storageKey);
     return true;
   } catch (e) {
-    console.error('Error removing from localStorage:', e);
     return false;
   }
 }
@@ -554,7 +514,6 @@ function clearUserDataFromLocalStorage() {
     });
     return true;
   } catch (e) {
-    console.error('Error clearing user data:', e);
     return false;
   }
 }
@@ -660,7 +619,6 @@ export async function importData(data) {
     }
     return true;
   } catch (e) {
-    console.error('Error importing data:', e);
     return false;
   }
 }

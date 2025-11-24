@@ -134,7 +134,6 @@ export function initLogin() {
         }
       }
     } catch (error) {
-      console.error('Auth error:', error);
       // Show more specific error for Firebase
       if (useFirebase && error.code) {
         if (error.code === 'auth/invalid-login-credentials' || error.code === 'auth/user-not-found') {
@@ -204,26 +203,19 @@ export function initLogin() {
   // Check if already logged in (secondary check after module loads)
   // For Firebase, we need to wait for auth state to be restored
   if (useFirebase) {
-    console.log('Checking Firebase authentication state...');
     onAuthStateChanged((user) => {
       if (user) {
-        console.log('User already logged in (Firebase):', user.uid || user.email);
-        console.log('Redirecting to app...');
         window.location.href = 'app.html';
       } else {
-        console.log('No Firebase user authenticated, showing login page');
         // Show login page only after confirming no auth
         document.body.classList.add('show-login');
       }
     });
   } else {
     // For localStorage, we can check synchronously
-    console.log('Checking localStorage authentication...');
     if (isAuthenticated()) {
-      console.log('User already logged in (localStorage), redirecting to app...');
       window.location.href = 'app.html';
     } else {
-      console.log('No localStorage user authenticated, showing login page');
       // Show login page only after confirming no auth
       document.body.classList.add('show-login');
     }
@@ -257,7 +249,6 @@ export function initLogin() {
         showError(result.error || 'Google login failed. Please try again.');
       }
     } catch (error) {
-      console.error('Google login error:', error);
       showError('Google login failed. Please try again.');
     } finally {
       this.disabled = false;

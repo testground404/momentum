@@ -42,10 +42,7 @@ try {
   db = getFirestore(app);
   googleProvider = new GoogleAuthProvider();
   firebaseInitialized = true;
-  console.log('Firebase initialized successfully (Modular SDK)');
 } catch (error) {
-  console.error('Error initializing Firebase:', error);
-  console.log('Falling back to localStorage mode');
 }
 
 // Export Firebase instances

@@ -20,8 +20,6 @@ const SESSION_KEY = 'momentum_session';
 // Check if Firebase is initialized
 const useFirebase = firebaseInitialized;
 
-console.log('Auth mode:', useFirebase ? 'Firebase' : 'LocalStorage');
-
 // ========== Firebase Auth Methods ==========
 
 /**
@@ -30,10 +28,8 @@ console.log('Auth mode:', useFirebase ? 'Firebase' : 'LocalStorage');
 async function registerWithFirebase(email, password) {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    console.log('User registered:', userCredential.user.uid);
     return { success: true, user: userCredential.user };
   } catch (error) {
-    console.error('Firebase registration error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -44,10 +40,8 @@ async function registerWithFirebase(email, password) {
 async function loginWithFirebase(email, password) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log('User logged in:', userCredential.user.uid);
     return { success: true, user: userCredential.user };
   } catch (error) {
-    console.error('Firebase login error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -58,10 +52,8 @@ async function loginWithFirebase(email, password) {
 async function loginWithGoogle() {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    console.log('Google login successful:', result.user.uid);
     return { success: true, user: result.user };
   } catch (error) {
-    console.error('Google login error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -74,7 +66,6 @@ async function logoutFromFirebase() {
     await signOut(auth);
     return true;
   } catch (error) {
-    console.error('Firebase logout error:', error);
     return false;
   }
 }
@@ -91,7 +82,6 @@ async function deleteFirebaseAccount() {
     }
     return false;
   } catch (error) {
-    console.error('Firebase account deletion error:', error);
     return false;
   }
 }
@@ -117,7 +107,6 @@ function getUsers() {
     const users = localStorage.getItem(USERS_KEY);
     return users ? JSON.parse(users) : {};
   } catch (e) {
-    console.error('Error reading users:', e);
     return {};
   }
 }
@@ -127,7 +116,6 @@ function saveUsers(users) {
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
     return true;
   } catch (e) {
-    console.error('Error saving users:', e);
     return false;
   }
 }
@@ -195,7 +183,6 @@ function createSession(username) {
   try {
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   } catch (e) {
-    console.error('Error creating session:', e);
   }
 }
 
@@ -204,7 +191,6 @@ function getSession() {
     const session = localStorage.getItem(SESSION_KEY);
     return session ? JSON.parse(session) : null;
   } catch (e) {
-    console.error('Error reading session:', e);
     return null;
   }
 }
@@ -224,7 +210,6 @@ function logoutFromLocalStorage() {
     localStorage.removeItem(SESSION_KEY);
     return true;
   } catch (e) {
-    console.error('Error logging out:', e);
     return false;
   }
 }

@@ -18,7 +18,6 @@ export function showConfirm(title, message) {
     const cancelBtn = document.getElementById('confirm-modal-cancel');
 
     if (!overlay || !titleEl || !messageEl || !confirmBtn || !cancelBtn) {
-      console.error('Confirm modal elements not found');
       resolve(false);
       return;
     }
@@ -74,7 +73,6 @@ export function showAlert(title, message) {
     const okBtn = document.getElementById('alert-modal-ok');
 
     if (!overlay || !titleEl || !messageEl || !okBtn) {
-      console.error('Alert modal elements not found');
       resolve();
       return;
     }
