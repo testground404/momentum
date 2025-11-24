@@ -1184,6 +1184,47 @@ window.Storage = Storage;
       });
     }
 
+    // Helper function to update mark-today button state and dots opacity
+    function updateMarkTodayButton(card, habit) {
+      var markTodayBtn = card.querySelector('.mark-today-btn');
+      if (!markTodayBtn) return;
+
+      var todayIdx = getHabitTodayIndex(habit);
+      if (todayIdx === -1) return;
+
+      var todayCount = habit.dots[todayIdx] || 0;
+      var dailyTarget = habit.dailyTarget || 1;
+      var nextCount = (todayCount + 1) % (dailyTarget + 1);
+
+      // Reset classes and style
+      markTodayBtn.classList.remove('marked');
+      markTodayBtn.style.removeProperty('--mark-today-opacity');
+
+      // Button shows NEXT state
+      if (nextCount === 0) {
+        // Next state is reset to 0 - show small faded
+        markTodayBtn.classList.add('marked');
+      } else {
+        // Next state is count - show large with next opacity
+        var nextOpacity = Math.min(nextCount / dailyTarget, 1);
+        markTodayBtn.style.setProperty('--mark-today-opacity', nextOpacity);
+      }
+
+      // Update all dots' opacity with new dailyTarget
+      var dotsContainer = card.querySelector('.year-dots, .month-dots');
+      if (dotsContainer) {
+        var dots = dotsContainer.querySelectorAll('.dot[aria-pressed="true"]');
+        dots.forEach(function(dot) {
+          var dotIndex = parseInt(dot.dataset.index);
+          if (!isNaN(dotIndex) && habit.dots[dotIndex]) {
+            var count = habit.dots[dotIndex];
+            var opacity = Math.min(count / dailyTarget, 1);
+            dot.style.setProperty('--dot-opacity', opacity);
+          }
+        });
+      }
+    }
+
     function render() {
       var visibleHabits = getVisibleHabits();
 
@@ -1221,6 +1262,11 @@ window.Storage = Storage;
         if (card) {
           // Card already exists, just move it to the fragment for reordering
           fragment.appendChild(card);
+
+          // Update mark-today button in case dailyTarget or count changed
+          if (!card.classList.contains('card-placeholder')) {
+            updateMarkTodayButton(card, habit);
+          }
 
           // If it's still a placeholder, observe it
           if (card.classList.contains('card-placeholder')) {
