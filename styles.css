@@ -2976,11 +2976,11 @@ html.dark .control-btn:active {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: var(--dot-inner);
-  height: var(--dot-inner);
+  width: var(--dot-outer);
+  height: var(--dot-outer);
   border-radius: 50%;
   background: var(--accent-base);
-  opacity: 0.35;
+  opacity: var(--mark-today-opacity, 1);
   transition: width 0.12s cubic-bezier(0.4, 0, 0.2, 1),
               height 0.12s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.12s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2988,11 +2988,11 @@ html.dark .control-btn:active {
   pointer-events: none;
 }
 
-/* When today is marked - large dot with count-based opacity (x/n) */
+/* When today is marked - show small faded dot (next state: will cycle/unmark) */
 .mark-today-btn.marked .mark-today-dot {
-  width: var(--dot-outer);
-  height: var(--dot-outer);
-  opacity: var(--mark-today-opacity, 1);
+  width: var(--dot-inner);
+  height: var(--dot-inner);
+  opacity: 0.35;
 }
 
 /* view-toggle icon swap */
