@@ -1057,6 +1057,11 @@ window.Storage = Storage;
       var isTodayMarked = habit.dots[todayIdx] > 0;
       if (isTodayMarked) {
         markTodayBtn.classList.add('marked');
+        // Set opacity based on count/target ratio
+        var todayCount = habit.dots[todayIdx];
+        var dailyTarget = habit.dailyTarget || 1;
+        var opacity = Math.min(todayCount / dailyTarget, 1);
+        markTodayBtn.style.setProperty('--mark-today-opacity', opacity);
       }
       markTodayBtn.setAttribute('aria-label', isTodayMarked ? 'Unmark today' : 'Mark today');
       markTodayBtn.setAttribute('title', isTodayMarked ? 'Unmark today' : 'Mark today');
@@ -1720,6 +1725,13 @@ window.Storage = Storage;
             markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
             markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
 
+            // Update opacity based on count/target ratio
+            if (newState) {
+              var dailyTarget = habit.dailyTarget || 1;
+              var opacity = Math.min(newCount / dailyTarget, 1);
+              markTodayBtn.style.setProperty('--mark-today-opacity', opacity);
+            }
+
             // Show count in habit icon for 1 second with animation
             var habitVisual = card.querySelector('.habit-visual');
             if (habitVisual) {
@@ -1942,6 +1954,13 @@ window.Storage = Storage;
               markTodayBtn.classList.toggle('marked', newState);
               markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
               markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
+
+              // Update opacity based on count/target ratio
+              if (newState) {
+                var dailyTarget = habit.dailyTarget || 1;
+                var opacity = Math.min(newCount / dailyTarget, 1);
+                markTodayBtn.style.setProperty('--mark-today-opacity', opacity);
+              }
             }
 
             // Show count in habit icon for 1 second with animation

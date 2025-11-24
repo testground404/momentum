@@ -2988,11 +2988,11 @@ html.dark .control-btn:active {
   pointer-events: none;
 }
 
-/* When today is marked - small faded dot */
+/* When today is marked - small dot with count-based opacity */
 .mark-today-btn.marked .mark-today-dot {
   width: var(--dot-inner);
   height: var(--dot-inner);
-  opacity: 0.35;
+  opacity: var(--mark-today-opacity, 0.35);
 }
 
 /* view-toggle icon swap */
