@@ -1054,15 +1054,21 @@ window.Storage = Storage;
       var markTodayBtn = document.createElement('button');
       markTodayBtn.className = 'control-btn mark-today-btn';
       markTodayBtn.dataset.action = 'mark-today';
-      var isTodayMarked = habit.dots[todayIdx] > 0;
-      if (isTodayMarked) {
+      var todayCount = habit.dots[todayIdx] || 0;
+      var dailyTarget = habit.dailyTarget || 1;
+      var nextCount = (todayCount + 1) % (dailyTarget + 1);
+
+      // Button shows NEXT state
+      if (nextCount === 0) {
+        // Next state is reset to 0 - show small faded
         markTodayBtn.classList.add('marked');
-        // Set opacity based on count/target ratio
-        var todayCount = habit.dots[todayIdx];
-        var dailyTarget = habit.dailyTarget || 1;
-        var opacity = Math.min(todayCount / dailyTarget, 1);
-        markTodayBtn.style.setProperty('--mark-today-opacity', opacity);
+      } else {
+        // Next state is count - show large with next opacity
+        var nextOpacity = Math.min(nextCount / dailyTarget, 1);
+        markTodayBtn.style.setProperty('--mark-today-opacity', nextOpacity);
       }
+
+      var isTodayMarked = todayCount > 0;
       markTodayBtn.setAttribute('aria-label', isTodayMarked ? 'Unmark today' : 'Mark today');
       markTodayBtn.setAttribute('title', isTodayMarked ? 'Unmark today' : 'Mark today');
       markTodayBtn.innerHTML = '<span class="mark-today-dot"></span>';
@@ -1720,17 +1726,22 @@ window.Storage = Storage;
             var newCount = habit.dots[todayIdx];
             var newState = newCount > 0;
 
-            // Update button visual state immediately
-            markTodayBtn.classList.toggle('marked', newState);
+            // Update button to show NEXT state
+            var dailyTarget = habit.dailyTarget || 1;
+            var nextCount = (newCount + 1) % (dailyTarget + 1);
+
+            markTodayBtn.classList.remove('marked');
+            if (nextCount === 0) {
+              // Next state is reset to 0 - show small faded
+              markTodayBtn.classList.add('marked');
+            } else {
+              // Next state is count - show large with next opacity
+              var nextOpacity = Math.min(nextCount / dailyTarget, 1);
+              markTodayBtn.style.setProperty('--mark-today-opacity', nextOpacity);
+            }
+
             markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
             markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
-
-            // Update opacity based on count/target ratio
-            if (newState) {
-              var dailyTarget = habit.dailyTarget || 1;
-              var opacity = Math.min(newCount / dailyTarget, 1);
-              markTodayBtn.style.setProperty('--mark-today-opacity', opacity);
-            }
 
             // Show count in habit icon for 1 second with animation
             var habitVisual = card.querySelector('.habit-visual');
@@ -1948,19 +1959,24 @@ window.Storage = Storage;
             var newCount = habit.dots[todayIdx];
             var newState = newCount > 0;
 
-            // Update mark-today button visual state
+            // Update mark-today button to show NEXT state
             var markTodayBtn = card.querySelector('.mark-today-btn');
             if (markTodayBtn) {
-              markTodayBtn.classList.toggle('marked', newState);
+              var dailyTarget = habit.dailyTarget || 1;
+              var nextCount = (newCount + 1) % (dailyTarget + 1);
+
+              markTodayBtn.classList.remove('marked');
+              if (nextCount === 0) {
+                // Next state is reset to 0 - show small faded
+                markTodayBtn.classList.add('marked');
+              } else {
+                // Next state is count - show large with next opacity
+                var nextOpacity = Math.min(nextCount / dailyTarget, 1);
+                markTodayBtn.style.setProperty('--mark-today-opacity', nextOpacity);
+              }
+
               markTodayBtn.setAttribute('aria-label', newState ? 'Unmark today' : 'Mark today');
               markTodayBtn.setAttribute('title', newState ? 'Unmark today' : 'Mark today');
-
-              // Update opacity based on count/target ratio
-              if (newState) {
-                var dailyTarget = habit.dailyTarget || 1;
-                var opacity = Math.min(newCount / dailyTarget, 1);
-                markTodayBtn.style.setProperty('--mark-today-opacity', opacity);
-              }
             }
 
             // Show count in habit icon for 1 second with animation
