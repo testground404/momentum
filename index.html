@@ -29,7 +29,6 @@
           var sessionData = JSON.parse(session);
           // If user is authenticated, redirect immediately (before page renders)
           if (sessionData && sessionData.username) {
-            console.log('Immediate redirect: localStorage session found');
             window.location.replace('app.html');
             return;
           }
@@ -49,7 +48,6 @@
           if (key && key.startsWith('firebase:authUser:')) {
             var authData = localStorage.getItem(key);
             if (authData && authData !== 'null') {
-              console.log('Immediate redirect: Firebase auth persistence found');
               hasFirebaseAuth = true;
               window.location.replace('app.html');
               return;
@@ -57,7 +55,6 @@
           }
         }
       } catch (e) {
-        console.log('Firebase auth check failed:', e);
         // Continue to show login page
       }
 

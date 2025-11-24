@@ -404,6 +404,21 @@ html.dark .header-top .year-banner::before {
   height: 24px;
 }
 
+/* Very small phones: prevent skeleton overlap with title */
+@media (max-width: 400px) {
+  .header-top {
+    gap: 12px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .year-banner-skeleton .sk-pill {
+    width: 100px;
+  }
+}
+
 /* ─── Year Wheel Selector (Per Habit Card) ─── */
 .habit-year-wheel {
   position: relative;

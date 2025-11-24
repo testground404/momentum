@@ -3697,7 +3697,6 @@ window.Storage = Storage;
         var elapsed = Date.now() - startTime;
         if (elapsed > duration) {
           clearInterval(timer);
-          console.log('=== Year wheel position debugging ended ===');
           return;
         }
 
@@ -3707,10 +3706,6 @@ window.Storage = Storage;
         if (!header || cards.length === 0) return;
 
         var headerRect = header.getBoundingClientRect();
-
-        console.log('=== YEAR WHEEL POSITION CHECK at ' + elapsed + 'ms ===');
-        console.log('Header: top=' + headerRect.top.toFixed(1) + ', bottom=' + headerRect.bottom.toFixed(1) + ', height=' + headerRect.height.toFixed(1));
-        console.log('');
 
         for (var i = 0; i < Math.min(cards.length, 2); i++) {
           var card = cards[i];
@@ -3725,38 +3720,16 @@ window.Storage = Storage;
           var yearWheelRect = yearWheel.getBoundingClientRect();
           var dotsRect = dotsGrid.getBoundingClientRect();
 
-          console.log('Card #' + i + ':');
-          console.log('  Card top: ' + cardRect.top.toFixed(1) + ', bottom: ' + cardRect.bottom.toFixed(1));
-          console.log('');
-
-          console.log('  Pills: top=' + pillsRect.top.toFixed(1) + ', bottom=' + pillsRect.bottom.toFixed(1) + ', height=' + pillsRect.height.toFixed(1));
-          console.log('  Year Wheel: top=' + yearWheelRect.top.toFixed(1) + ', bottom=' + yearWheelRect.bottom.toFixed(1) + ', height=' + yearWheelRect.height.toFixed(1));
-          console.log('  Dots: top=' + dotsRect.top.toFixed(1) + ', bottom=' + dotsRect.bottom.toFixed(1) + ', height=' + dotsRect.height.toFixed(1));
-          console.log('');
-
           // Check spacing
           var pillsToYearWheel = yearWheelRect.top - pillsRect.bottom;
           var yearWheelToDots = dotsRect.top - yearWheelRect.bottom;
           var headerToYearWheel = yearWheelRect.top - headerRect.bottom;
-
-          console.log('  Spacing:');
-          console.log('    Pills → Year Wheel: ' + pillsToYearWheel.toFixed(1) + 'px ' + (pillsToYearWheel >= 9 && pillsToYearWheel <= 11 ? '✓' : '✗ (expected ~10px)'));
-          console.log('    Year Wheel → Dots: ' + yearWheelToDots.toFixed(1) + 'px ' + (yearWheelToDots >= 9 && yearWheelToDots <= 11 ? '✓' : '✗ (expected ~10px)'));
-          console.log('    Header → Year Wheel: ' + headerToYearWheel.toFixed(1) + 'px');
-          console.log('');
 
           // Check overlaps
           var overlaps = [];
           if (checkOverlap(yearWheelRect, headerRect)) overlaps.push('HEADER');
           if (checkOverlap(yearWheelRect, pillsRect)) overlaps.push('PILLS');
           if (checkOverlap(yearWheelRect, dotsRect)) overlaps.push('DOTS');
-
-          if (overlaps.length > 0) {
-            console.log('  ⚠️  OVERLAPS DETECTED: ' + overlaps.join(', '));
-          } else {
-            console.log('  ✓ No overlaps detected');
-          }
-          console.log('');
         }
       }
 

@@ -41,7 +41,7 @@
   <div class="container">
     <header class="app-header">
       <div class="header-top">
-        <h1 class="title" data-version="v2.10.02" title="Version 2.10.02">Momentum</h1>
+        <h1 class="title" data-version="v2.10.04" title="Version 2.10.04">Momentum</h1>
         <div class="year-banner" id="year-banner">
           <div class="year-banner-skeleton">
             <div class="sk-pill skeleton-shimmer"></div>
@@ -728,10 +728,7 @@
           // For Firebase, wait for auth state to be restored
           window.Auth.onAuthStateChanged((user) => {
             if (!user) {
-              console.log('User not authenticated, redirecting to login...');
               window.location.href = 'index.html';
-            } else {
-              console.log('User authenticated:', user.uid || user.username);
             }
           });
         } else {
@@ -753,7 +750,6 @@
     const DESIRED_GAP_PX = 30;
 
     if (!header || !bodyShell) {
-      console.warn('Could not find header or body shell to adjust spacing.');
       return;
     }
 
@@ -793,7 +789,6 @@
     const fadeOverlay = document.getElementById('scroll-blur-overlay');
 
     if (!header || !fadeOverlay) {
-      console.warn('Fade effect requires .app-header and #scroll-blur-overlay elements.');
       return;
     }
 
