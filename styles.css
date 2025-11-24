@@ -2980,7 +2980,7 @@ html.dark .control-btn:active {
   height: var(--dot-outer);
   border-radius: 50%;
   background: var(--accent-base);
-  opacity: 1;
+  opacity: var(--mark-today-opacity, 1);
   transition: width 0.12s cubic-bezier(0.4, 0, 0.2, 1),
               height 0.12s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.12s cubic-bezier(0.4, 0, 0.2, 1);
@@ -2988,7 +2988,7 @@ html.dark .control-btn:active {
   pointer-events: none;
 }
 
-/* When today is marked - small faded dot */
+/* When today is marked - show small faded dot (next state: will cycle/unmark) */
 .mark-today-btn.marked .mark-today-dot {
   width: var(--dot-inner);
   height: var(--dot-inner);
